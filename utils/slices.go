@@ -1,0 +1,44 @@
+package utils
+
+func StringInSlice(s string, a []string) bool {
+	for _, entry := range a {
+		if entry == s {
+			return true
+		}
+	}
+	return false
+}
+
+func RemoveFromStringSlice(a []string, s string) []string {
+	for key, entry := range a {
+		if entry == s {
+			a = append(a[:key], a[key+1:]...)
+			return a
+		}
+	}
+	return a
+}
+
+func DuplicateStrings(a []string) []string {
+	b := make([]string, len(a))
+	copy(b, a)
+	return b
+}
+
+func StringSliceEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func DuplicateBytes(a []byte) []byte {
+	b := make([]byte, len(a))
+	copy(b, a)
+	return b
+}

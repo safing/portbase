@@ -1,0 +1,4 @@
+from: https://github.com/ipfs/go-datastore/blob/master/basic_ds.go
+commit: https://github.com/ipfs/go-datastore/commit/545f59008f75bdb6b28abafd8391d7d7d19422be
+original files imported:
+  - basic_ds.go sha256:f6bd8d26e3511539358b1712c1f1359b9da6425f2d28c8305f4017e61688fe4d
