@@ -43,6 +43,19 @@ func GetAsString(name string, fallback string) func() string {
 	}
 }
 
+// GetAsStringArray returns a function that returns the wanted string with high performance.
+func GetAsStringArray(name string, fallback []string) func() []string {
+	valid := getValidityFlag()
+	value := findStringArrayValue(name, fallback)
+	return func() []string {
+		if !valid.IsSet() {
+			valid = getValidityFlag()
+			value = findStringArrayValue(name, fallback)
+		}
+		return value
+	}
+}
+
 // GetAsInt returns a function that returns the wanted int with high performance.
 func GetAsInt(name string, fallback int64) func() int64 {
 	valid := getValidityFlag()
@@ -51,6 +64,19 @@ func GetAsInt(name string, fallback int64) func() int64 {
 		if !valid.IsSet() {
 			valid = getValidityFlag()
 			value = findIntValue(name, fallback)
+		}
+		return value
+	}
+}
+
+// GetAsBool returns a function that returns the wanted int with high performance.
+func GetAsBool(name string, fallback bool) func() bool {
+	valid := getValidityFlag()
+	value := findBoolValue(name, fallback)
+	return func() bool {
+		if !valid.IsSet() {
+			valid = getValidityFlag()
+			value = findBoolValue(name, fallback)
 		}
 		return value
 	}
