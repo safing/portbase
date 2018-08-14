@@ -9,7 +9,10 @@ func TestGet(t *testing.T) {
 	err := SetConfig(`
   {
     "monkey": "1",
-    "elephant": 2
+		"zebra": ["black", "white"],
+    "elephant": 2,
+		"hot": true,
+		"cold": false
   }
   `)
 	if err != nil {
@@ -28,12 +31,28 @@ func TestGet(t *testing.T) {
 	}
 
 	monkey := GetAsString("monkey", "none")
-	elephant := GetAsInt("elephant", -1)
 	if monkey() != "1" {
 		t.Fatalf("monkey should be 1, is %s", monkey())
 	}
+
+	zebra := GetAsStringArray("zebra", []string{})
+	if len(zebra()) != 2 || zebra()[0] != "black" || zebra()[1] != "white" {
+		t.Fatalf("zebra should be [\"black\", \"white\"], is %v", zebra())
+	}
+
+	elephant := GetAsInt("elephant", -1)
 	if elephant() != 2 {
 		t.Fatalf("elephant should be 2, is %d", elephant())
+	}
+
+	hot := GetAsBool("hot", false)
+	if !hot() {
+		t.Fatalf("hot should be true, is %v", hot())
+	}
+
+	cold := GetAsBool("cold", true)
+	if cold() {
+		t.Fatalf("cold should be false, is %v", cold())
 	}
 
 	err = SetConfig(`
@@ -48,9 +67,13 @@ func TestGet(t *testing.T) {
 	if monkey() != "3" {
 		t.Fatalf("monkey should be 0, is %s", monkey())
 	}
+
 	if elephant() != 0 {
 		t.Fatalf("elephant should be 0, is %d", elephant())
 	}
+
+	zebra()
+	hot()
 
 }
 
