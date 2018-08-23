@@ -14,9 +14,9 @@ const (
 	OptTypeInt         uint8 = 3
 	OptTypeBool        uint8 = 4
 
-	ExpertiseLevelUser      int8 = 1
-	ExpertiseLevelExpert    int8 = 2
-	ExpertiseLevelDeveloper int8 = 3
+	ExpertiseLevelUser      uint8 = 1
+	ExpertiseLevelExpert    uint8 = 2
+	ExpertiseLevelDeveloper uint8 = 3
 )
 
 var (
