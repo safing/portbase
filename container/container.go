@@ -1,3 +1,4 @@
+// Package container gives you a []byte slice on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation.
 package container
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/Safing/safing-core/formats/varint"
 )
 
-// Container is []byte array on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation. (Error transportation requires use of varints for data)
+// Container is []byte sclie on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation. (Error transportation requires use of varints for data)
 type Container struct {
 	compartments [][]byte
 	offset       int
@@ -15,7 +16,7 @@ type Container struct {
 
 // Data Handling
 
-// NewContainer creates a new container with an optional initial []byte slice. Data will NOT be copied.
+// NewContainer is DEPRECATED, please use New(), it's the same thing.
 func NewContainer(data ...[]byte) *Container {
 	return &Container{
 		compartments: data,
@@ -120,7 +121,7 @@ func (c *Container) WriteToSlice(slice []byte) (n int, containerEmptied bool) {
 	return n, true
 }
 
-func (c *Container) Clean() {
+func (c *Container) clean() {
 	if c.offset > 100 {
 		c.renewCompartments()
 	}
@@ -184,7 +185,7 @@ func (c *Container) Error() error {
 	return c.err
 }
 
-// Error returns the error.
+// ErrString returns the error as a string.
 func (c *Container) ErrString() string {
 	return c.err.Error()
 }
