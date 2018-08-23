@@ -10,9 +10,6 @@ import (
 	"time"
 
 	"github.com/tevino/abool"
-
-	"github.com/Safing/safing-core/meta"
-	"github.com/Safing/safing-core/modules"
 )
 
 // concept
@@ -54,8 +51,6 @@ const (
 )
 
 var (
-	module *modules.Module
-
 	logBuffer             chan *logLine
 	forceEmptyingOfBuffer chan bool
 
@@ -68,6 +63,12 @@ var (
 
 	logsWaiting     = make(chan bool, 1)
 	logsWaitingFlag = abool.NewBool(false)
+
+	shutdownSignal    = make(chan struct{}, 0)
+	shutdownWaitGroup sync.WaitGroup
+
+	started    = abool.NewBool(false)
+	testErrors = abool.NewBool(false)
 )
 
 func SetFileLevels(levels map[string]severity) {
@@ -103,37 +104,34 @@ func ParseLevel(level string) severity {
 	return 0
 }
 
-var ()
+func Start() error {
 
-func init() {
-
-	module = modules.Register("Logging", 0)
-	modules.RegisterLogger(Logger)
+	if !started.SetToIf(false, true) {
+		return nil
+	}
 
 	logBuffer = make(chan *logLine, 8192)
 	forceEmptyingOfBuffer = make(chan bool, 4)
 
-	initialLogLevel := ParseLevel(meta.LogLevel())
+	initialLogLevel := ParseLevel(logLevelFlag)
 	if initialLogLevel > 0 {
 		atomic.StoreUint32(logLevel, uint32(initialLogLevel))
 	} else {
-		fmt.Printf("WARNING: invalid log level, falling back to level info.")
+		return fmt.Errorf("invalid log level \"%s\", falling back to level info", logLevelFlag)
 	}
 
 	// get and set file loglevels
-	fileLogLevels := meta.FileLogLevels()
+	fileLogLevels := fileLogLevelsFlag
 	if len(fileLogLevels) > 0 {
 		newFileLevels := make(map[string]severity)
 		for _, pair := range strings.Split(fileLogLevels, ",") {
 			splitted := strings.Split(pair, "=")
 			if len(splitted) != 2 {
-				fmt.Printf("WARNING: invalid file log level \"%s\", ignoring", pair)
-				continue
+				return fmt.Errorf("invalid file log level \"%s\", ignoring", pair)
 			}
 			fileLevel := ParseLevel(splitted[1])
 			if fileLevel == 0 {
-				fmt.Printf("WARNING: invalid file log level \"%s\", ignoring", pair)
-				continue
+				return fmt.Errorf("invalid file log level \"%s\", ignoring", pair)
 			}
 			newFileLevels[splitted[0]] = fileLevel
 		}
@@ -141,5 +139,13 @@ func init() {
 	}
 
 	go writer()
+	Info("logging: started")
+	return nil
 
+}
+
+// Shutdown writes remaining log lines and then stops the logger.
+func Shutdown() {
+	close(shutdownSignal)
+	shutdownWaitGroup.Wait()
 }

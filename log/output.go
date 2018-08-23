@@ -4,7 +4,7 @@ package log
 
 import (
 	"fmt"
-	"github.com/Safing/safing-core/taskmanager"
+	"github.com/Safing/portbase/taskmanager"
 	"time"
 )
 
@@ -20,6 +20,8 @@ func writeLine(line *logLine) {
 func writer() {
 	var line *logLine
 	startedTask := false
+	shutdownWaitGroup.Add(1)
+	defer shutdownWaitGroup.Done()
 
 	for {
 
@@ -27,7 +29,7 @@ func writer() {
 		select {
 		case <-logsWaiting:
 			logsWaitingFlag.UnSet()
-		case <-module.Stop:
+		case <-shutdownSignal:
 		}
 
 		// wait for timeslot to log, or when buffer is full
@@ -35,20 +37,21 @@ func writer() {
 		case <-taskmanager.StartVeryLowPriorityMicroTask():
 			startedTask = true
 		case <-forceEmptyingOfBuffer:
-		case <-module.Stop:
-			select {
-			case line = <-logBuffer:
-				writeLine(line)
-			case <-time.After(10 * time.Millisecond):
-				writeLine(&logLine{
-					"===== LOGGING STOPPED =====",
-					WarningLevel,
-					time.Now(),
-					"",
-					0,
-				})
-				module.StopComplete()
-				return
+		case <-shutdownSignal:
+			for {
+				select {
+				case line = <-logBuffer:
+					writeLine(line)
+				case <-time.After(10 * time.Millisecond):
+					writeLine(&logLine{
+						"===== LOGGING STOPPED =====",
+						WarningLevel,
+						time.Now(),
+						"",
+						0,
+					})
+					return
+				}
 			}
 		}
 
