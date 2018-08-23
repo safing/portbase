@@ -6,7 +6,7 @@ Here is what is included:
 - `log`: really fast and beautiful logging
 - `modules`: a multi stage, dependency aware boot process for your software
 - `config`: simple, live updating and extremely fast configuration storage
-- `info`: easily tag you builds with versions, commit hashes, and so on
+- `info`: easily tag your builds with versions, commit hashes, and so on
 - `taskmanager`: run your more important goroutines first
 - `formats`: some handy data encoding libs
 - `crypto/hash`: easy self-identifying hashes
