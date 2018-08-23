@@ -4,7 +4,6 @@ package taskmanager
 
 import (
 	"container/list"
-	"github.com/Safing/safing-core/modules"
 	"time"
 )
 
@@ -46,8 +45,6 @@ func waitUntilNextScheduledTask() <-chan time.Time {
 
 func init() {
 
-	module := modules.Register("Taskmanager:ScheduledTasks", 3)
-
 	taskSchedule = list.New()
 	addToSchedule = make(chan *Task, 1)
 	waitForever = make(chan time.Time, 1)
@@ -59,8 +56,7 @@ func init() {
 
 		for {
 			select {
-			case <-module.Stop:
-				module.StopComplete()
+			case <-shutdownSignal:
 				return
 			case <-getScheduleLengthREQ:
 				// TODO: maybe clean queues before replying

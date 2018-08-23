@@ -4,7 +4,6 @@ package taskmanager
 
 import (
 	"container/list"
-	"github.com/Safing/safing-core/modules"
 	"time"
 
 	"github.com/tevino/abool"
@@ -110,8 +109,6 @@ func fireNextTask() {
 
 func init() {
 
-	module := modules.Register("Taskmanager:QueuedTasks", 3)
-
 	taskQueue = list.New()
 	prioritizedTaskQueue = list.New()
 	addToQueue = make(chan *Task, 1)
@@ -128,9 +125,8 @@ func init() {
 
 		for {
 			select {
-			case <-module.Stop:
+			case <-shutdownSignal:
 				// TODO: work off queue?
-				module.StopComplete()
 				return
 			case <-getQueueLengthREQ:
 				// TODO: maybe clean queues before replying
