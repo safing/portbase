@@ -55,3 +55,7 @@ func (c *regexCondition) check() error {
 	}
 	return nil
 }
+
+func (c *regexCondition) string() string {
+	return fmt.Sprintf("%s %s %s", c.key, getOpName(c.operator), c.regex.String())
+}

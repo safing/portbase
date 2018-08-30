@@ -17,3 +17,7 @@ func (c *errorCondition) complies(f Fetcher) bool {
 func (c *errorCondition) check() error {
 	return c.err
 }
+
+func (c *errorCondition) string() string {
+	return "[ERROR]"
+}

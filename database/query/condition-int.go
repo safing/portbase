@@ -84,3 +84,7 @@ func (c *intCondition) check() error {
 	}
 	return nil
 }
+
+func (c *intCondition) string() string {
+	return fmt.Sprintf("%s %s %d", c.key, getOpName(c.operator), c.value)
+}

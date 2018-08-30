@@ -45,18 +45,16 @@ var (
 )
 
 func testQuery(t *testing.T, f Fetcher, shouldMatch bool, condition Condition) {
-	q := MustCompile("test:")
-	err := q.Append(condition)
-	if err != nil {
-		t.Errorf("append failed: %s", err)
-	}
+	q := MustCompile("test:", condition)
+
+	// fmt.Printf("%s\n", q.String())
 
 	matched := q.Matches(f)
 	switch {
-	case matched && !shouldMatch:
-		t.Errorf("query should match")
 	case !matched && shouldMatch:
-		t.Errorf("query should not match")
+		t.Errorf("should match: %s", q.String())
+	case matched && !shouldMatch:
+		t.Errorf("should not match: %s", q.String())
 	}
 }
 
@@ -83,7 +81,7 @@ func TestQuery(t *testing.T) {
 	testQuery(t, f, true, Where("temperature", FloatLessThanOrEqual, "121"))
 	testQuery(t, f, true, Where("temperature", FloatLessThanOrEqual, "120.413"))
 
-	testQuery(t, f, true, Where("lastly.yay", Matches, "final"))
+	testQuery(t, f, true, Where("lastly.yay", SameAs, "final"))
 	testQuery(t, f, true, Where("lastly.yay", Contains, "ina"))
 	testQuery(t, f, true, Where("lastly.yay", StartsWith, "fin"))
 	testQuery(t, f, true, Where("lastly.yay", EndsWith, "nal"))
@@ -92,10 +90,14 @@ func TestQuery(t *testing.T) {
 
 	testQuery(t, f, true, Where("happy", Is, "true"))
 	testQuery(t, f, true, Where("happy", Is, "t"))
-	testQuery(t, f, true, Where("happy", Is, "1"))
-	testQuery(t, f, true, Not(Where("happy", Is, "false")))
-	testQuery(t, f, true, Not(Where("happy", Is, "f")))
 	testQuery(t, f, true, Not(Where("happy", Is, "0")))
+	testQuery(t, f, true, And(
+		Where("happy", Is, "1"),
+		Not(Or(
+			Where("happy", Is, false),
+			Where("happy", Is, "f"),
+		)),
+	))
 
 	testQuery(t, f, true, Where("happy", Exists, nil))
 

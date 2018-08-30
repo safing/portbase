@@ -35,7 +35,7 @@ func (c *stringCondition) complies(f Fetcher) bool {
 	}
 
 	switch c.operator {
-	case Matches:
+	case SameAs:
 		return c.value == comp
 	case Contains:
 		return strings.Contains(comp, c.value)
@@ -53,4 +53,8 @@ func (c *stringCondition) check() error {
 		return errors.New(c.key)
 	}
 	return nil
+}
+
+func (c *stringCondition) string() string {
+	return fmt.Sprintf("%s %s %s", c.key, getOpName(c.operator), c.value)
 }

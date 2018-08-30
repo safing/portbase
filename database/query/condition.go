@@ -6,7 +6,7 @@ import "fmt"
 type Condition interface {
 	complies(f Fetcher) bool
 	check() error
-	// string() string
+	string() string
 }
 
 // Operators

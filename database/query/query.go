@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // Example:
@@ -21,78 +22,56 @@ var (
 
 // Query contains a compiled query.
 type Query struct {
-	prefix     string
-	conditions []Condition
+	prefix    string
+	condition Condition
 }
 
 // New creates a new query.
-func New(prefix string, conditions ...Condition) (*Query, error) {
+func New(prefix string, condition Condition) (*Query, error) {
 	// check prefix
 	if !prefixExpr.MatchString(prefix) {
 		return nil, fmt.Errorf("invalid prefix: %s", prefix)
 	}
 
-	// check conditions
-	var err error
-	for _, cond := range conditions {
-		err = cond.check()
+	// check condition
+	if condition != nil {
+		err := condition.check()
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		condition = &noCond{}
 	}
 
 	// return query
 	return &Query{
-		prefix:     prefix,
-		conditions: conditions,
+		prefix:    prefix,
+		condition: condition,
 	}, nil
 }
 
 // MustCompile creates a new query and panics on an error.
-func MustCompile(prefix string, conditions ...Condition) *Query {
-	q, err := New(prefix, conditions...)
+func MustCompile(prefix string, condition Condition) *Query {
+	q, err := New(prefix, condition)
 	if err != nil {
 		panic(err)
 	}
 	return q
 }
 
-// Prepend prepends (check first) new query conditions to the query.
-func (q *Query) Prepend(conditions ...Condition) error {
-	// check conditions
-	var err error
-	for _, cond := range conditions {
-		err = cond.check()
-		if err != nil {
-			return err
-		}
-	}
-
-	q.conditions = append(conditions, q.conditions...)
-	return nil
-}
-
-// Append appends (check last) new query conditions to the query.
-func (q *Query) Append(conditions ...Condition) error {
-	// check conditions
-	var err error
-	for _, cond := range conditions {
-		err = cond.check()
-		if err != nil {
-			return err
-		}
-	}
-
-	q.conditions = append(q.conditions, conditions...)
-	return nil
-}
-
 // Matches checks whether the query matches the supplied data object.
 func (q *Query) Matches(f Fetcher) bool {
-	for _, cond := range q.conditions {
-		if !cond.complies(f) {
-			return false
-		}
+	return q.condition.complies(f)
+}
+
+// String returns the string representation of the query.
+func (q *Query) String() string {
+	text := q.condition.string()
+	if text == "" {
+		return fmt.Sprintf("query %s", q.prefix)
 	}
-	return true
+	if strings.HasPrefix(text, "(") {
+		text = text[1 : len(text)-1]
+	}
+	return fmt.Sprintf("query %s where %s", q.prefix, text)
 }

@@ -1,5 +1,10 @@
 package query
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Or combines multiple conditions with a logical _OR_ operator.
 func Or(conditions ...Condition) Condition {
 	return &orCond{
@@ -28,4 +33,12 @@ func (c *orCond) check() (err error) {
 		}
 	}
 	return nil
+}
+
+func (c *orCond) string() string {
+	var all []string
+	for _, cond := range c.conditions {
+		all = append(all, cond.string())
+	}
+	return fmt.Sprintf("(%s)", strings.Join(all, " or "))
 }

@@ -58,3 +58,7 @@ func (c *stringSliceCondition) check() error {
 	}
 	return nil
 }
+
+func (c *stringSliceCondition) string() string {
+	return fmt.Sprintf("%s %s %s", c.key, getOpName(c.operator), strings.Join(c.value, ","))
+}

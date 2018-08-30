@@ -1,5 +1,10 @@
 package query
 
+import (
+	"fmt"
+	"strings"
+)
+
 // And combines multiple conditions with a logical _AND_ operator.
 func And(conditions ...Condition) Condition {
 	return &andCond{
@@ -28,4 +33,12 @@ func (c *andCond) check() (err error) {
 		}
 	}
 	return nil
+}
+
+func (c *andCond) string() string {
+	var all []string
+	for _, cond := range c.conditions {
+		all = append(all, cond.string())
+	}
+	return fmt.Sprintf("(%s)", strings.Join(all, " and "))
 }

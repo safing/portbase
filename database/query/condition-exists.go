@@ -2,6 +2,7 @@ package query
 
 import (
 	"errors"
+	"fmt"
 )
 
 type existsCondition struct {
@@ -25,4 +26,8 @@ func (c *existsCondition) check() error {
 		return errors.New(c.key)
 	}
 	return nil
+}
+
+func (c *existsCondition) string() string {
+	return fmt.Sprintf("%s %s", c.key, getOpName(c.operator))
 }
