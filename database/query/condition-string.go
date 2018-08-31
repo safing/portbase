@@ -56,5 +56,5 @@ func (c *stringCondition) check() error {
 }
 
 func (c *stringCondition) string() string {
-	return fmt.Sprintf("%s %s %s", c.key, getOpName(c.operator), c.value)
+	return fmt.Sprintf("%s %s %s", escapeString(c.key), getOpName(c.operator), escapeString(c.value))
 }

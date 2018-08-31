@@ -64,5 +64,5 @@ func (c *boolCondition) check() error {
 }
 
 func (c *boolCondition) string() string {
-	return fmt.Sprintf("%s %s %t", c.key, getOpName(c.operator), c.value)
+	return fmt.Sprintf("%s %s %t", escapeString(c.key), getOpName(c.operator), c.value)
 }

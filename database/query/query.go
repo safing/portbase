@@ -22,56 +22,113 @@ var (
 
 // Query contains a compiled query.
 type Query struct {
-	prefix    string
-	condition Condition
+	checked bool
+	prefix  string
+	where   Condition
+	orderBy string
+	limit   int
+	offset  int
 }
 
-// New creates a new query.
-func New(prefix string, condition Condition) (*Query, error) {
+// New creates a new query with the supplied prefix.
+func New(prefix string) *Query {
+	return &Query{
+		prefix: prefix,
+	}
+}
+
+// Where adds filtering.
+func (q *Query) Where(condition Condition) *Query {
+	q.where = condition
+	return q
+}
+
+// Limit limits the number of returned results.
+func (q *Query) Limit(limit int) *Query {
+	q.limit = limit
+	return q
+}
+
+// Offset sets the query offset.
+func (q *Query) Offset(offset int) *Query {
+	q.offset = offset
+	return q
+}
+
+// OrderBy orders the results by the given key.
+func (q *Query) OrderBy(key string) *Query {
+	q.orderBy = key
+	return q
+}
+
+// Check checks for errors in the query.
+func (q *Query) Check() (*Query, error) {
+	if q.checked {
+		return q, nil
+	}
+
 	// check prefix
-	if !prefixExpr.MatchString(prefix) {
-		return nil, fmt.Errorf("invalid prefix: %s", prefix)
+	if !prefixExpr.MatchString(q.prefix) {
+		return nil, fmt.Errorf("invalid prefix: %s", q.prefix)
 	}
 
 	// check condition
-	if condition != nil {
-		err := condition.check()
+	if q.where != nil {
+		err := q.where.check()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		condition = &noCond{}
+		q.where = &noCond{}
 	}
 
-	// return query
-	return &Query{
-		prefix:    prefix,
-		condition: condition,
-	}, nil
+	q.checked = true
+	return q, nil
 }
 
-// MustCompile creates a new query and panics on an error.
-func MustCompile(prefix string, condition Condition) *Query {
-	q, err := New(prefix, condition)
+// MustBeValid checks for errors in the query and panics if there is an error.
+func (q *Query) MustBeValid() *Query {
+	_, err := q.Check()
 	if err != nil {
 		panic(err)
 	}
 	return q
 }
 
-// Matches checks whether the query matches the supplied data object.
-func (q *Query) Matches(f Fetcher) bool {
-	return q.condition.complies(f)
+// IsChecked returns whether they query was checked.
+func (q *Query) IsChecked() bool {
+	return q.checked
 }
 
-// String returns the string representation of the query.
-func (q *Query) String() string {
-	text := q.condition.string()
-	if text == "" {
-		return fmt.Sprintf("query %s", q.prefix)
+// Matches checks whether the query matches the supplied data object.
+func (q *Query) Matches(f Fetcher) bool {
+	return q.where.complies(f)
+}
+
+// Print returns the string representation of the query.
+func (q *Query) Print() string {
+	where := q.where.string()
+	if where != "" {
+		if strings.HasPrefix(where, "(") {
+			where = where[1 : len(where)-1]
+		}
+		where = fmt.Sprintf(" where %s", where)
 	}
-	if strings.HasPrefix(text, "(") {
-		text = text[1 : len(text)-1]
+
+	var orderBy string
+	if q.orderBy != "" {
+		orderBy = fmt.Sprintf(" orderby %s", q.orderBy)
 	}
-	return fmt.Sprintf("query %s where %s", q.prefix, text)
+
+	var limit string
+	if q.limit > 0 {
+		limit = fmt.Sprintf(" limit %d", q.limit)
+	}
+
+	var offset string
+	if q.offset > 0 {
+		offset = fmt.Sprintf(" offset %d", q.offset)
+	}
+
+	return fmt.Sprintf("query %s%s%s%s%s", q.prefix, where, orderBy, limit, offset)
 }

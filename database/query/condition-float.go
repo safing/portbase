@@ -31,6 +31,8 @@ func newFloatCondition(key string, operator uint8, value interface{}) *floatCond
 		parsedValue = float64(v)
 	case uint8:
 		parsedValue = float64(v)
+	case uint16:
+		parsedValue = float64(v)
 	case uint32:
 		parsedValue = float64(v)
 	case float32:
@@ -90,5 +92,5 @@ func (c *floatCondition) check() error {
 }
 
 func (c *floatCondition) string() string {
-	return fmt.Sprintf("%s %s %f", c.key, getOpName(c.operator), c.value)
+	return fmt.Sprintf("%s %s %g", escapeString(c.key), getOpName(c.operator), c.value)
 }

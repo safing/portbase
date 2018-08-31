@@ -20,7 +20,7 @@ func newStringSliceCondition(key string, operator uint8, value interface{}) *str
 		parsedValue := strings.Split(v, ",")
 		if len(parsedValue) < 2 {
 			return &stringSliceCondition{
-				key:      fmt.Sprintf("could not parse \"%s\" to []string", v),
+				key:      v,
 				operator: errorPresent,
 			}
 		}
@@ -28,6 +28,12 @@ func newStringSliceCondition(key string, operator uint8, value interface{}) *str
 			key:      key,
 			operator: operator,
 			value:    parsedValue,
+		}
+	case []string:
+		return &stringSliceCondition{
+			key:      key,
+			operator: operator,
+			value:    v,
 		}
 	default:
 		return &stringSliceCondition{
@@ -60,5 +66,5 @@ func (c *stringSliceCondition) check() error {
 }
 
 func (c *stringSliceCondition) string() string {
-	return fmt.Sprintf("%s %s %s", c.key, getOpName(c.operator), strings.Join(c.value, ","))
+	return fmt.Sprintf("%s %s %s", escapeString(c.key), getOpName(c.operator), escapeString(strings.Join(c.value, ",")))
 }

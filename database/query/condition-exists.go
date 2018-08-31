@@ -29,5 +29,5 @@ func (c *existsCondition) check() error {
 }
 
 func (c *existsCondition) string() string {
-	return fmt.Sprintf("%s %s", c.key, getOpName(c.operator))
+	return fmt.Sprintf("%s %s", escapeString(c.key), getOpName(c.operator))
 }

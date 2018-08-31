@@ -6,7 +6,7 @@ import (
 
 var (
 	// copied from https://github.com/tidwall/gjson/blob/master/gjson_test.go
-	testJson = `{"age":100, "name":{"here":"B\\\"R"},
+	testJSON = `{"age":100, "name":{"here":"B\\\"R"},
   "noop":{"what is a wren?":"a bird"},
   "happy":true,"immortal":false,
   "items":[1,2,3,{"tags":[1,2,3],"points":[[1,2],[3,4]]},4,5,6,7],
@@ -45,25 +45,25 @@ var (
 )
 
 func testQuery(t *testing.T, f Fetcher, shouldMatch bool, condition Condition) {
-	q := MustCompile("test:", condition)
+	q := New("test:").Where(condition).MustBeValid()
 
 	// fmt.Printf("%s\n", q.String())
 
 	matched := q.Matches(f)
 	switch {
 	case !matched && shouldMatch:
-		t.Errorf("should match: %s", q.String())
+		t.Errorf("should match: %s", q.Print())
 	case matched && !shouldMatch:
-		t.Errorf("should not match: %s", q.String())
+		t.Errorf("should not match: %s", q.Print())
 	}
 }
 
 func TestQuery(t *testing.T) {
 
-	// if !gjson.Valid(testJson) {
+	// if !gjson.Valid(testJSON) {
 	// 	t.Fatal("test json is invalid")
 	// }
-	f := NewJSONFetcher(testJson)
+	f := NewJSONFetcher(testJSON)
 
 	testQuery(t, f, true, Where("age", Equals, 100))
 	testQuery(t, f, true, Where("age", GreaterThan, uint8(99)))
@@ -88,6 +88,7 @@ func TestQuery(t *testing.T) {
 	testQuery(t, f, true, Where("lastly.yay", In, "draft,final"))
 	testQuery(t, f, true, Where("lastly.yay", In, "final,draft"))
 
+	testQuery(t, f, true, Where("happy", Is, true))
 	testQuery(t, f, true, Where("happy", Is, "true"))
 	testQuery(t, f, true, Where("happy", Is, "t"))
 	testQuery(t, f, true, Not(Where("happy", Is, "0")))

@@ -31,6 +31,8 @@ func newIntCondition(key string, operator uint8, value interface{}) *intConditio
 		parsedValue = int64(v)
 	case uint8:
 		parsedValue = int64(v)
+	case uint16:
+		parsedValue = int64(v)
 	case uint32:
 		parsedValue = int64(v)
 	case string:
@@ -86,5 +88,5 @@ func (c *intCondition) check() error {
 }
 
 func (c *intCondition) string() string {
-	return fmt.Sprintf("%s %s %d", c.key, getOpName(c.operator), c.value)
+	return fmt.Sprintf("%s %s %d", escapeString(c.key), getOpName(c.operator), c.value)
 }
