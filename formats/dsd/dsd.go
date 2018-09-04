@@ -10,19 +10,19 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/pkg/bson"
+	// "github.com/pkg/bson"
 
 	"github.com/Safing/safing-core/formats/varint"
 )
 
 // define types
 const (
-	AUTO   = 0
-	STRING = 83 // S
-	BYTES  = 88 // X
-	JSON   = 74 // J
-	BSON   = 66 // B
-	// MSGP
+	AUTO    = 0
+	STRING  = 83 // S
+	BYTES   = 88 // X
+	JSON    = 74 // J
+	BSON    = 66 // B
+	GenCode = 71 // G (reserved)
 )
 
 // define errors
@@ -56,12 +56,12 @@ func Load(data []byte, t interface{}) (interface{}, error) {
 			return nil, err
 		}
 		return t, nil
-	case BSON:
-		err := bson.Unmarshal(data[read:], t)
-		if err != nil {
-			return nil, err
-		}
-		return t, nil
+	// case BSON:
+	// 	err := bson.Unmarshal(data[read:], t)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return t, nil
 	// case MSGP:
 	//   err := t.UnmarshalMsg(data[read:])
 	//   if err != nil {
@@ -101,11 +101,11 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-	case BSON:
-		data, err = bson.Marshal(t)
-		if err != nil {
-			return nil, err
-		}
+	// case BSON:
+	// 	data, err = bson.Marshal(t)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 	// case MSGP:
 	//   data, err := t.MarshalMsg(nil)
 	//   if err != nil {
