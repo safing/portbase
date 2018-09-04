@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ipfs/go-datastore"
-
 	"github.com/Safing/safing-core/database/dbutils"
 	"github.com/Safing/safing-core/formats/dsd"
 )

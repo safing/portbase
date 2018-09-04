@@ -9,29 +9,20 @@ import (
 	"path"
 	"strings"
 
-	ds "github.com/ipfs/go-datastore"
-	dsq "github.com/ipfs/go-datastore/query"
-	mount "github.com/ipfs/go-datastore/syncmount"
-
 	"github.com/Safing/safing-core/database/dbutils"
-	"github.com/Safing/safing-core/database/ds/channelshim"
-	"github.com/Safing/safing-core/database/ds/leveldb"
 	"github.com/Safing/safing-core/log"
 	"github.com/Safing/safing-core/meta"
 )
 
-// TODO: do not let other modules panic, even if database module crashes.
-var db ds.Datastore
-
 var ErrNotFound = errors.New("database: entry could not be found")
 
 func init() {
-	if strings.HasSuffix(os.Args[0], ".test") {
-		// testing setup
-		log.Warning("===== DATABASE RUNNING IN TEST MODE =====")
-		db = channelshim.NewChanneledDatastore(ds.NewMapDatastore())
-		return
-	}
+	// if strings.HasSuffix(os.Args[0], ".test") {
+	// 	// testing setup
+	// 	log.Warning("===== DATABASE RUNNING IN TEST MODE =====")
+	// 	db = channelshim.NewChanneledDatastore(ds.NewMapDatastore())
+	// 	return
+	// }
 
 	// sfsDB, err := simplefs.NewDatastore(meta.DatabaseDir())
 	// if err != nil {
@@ -39,24 +30,24 @@ func init() {
 	// 	os.Exit(1)
 	// }
 
-	ldb, err := leveldb.NewDatastore(path.Join(meta.DatabaseDir(), "leveldb"), &leveldb.Options{})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "FATAL ERROR: could not init simplefs database: %s\n", err)
-		os.Exit(1)
-	}
-
-	mapDB := ds.NewMapDatastore()
-
-	db = channelshim.NewChanneledDatastore(mount.New([]mount.Mount{
-		mount.Mount{
-			Prefix:    ds.NewKey("/Run"),
-			Datastore: mapDB,
-		},
-		mount.Mount{
-			Prefix:    ds.NewKey("/"),
-			Datastore: ldb,
-		},
-	}))
+	// ldb, err := leveldb.NewDatastore(path.Join(meta.DatabaseDir(), "leveldb"), &leveldb.Options{})
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "FATAL ERROR: could not init simplefs database: %s\n", err)
+	// 	os.Exit(1)
+	// }
+	//
+	// mapDB := ds.NewMapDatastore()
+	//
+	// db = channelshim.NewChanneledDatastore(mount.New([]mount.Mount{
+	// 	mount.Mount{
+	// 		Prefix:    ds.NewKey("/Run"),
+	// 		Datastore: mapDB,
+	// 	},
+	// 	mount.Mount{
+	// 		Prefix:    ds.NewKey("/"),
+	// 		Datastore: ldb,
+	// 	},
+	// }))
 
 }
 
