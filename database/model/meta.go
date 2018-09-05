@@ -12,17 +12,35 @@ type Meta struct {
 	cronjewel bool // crownjewels must never leave the instance, but may be read by the UI
 }
 
-// SetAbsoluteExpiry sets an absolute expiry time, that is not affected when the record is updated.
-func (m *Meta) SetAbsoluteExpiry(time int64) {
-	m.expires = time
+// SetAbsoluteExpiry sets an absolute expiry time (in seconds), that is not affected when the record is updated.
+func (m *Meta) SetAbsoluteExpiry(seconds int64) {
+	m.expires = seconds
 	m.deleted = 0
 }
 
-// SetRelativateExpiry sets a relative expiry that is automatically updated whenever the record is updated/saved.
-func (m *Meta) SetRelativateExpiry(duration int64) {
-	if duration >= 0 {
-		m.deleted = -duration
+// SetRelativateExpiry sets a relative expiry time (ie. TTL in seconds) that is automatically updated whenever the record is updated/saved.
+func (m *Meta) SetRelativateExpiry(seconds int64) {
+	if seconds >= 0 {
+		m.deleted = -seconds
 	}
+}
+
+// GetAbsoluteExpiry returns the absolute expiry time.
+func (m *Meta) GetAbsoluteExpiry() int64 {
+	return m.expires
+}
+
+// GetRelativeExpiry returns the current relative expiry time - ie. seconds until expiry.
+func (m *Meta) GetRelativeExpiry() int64 {
+	if m.deleted < 0 {
+		return -m.deleted
+	}
+
+	abs := m.expires - time.Now().Unix()
+	if abs < 0 {
+		return 0
+	}
+	return abs
 }
 
 // MakeCrownJewel marks the database records as a crownjewel, meaning that it will not be sent/synced to other devices.

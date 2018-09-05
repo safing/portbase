@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"io"
 	"time"
 	"unsafe"
@@ -13,7 +14,7 @@ var (
 )
 
 // GenCodeSize returns the size of the gencode marshalled byte slice
-func (d *Meta) GenCodeSize() (s uint64) {
+func (d *Meta) GenCodeSize() (s int) {
 	s += 34
 	return
 }
@@ -22,7 +23,7 @@ func (d *Meta) GenCodeSize() (s uint64) {
 func (d *Meta) GenCodeMarshal(buf []byte) ([]byte, error) {
 	size := d.GenCodeSize()
 	{
-		if uint64(cap(buf)) >= size {
+		if cap(buf) >= size {
 			buf = buf[:size]
 		} else {
 			buf = make([]byte, size)
@@ -125,6 +126,10 @@ func (d *Meta) GenCodeMarshal(buf []byte) ([]byte, error) {
 
 // GenCodeUnmarshal gencode unmarshalls Meta and returns the bytes read.
 func (d *Meta) GenCodeUnmarshal(buf []byte) (uint64, error) {
+	if len(buf) < d.GenCodeSize() {
+		return 0, fmt.Errorf("insufficient data: got %d out of %d bytes", len(buf), d.GenCodeSize())
+	}
+
 	i := uint64(0)
 
 	{

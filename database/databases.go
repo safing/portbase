@@ -2,11 +2,11 @@ package database
 
 
 var (
-  databases = make(map[string]*storage.Interface)
+  databases = make(map[string]*Controller)
   databasesLock sync.Mutex
 )
 
-func getDatabase(name string) *storage.Interface {
+func getDatabase(name string) *Controller {
   databasesLock.Lock()
   defer   databasesLock.Unlock()
   storage, ok := databases[name]

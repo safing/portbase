@@ -1,14 +1,14 @@
 package model
 
 import (
-	"errors"
 	"strings"
 )
 
-func ParseKey(key string) (dbName, dbKey string, err error) {
+// ParseKey splits a key into it's database name and key parts.
+func ParseKey(key string) (dbName, dbKey string) {
 	splitted := strings.SplitN(key, ":", 2)
 	if len(splitted) == 2 {
-		return splitted[0], splitted[1], nil
+		return splitted[0], splitted[1]
 	}
-	return "", "", errors.New("invalid key")
+	return splitted[0], ""
 }
