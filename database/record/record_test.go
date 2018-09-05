@@ -2,15 +2,15 @@ package model
 
 import "sync"
 
-type TestModel struct {
+type TestRecord struct {
 	Base
 	lock sync.Mutex
 }
 
-func (tm *TestModel) Lock() {
+func (tm *TestRecord) Lock() {
 	tm.lock.Lock()
 }
 
-func (tm *TestModel) Unlock() {
+func (tm *TestRecord) Unlock() {
 	tm.lock.Unlock()
 }

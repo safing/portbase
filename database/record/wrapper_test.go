@@ -10,7 +10,7 @@ import (
 func TestWrapper(t *testing.T) {
 
 	// check model interface compliance
-	var m Model
+	var m Record
 	w := &Wrapper{}
 	m = w
 	_ = m

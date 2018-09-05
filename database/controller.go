@@ -1,5 +1,9 @@
 package database
 
+import (
+  "github.com/Safing/portbase/database/record"
+)
+
 type Controller struct {
   storage
   writeLock sync.RWMutex
@@ -13,14 +17,14 @@ func NewController() (*Controller, error) {
 
 	// Retrieve
 func (c *Controller) Exists(key string) (bool, error) {}
-func (c *Controller) Get(key string) (model.Model, error) {}
+func (c *Controller) Get(key string) (record.Record, error) {}
 
 // Modify
-func (c *Controller) Create(model model.Model) error {}
+func (c *Controller) Create(model record.Record) error {}
 // create when not exists
-func (c *Controller) Update(model model.Model) error {}
+func (c *Controller) Update(model record.Record) error {}
 // update, create if not exists.
-func (c *Controller) UpdateOrCreate(model model.Model) error {}
+func (c *Controller) UpdateOrCreate(model record.Record) error {}
 func (c *Controller) Delete(key string) error {}
 
 // Partial

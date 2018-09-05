@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/Safing/portbase/database/iterator"
-	"github.com/Safing/portbase/database/model"
+	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/query"
 	"github.com/Safing/portbase/database/storage"
 )
@@ -31,12 +31,12 @@ func (s *Sinkhole) Exists(key string) (bool, error) {
 }
 
 // Get returns a database record.
-func (s *Sinkhole) Get(key string) (model.Model, error) {
+func (s *Sinkhole) Get(key string) (record.Record, error) {
 	return nil, storage.ErrNotFound
 }
 
 // Put stores a record in the database.
-func (s *Sinkhole) Put(m model.Model) error {
+func (s *Sinkhole) Put(m record.Record) error {
 	return nil
 }
 

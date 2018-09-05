@@ -19,9 +19,9 @@ func NewInterface(opts *Options) *Interface {
   }
 }
 
-func (i *Interface) Get(key string) (model.Model, error) {
+func (i *Interface) Get(key string) (record.Record, error) {
 
-  controller 
+  controller
 
   return nil, nil
 }

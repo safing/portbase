@@ -1,7 +1,7 @@
 package model
 
-// Model provides an interface for uniformally handling database records.
-type Model interface {
+// Record provides an interface for uniformally handling database records.
+type Record interface {
 	Key() string          // test:config
 	DatabaseName() string // test
 	DatabaseKey() string  // config

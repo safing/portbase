@@ -7,7 +7,7 @@ import (
 	"github.com/dgraph-io/badger"
 
 	"github.com/Safing/portbase/database/iterator"
-	"github.com/Safing/portbase/database/model"
+	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/query"
 	"github.com/Safing/portbase/database/storage"
 )
@@ -58,7 +58,7 @@ func (b *Badger) Exists(key string) (bool, error) {
 }
 
 // Get returns a database record.
-func (b *Badger) Get(key string) (model.Model, error) {
+func (b *Badger) Get(key string) (record.Record, error) {
 	var item *badger.Item
 
 	err := b.db.View(func(txn *badger.Txn) error {
@@ -93,7 +93,7 @@ func (b *Badger) Get(key string) (model.Model, error) {
 }
 
 // Put stores a record in the database.
-func (b *Badger) Put(m model.Model) error {
+func (b *Badger) Put(m record.Record) error {
 	data, err := m.MarshalRecord()
 	if err != nil {
 		return err

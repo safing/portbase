@@ -4,35 +4,11 @@ package database
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/Safing/safing-core/database/dbutils"
 	"github.com/Safing/safing-core/formats/dsd"
 )
-
-type Model interface {
-	SetKey(*datastore.Key)
-	GetKey() *datastore.Key
-	FmtKey() string
-	// Type() string
-	// DefaultNamespace() datastore.Key
-	// Create(string) error
-	// CreateInLocation(datastore.Key, string) error
-	// CreateObject(*datastore.Key, string, Model) error
-	// Save() error
-	// Delete() error
-	// CastError(interface{}, interface{}) error
-}
-
-func getTypeName(model interface{}) string {
-	full := fmt.Sprintf("%T", model)
-	return full[strings.LastIndex(full, ".")+1:]
-}
-
-func TypeAssertError(model Model, object interface{}) error {
-	return fmt.Errorf("database: could not assert %s to type %T (is type %T)", model.FmtKey(), model, object)
-}
 
 // Model Registration
 

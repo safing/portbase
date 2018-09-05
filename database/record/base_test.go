@@ -2,11 +2,11 @@ package model
 
 import "testing"
 
-func TestBaseModel(t *testing.T) {
+func TestBaseRecord(t *testing.T) {
 
 	// check model interface compliance
-	var m Model
-	b := &TestModel{}
+	var m Record
+	b := &TestRecord{}
 	m = b
 	_ = m
 
