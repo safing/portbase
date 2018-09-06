@@ -1,4 +1,4 @@
-package model
+package record
 
 // Benchmark:
 // BenchmarkAllocateBytes-8                	2000000000	         0.76 ns/op

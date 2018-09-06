@@ -1,4 +1,4 @@
-package model
+package record
 
 // Record provides an interface for uniformally handling database records.
 type Record interface {

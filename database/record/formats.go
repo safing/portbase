@@ -1,4 +1,4 @@
-package model
+package record
 
 import (
 	"github.com/Safing/portbase/formats/dsd"

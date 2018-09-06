@@ -1,4 +1,4 @@
-package model
+package record
 
 type course struct {
   Created   int64
