@@ -118,3 +118,25 @@ func (w *Wrapper) Lock() {
 func (w *Wrapper) Unlock() {
 	w.lock.Unlock()
 }
+
+// IsWrapped returns whether the record is a Wrapper.
+func (w *Wrapper) IsWrapped() bool {
+	return true
+}
+
+func Unwrap(wrapped, new Record) (Record, error) {
+	wrapper, ok := wrapped.(*Wrapper)
+	if !ok {
+		return nil, fmt.Errorf("cannot unwrap %T", wrapped)
+	}
+
+	_, err := dsd.Load(wrapper.Data, new)
+	if err != nil {
+		return nil, fmt.Errorf("database: failed to unwrap %T: %s", new, err)
+	}
+
+	new.SetKey(wrapped.Key())
+	new.SetMeta(wrapped.Meta())
+
+	return new, nil
+}

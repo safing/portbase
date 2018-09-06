@@ -28,6 +28,11 @@ func Register(name string, factory Factory) error {
 	return nil
 }
 
+// CreateDatabase starts a new database with the given name and storageType at location.
+func CreateDatabase(name, storageType, location string) (Interface, error) {
+	return nil, nil
+}
+
 // StartDatabase starts a new database with the given name and storageType at location.
 func StartDatabase(name, storageType, location string) (Interface, error) {
 	storagesLock.Lock()

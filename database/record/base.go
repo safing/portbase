@@ -85,3 +85,8 @@ func (b *Base) MarshalRecord() ([]byte, error) {
 
 	return c.CompileData(), nil
 }
+
+// IsWrapped returns whether the record is a Wrapper.
+func (b *Base) IsWrapped() bool {
+	return false
+}

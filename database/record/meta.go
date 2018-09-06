@@ -4,39 +4,39 @@ import "time"
 
 // Meta holds
 type Meta struct {
-	created   int64
-	modified  int64
-	expires   int64
-	deleted   int64
+	Created   int64
+	Modified  int64
+	Expires   int64
+	Deleted   int64
 	secret    bool // secrets must not be sent to the UI, only synced between nodes
 	cronjewel bool // crownjewels must never leave the instance, but may be read by the UI
 }
 
 // SetAbsoluteExpiry sets an absolute expiry time (in seconds), that is not affected when the record is updated.
 func (m *Meta) SetAbsoluteExpiry(seconds int64) {
-	m.expires = seconds
-	m.deleted = 0
+	m.Expires = seconds
+	m.Deleted = 0
 }
 
 // SetRelativateExpiry sets a relative expiry time (ie. TTL in seconds) that is automatically updated whenever the record is updated/saved.
 func (m *Meta) SetRelativateExpiry(seconds int64) {
 	if seconds >= 0 {
-		m.deleted = -seconds
+		m.Deleted = -seconds
 	}
 }
 
 // GetAbsoluteExpiry returns the absolute expiry time.
 func (m *Meta) GetAbsoluteExpiry() int64 {
-	return m.expires
+	return m.Expires
 }
 
 // GetRelativeExpiry returns the current relative expiry time - ie. seconds until expiry.
 func (m *Meta) GetRelativeExpiry() int64 {
-	if m.deleted < 0 {
-		return -m.deleted
+	if m.Deleted < 0 {
+		return -m.Deleted
 	}
 
-	abs := m.expires - time.Now().Unix()
+	abs := m.Expires - time.Now().Unix()
 	if abs < 0 {
 		return 0
 	}
@@ -56,30 +56,38 @@ func (m *Meta) MakeSecret() {
 // Update updates the internal meta states and should be called before writing the record to the database.
 func (m *Meta) Update() {
 	now := time.Now().Unix()
-	m.modified = now
-	if m.created == 0 {
-		m.created = now
+	m.Modified = now
+	if m.Created == 0 {
+		m.Created = now
 	}
-	if m.deleted < 0 {
-		m.expires = now - m.deleted
+	if m.Deleted < 0 {
+		m.Expires = now - m.Deleted
 	}
 }
 
 // Reset resets all metadata, except for the secret and crownjewel status.
 func (m *Meta) Reset() {
-	m.created = 0
-	m.modified = 0
-	m.expires = 0
-	m.deleted = 0
+	m.Created = 0
+	m.Modified = 0
+	m.Expires = 0
+	m.Deleted = 0
 }
 
-// CheckScope checks whether the current database record exists for the given scope.
-func (m *Meta) CheckScope(now int64, local, internal bool) (recordExists bool) {
+// CheckValidity checks whether the database record is valid.
+func (m *Meta) CheckValidity(now int64) (valid bool) {
 	switch {
-	case m.deleted > 0:
+	case m.Deleted > 0:
 		return false
-	case m.expires < now:
+	case m.Expires < now:
 		return false
+	default:
+		return true
+	}
+}
+
+// CheckPermission checks whether the database record may be accessed with the following scope.
+func (m *Meta) CheckPermission(local, internal bool) (permitted bool) {
+	switch {
 	case !local && m.cronjewel:
 		return false
 	case !internal && m.secret:

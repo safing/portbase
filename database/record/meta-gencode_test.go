@@ -8,10 +8,10 @@ import (
 
 var (
 	genCodeTestMeta = &Meta{
-		created:   time.Now().Unix(),
-		modified:  time.Now().Unix(),
-		expires:   time.Now().Unix(),
-		deleted:   time.Now().Unix(),
+		Created:   time.Now().Unix(),
+		Modified:  time.Now().Unix(),
+		Expires:   time.Now().Unix(),
+		Deleted:   time.Now().Unix(),
 		secret:    true,
 		cronjewel: true,
 	}

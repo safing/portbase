@@ -32,10 +32,10 @@ import (
 
 var (
 	testMeta = &Meta{
-		created:   time.Now().Unix(),
-		modified:  time.Now().Unix(),
-		expires:   time.Now().Unix(),
-		deleted:   time.Now().Unix(),
+		Created:   time.Now().Unix(),
+		Modified:  time.Now().Unix(),
+		Expires:   time.Now().Unix(),
+		Deleted:   time.Now().Unix(),
 		secret:    true,
 		cronjewel: true,
 	}
@@ -65,10 +65,10 @@ func BenchmarkMetaSerializeContainer(b *testing.B) {
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
 		c := container.New()
-		c.AppendNumber(uint64(testMeta.created))
-		c.AppendNumber(uint64(testMeta.modified))
-		c.AppendNumber(uint64(testMeta.expires))
-		c.AppendNumber(uint64(testMeta.deleted))
+		c.AppendNumber(uint64(testMeta.Created))
+		c.AppendNumber(uint64(testMeta.Modified))
+		c.AppendNumber(uint64(testMeta.Expires))
+		c.AppendNumber(uint64(testMeta.Deleted))
 		switch {
 		case testMeta.secret && testMeta.cronjewel:
 			c.AppendNumber(3)
@@ -87,10 +87,10 @@ func BenchmarkMetaUnserializeContainer(b *testing.B) {
 
 	// Setup
 	c := container.New()
-	c.AppendNumber(uint64(testMeta.created))
-	c.AppendNumber(uint64(testMeta.modified))
-	c.AppendNumber(uint64(testMeta.expires))
-	c.AppendNumber(uint64(testMeta.deleted))
+	c.AppendNumber(uint64(testMeta.Created))
+	c.AppendNumber(uint64(testMeta.Modified))
+	c.AppendNumber(uint64(testMeta.Expires))
+	c.AppendNumber(uint64(testMeta.Deleted))
 	switch {
 	case testMeta.secret && testMeta.cronjewel:
 		c.AppendNumber(3)
@@ -113,25 +113,25 @@ func BenchmarkMetaUnserializeContainer(b *testing.B) {
 		var num uint64
 		c := container.New(encodedData)
 		num, err = c.GetNextN64()
-		newMeta.created = int64(num)
+		newMeta.Created = int64(num)
 		if err != nil {
 			b.Errorf("could not decode: %s", err)
 			return
 		}
 		num, err = c.GetNextN64()
-		newMeta.modified = int64(num)
+		newMeta.Modified = int64(num)
 		if err != nil {
 			b.Errorf("could not decode: %s", err)
 			return
 		}
 		num, err = c.GetNextN64()
-		newMeta.expires = int64(num)
+		newMeta.Expires = int64(num)
 		if err != nil {
 			b.Errorf("could not decode: %s", err)
 			return
 		}
 		num, err = c.GetNextN64()
-		newMeta.deleted = int64(num)
+		newMeta.Deleted = int64(num)
 		if err != nil {
 			b.Errorf("could not decode: %s", err)
 			return
@@ -166,22 +166,22 @@ func BenchmarkMetaSerializeVarInt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		encoded := make([]byte, 33)
 		offset := 0
-		data := varint.Pack64(uint64(testMeta.created))
+		data := varint.Pack64(uint64(testMeta.Created))
 		for _, part := range data {
 			encoded[offset] = part
 			offset++
 		}
-		data = varint.Pack64(uint64(testMeta.modified))
+		data = varint.Pack64(uint64(testMeta.Modified))
 		for _, part := range data {
 			encoded[offset] = part
 			offset++
 		}
-		data = varint.Pack64(uint64(testMeta.expires))
+		data = varint.Pack64(uint64(testMeta.Expires))
 		for _, part := range data {
 			encoded[offset] = part
 			offset++
 		}
-		data = varint.Pack64(uint64(testMeta.deleted))
+		data = varint.Pack64(uint64(testMeta.Deleted))
 		for _, part := range data {
 			encoded[offset] = part
 			offset++
@@ -207,22 +207,22 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 	// Setup
 	encoded := make([]byte, 33)
 	offset := 0
-	data := varint.Pack64(uint64(testMeta.created))
+	data := varint.Pack64(uint64(testMeta.Created))
 	for _, part := range data {
 		encoded[offset] = part
 		offset++
 	}
-	data = varint.Pack64(uint64(testMeta.modified))
+	data = varint.Pack64(uint64(testMeta.Modified))
 	for _, part := range data {
 		encoded[offset] = part
 		offset++
 	}
-	data = varint.Pack64(uint64(testMeta.expires))
+	data = varint.Pack64(uint64(testMeta.Expires))
 	for _, part := range data {
 		encoded[offset] = part
 		offset++
 	}
-	data = varint.Pack64(uint64(testMeta.deleted))
+	data = varint.Pack64(uint64(testMeta.Deleted))
 	for _, part := range data {
 		encoded[offset] = part
 		offset++
@@ -254,7 +254,7 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 			b.Error(err)
 			return
 		}
-		testMeta.created = int64(num)
+		testMeta.Created = int64(num)
 		offset += n
 
 		num, n, err = varint.Unpack64(encodedData[offset:])
@@ -262,7 +262,7 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 			b.Error(err)
 			return
 		}
-		testMeta.modified = int64(num)
+		testMeta.Modified = int64(num)
 		offset += n
 
 		num, n, err = varint.Unpack64(encodedData[offset:])
@@ -270,7 +270,7 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 			b.Error(err)
 			return
 		}
-		testMeta.expires = int64(num)
+		testMeta.Expires = int64(num)
 		offset += n
 
 		num, n, err = varint.Unpack64(encodedData[offset:])
@@ -278,7 +278,7 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 			b.Error(err)
 			return
 		}
-		testMeta.deleted = int64(num)
+		testMeta.Deleted = int64(num)
 		offset += n
 
 		switch encodedData[offset] {
