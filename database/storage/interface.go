@@ -13,6 +13,7 @@ type Interface interface {
 	Delete(key string) error
 	Query(q *query.Query) (*iterator.Iterator, error)
 
+	ReadOnly() bool
 	Maintain() error
 	MaintainThorough() error
 	Shutdown() error

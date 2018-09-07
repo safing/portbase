@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/Safing/portbase/database/iterator"
-	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/query"
+	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/storage"
 )
 
@@ -48,6 +48,11 @@ func (s *Sinkhole) Delete(key string) error {
 // Query returns a an iterator for the supplied query.
 func (s *Sinkhole) Query(q *query.Query) (*iterator.Iterator, error) {
 	return nil, errors.New("query not implemented by sinkhole")
+}
+
+// ReadOnly returns whether the database is read only.
+func (s *Sinkhole) ReadOnly() bool {
+	return false
 }
 
 // Maintain runs a light maintenance operation on the database.

@@ -2,13 +2,12 @@ package badger
 
 import (
 	"errors"
-	"time"
 
 	"github.com/dgraph-io/badger"
 
 	"github.com/Safing/portbase/database/iterator"
-	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/query"
+	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/storage"
 )
 
@@ -85,7 +84,7 @@ func (b *Badger) Get(key string) (record.Record, error) {
 		return nil, err
 	}
 
-	m, err := model.NewRawWrapper(b.name, string(item.Key()), data)
+	m, err := record.NewRawWrapper(b.name, string(item.Key()), data)
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +99,7 @@ func (b *Badger) Put(m record.Record) error {
 	}
 
 	err = b.db.Update(func(txn *badger.Txn) error {
-		if m.Meta().GetAbsoluteExpiry() > 0 {
-			txn.SetWithTTL([]byte(m.DatabaseKey()), data, time.Duration(m.Meta().GetRelativeExpiry()))
-		} else {
-			txn.Set([]byte(m.DatabaseKey()), data)
-		}
-		return nil
+		return txn.Set([]byte(m.DatabaseKey()), data)
 	})
 	return err
 }
@@ -124,6 +118,11 @@ func (b *Badger) Delete(key string) error {
 // Query returns a an iterator for the supplied query.
 func (b *Badger) Query(q *query.Query) (*iterator.Iterator, error) {
 	return nil, errors.New("query not implemented by badger")
+}
+
+// ReadOnly returns whether the database is read only.
+func (b *Badger) ReadOnly() bool {
+	return false
 }
 
 // Maintain runs a light maintenance operation on the database.

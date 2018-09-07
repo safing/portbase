@@ -8,8 +8,9 @@ import (
 
 // Errors
 var (
-	ErrNotFound         = errors.New("database: entry could not be found")
-	ErrPermissionDenied = errors.New("database: access to record denied")
+	ErrNotFound         = errors.New("database entry could not be found")
+	ErrPermissionDenied = errors.New("access to database record denied")
+	ErrReadOnly         = errors.New("database is read only")
 )
 
 func init() {
