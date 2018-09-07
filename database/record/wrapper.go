@@ -75,6 +75,14 @@ func NewWrapper(key string, meta *Meta, data []byte) (*Wrapper, error) {
 
 // Marshal marshals the object, without the database key or metadata
 func (w *Wrapper) Marshal(storageType uint8) ([]byte, error) {
+	if w.Meta() == nil {
+		return nil, errors.New("missing meta")
+	}
+
+	if w.Meta().Deleted > 0 {
+		return nil, nil
+	}
+
 	if storageType != dsd.AUTO && storageType != w.Format {
 		return nil, errors.New("could not dump model, wrapped object format mismatch")
 	}

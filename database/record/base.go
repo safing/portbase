@@ -53,6 +53,14 @@ func (b *Base) SetMeta(meta *Meta) {
 
 // Marshal marshals the object, without the database key or metadata
 func (b *Base) Marshal(format uint8) ([]byte, error) {
+	if b.Meta() == nil {
+		return nil, errors.New("missing meta")
+	}
+
+	if b.Meta().Deleted > 0 {
+		return nil, nil
+	}
+
 	dumped, err := dsd.Dump(b, format)
 	if err != nil {
 		return nil, err

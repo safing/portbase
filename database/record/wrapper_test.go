@@ -19,7 +19,7 @@ func TestWrapper(t *testing.T) {
 	testData := []byte(`J{"a": "b"}`)
 
 	// test wrapper
-	wrapper, err := NewWrapper("test:a", nil, testData)
+	wrapper, err := NewWrapper("test:a", &Meta{}, testData)
 	if err != nil {
 		t.Fatal(err)
 	}
