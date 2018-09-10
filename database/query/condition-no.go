@@ -1,9 +1,13 @@
 package query
 
+import (
+	"github.com/Safing/portbase/database/accessor"
+)
+
 type noCond struct {
 }
 
-func (c *noCond) complies(f Fetcher) bool {
+func (c *noCond) complies(acc accessor.Accessor) bool {
 	return true
 }
 

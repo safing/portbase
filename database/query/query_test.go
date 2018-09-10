@@ -2,6 +2,8 @@ package query
 
 import (
 	"testing"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 var (
@@ -44,12 +46,12 @@ var (
 }`
 )
 
-func testQuery(t *testing.T, f Fetcher, shouldMatch bool, condition Condition) {
+func testQuery(t *testing.T, acc accessor.Accessor, shouldMatch bool, condition Condition) {
 	q := New("test:").Where(condition).MustBeValid()
 
 	// fmt.Printf("%s\n", q.String())
 
-	matched := q.Matches(f)
+	matched := q.Matches(acc)
 	switch {
 	case !matched && shouldMatch:
 		t.Errorf("should match: %s", q.Print())
@@ -63,7 +65,7 @@ func TestQuery(t *testing.T) {
 	// if !gjson.Valid(testJSON) {
 	// 	t.Fatal("test json is invalid")
 	// }
-	f := NewJSONFetcher(testJSON)
+	f := accessor.NewJSONAccessor(&testJSON)
 
 	testQuery(t, f, true, Where("age", Equals, 100))
 	testQuery(t, f, true, Where("age", GreaterThan, uint8(99)))

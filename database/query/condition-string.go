@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 type stringCondition struct {
@@ -28,8 +30,8 @@ func newStringCondition(key string, operator uint8, value interface{}) *stringCo
 	}
 }
 
-func (c *stringCondition) complies(f Fetcher) bool {
-	comp, ok := f.GetString(c.key)
+func (c *stringCondition) complies(acc accessor.Accessor) bool {
+	comp, ok := acc.GetString(c.key)
 	if !ok {
 		return false
 	}

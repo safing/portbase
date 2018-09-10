@@ -3,6 +3,8 @@ package query
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 // Not negates the supplied condition.
@@ -16,8 +18,8 @@ type notCond struct {
 	notC Condition
 }
 
-func (c *notCond) complies(f Fetcher) bool {
-	return !c.notC.complies(f)
+func (c *notCond) complies(acc accessor.Accessor) bool {
+	return !c.notC.complies(acc)
 }
 
 func (c *notCond) check() error {

@@ -3,6 +3,8 @@ package query
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 // And combines multiple conditions with a logical _AND_ operator.
@@ -16,9 +18,9 @@ type andCond struct {
 	conditions []Condition
 }
 
-func (c *andCond) complies(f Fetcher) bool {
+func (c *andCond) complies(acc accessor.Accessor) bool {
 	for _, cond := range c.conditions {
-		if !cond.complies(f) {
+		if !cond.complies(acc) {
 			return false
 		}
 	}

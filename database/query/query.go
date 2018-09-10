@@ -2,8 +2,10 @@ package query
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/Safing/portbase/database/accessor"
+	"github.com/Safing/portbase/database/record"
 )
 
 // Example:
@@ -16,24 +18,23 @@ import (
 //     )
 //   )
 
-var (
-	prefixExpr = regexp.MustCompile("^[a-z-]+:")
-)
-
 // Query contains a compiled query.
 type Query struct {
-	checked bool
-	prefix  string
-	where   Condition
-	orderBy string
-	limit   int
-	offset  int
+	checked     bool
+	dbName      string
+	dbKeyPrefix string
+	where       Condition
+	orderBy     string
+	limit       int
+	offset      int
 }
 
 // New creates a new query with the supplied prefix.
 func New(prefix string) *Query {
+	dbName, dbKeyPrefix := record.ParseKey(prefix)
 	return &Query{
-		prefix: prefix,
+		dbName:      dbName,
+		dbKeyPrefix: dbKeyPrefix,
 	}
 }
 
@@ -67,11 +68,6 @@ func (q *Query) Check() (*Query, error) {
 		return q, nil
 	}
 
-	// check prefix
-	if !prefixExpr.MatchString(q.prefix) {
-		return nil, fmt.Errorf("invalid prefix: %s", q.prefix)
-	}
-
 	// check condition
 	if q.where != nil {
 		err := q.where.check()
@@ -101,8 +97,8 @@ func (q *Query) IsChecked() bool {
 }
 
 // Matches checks whether the query matches the supplied data object.
-func (q *Query) Matches(f Fetcher) bool {
-	return q.where.complies(f)
+func (q *Query) Matches(acc accessor.Accessor) bool {
+	return q.where.complies(acc)
 }
 
 // Print returns the string representation of the query.
@@ -130,5 +126,15 @@ func (q *Query) Print() string {
 		offset = fmt.Sprintf(" offset %d", q.offset)
 	}
 
-	return fmt.Sprintf("query %s%s%s%s%s", q.prefix, where, orderBy, limit, offset)
+	return fmt.Sprintf("query %s:%s%s%s%s%s", q.dbName, q.dbKeyPrefix, where, orderBy, limit, offset)
+}
+
+// DatabaseName returns the name of the database.
+func (q *Query) DatabaseName() string {
+	return q.dbName
+}
+
+// DatabaseKeyPrefix returns the key prefix for the database.
+func (q *Query) DatabaseKeyPrefix() string {
+	return q.dbKeyPrefix
 }

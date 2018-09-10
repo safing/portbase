@@ -6,6 +6,7 @@ import (
   "fmt"
   "path"
 
+	"github.com/tevino/abool"
   "github.com/Safing/portbase/database/storage"
 	"github.com/Safing/portbase/database/record"
 )
@@ -13,14 +14,16 @@ import (
 var (
 	databases     = make(map[string]*Controller)
 	databasesLock sync.Mutex
+
+	shuttingDown = abool.NewBool(false)
 )
 
-func splitKeyAndGetDatabase(key string) (dbKey string, db *Controller, err error) {
+func splitKeyAndGetDatabase(key string) (db *Controller, dbKey string, err error) {
   var dbName string
   dbName, dbKey = record.ParseKey(key)
   db, err = getDatabase(dbName)
   if err != nil {
-    return "", nil, err
+    return nil, "", err
   }
   return
 }

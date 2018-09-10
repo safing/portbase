@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 type intCondition struct {
@@ -58,8 +60,8 @@ func newIntCondition(key string, operator uint8, value interface{}) *intConditio
 	}
 }
 
-func (c *intCondition) complies(f Fetcher) bool {
-	comp, ok := f.GetInt(c.key)
+func (c *intCondition) complies(acc accessor.Accessor) bool {
+	comp, ok := acc.GetInt(c.key)
 	if !ok {
 		return false
 	}

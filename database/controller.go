@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -29,8 +28,17 @@ func newController(storageInt storage.Interface) (*Controller, error) {
 	}, nil
 }
 
+// ReadOnly returns whether the storage is read only.
+func (c *Controller) ReadOnly() bool {
+	return c.storage.ReadOnly()
+}
+
 // Get return the record with the given key.
 func (c *Controller) Get(key string) (record.Record, error) {
+	if shuttingDown.IsSet() {
+		return nil, ErrShuttingDown
+	}
+
 	r, err := c.storage.Get(key)
 	if err != nil {
 		return nil, err
@@ -48,101 +56,41 @@ func (c *Controller) Get(key string) (record.Record, error) {
 
 // Put saves a record in the database.
 func (c *Controller) Put(r record.Record) error {
+	if shuttingDown.IsSet() {
+		return ErrShuttingDown
+	}
+
 	if c.storage.ReadOnly() {
 		return ErrReadOnly
 	}
+
+	if r.Meta() == nil {
+		r.SetMeta(&record.Meta{})
+	}
+	r.Meta().Update()
 
 	return c.storage.Put(r)
 }
 
-// Delete a record from the database.
-func (c *Controller) Delete(key string) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	r, err := c.Get(key)
-	if err != nil {
-		return err
-	}
-
-	r.Lock()
-	defer r.Unlock()
-
-	r.Meta().Deleted = time.Now().Unix()
-	return c.Put(r)
-}
-
-// Partial
-// What happens if I mutate a value that does not yet exist? How would I know its type?
-func (c *Controller) InsertPartial(key string, partialObject interface{}) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	return nil
-}
-
-func (c *Controller) InsertValue(key string, attribute string, value interface{}) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	r, err := c.Get(key)
-	if err != nil {
-		return err
-	}
-
-	r.Lock()
-	defer r.Unlock()
-
-	if r.IsWrapped() {
-		wrapper, ok := r.(*record.Wrapper)
-		if !ok {
-			return errors.New("record is malformed")
-		}
-
-	} else {
-
-	}
-
-	return nil
-}
-
-// Query
+// Query executes the given query on the database.
 func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
-	return nil, nil
+	if shuttingDown.IsSet() {
+		return nil, ErrShuttingDown
+	}
+	return c.storage.Query(q, local, internal)
 }
 
-// Meta
-func (c *Controller) SetAbsoluteExpiry(key string, time int64) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	return nil
+// Maintain runs the Maintain method no the storage.
+func (c *Controller) Maintain() error {
+	return c.storage.Maintain()
 }
 
-func (c *Controller) SetRelativateExpiry(key string, duration int64) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	return nil
+// MaintainThorough runs the MaintainThorough method no the storage.
+func (c *Controller) MaintainThorough() error {
+	return c.storage.MaintainThorough()
 }
 
-func (c *Controller) MakeCrownJewel(key string) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	return nil
-}
-
-func (c *Controller) MakeSecret(key string) error {
-	if c.storage.ReadOnly() {
-		return ErrReadOnly
-	}
-
-	return nil
+// Shutdown shuts down the storage.
+func (c *Controller) Shutdown() error {
+	return c.storage.Shutdown()
 }

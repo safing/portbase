@@ -1,5 +1,9 @@
 package query
 
+import (
+	"github.com/Safing/portbase/database/accessor"
+)
+
 type errorCondition struct {
 	err error
 }
@@ -10,7 +14,7 @@ func newErrorCondition(err error) *errorCondition {
 	}
 }
 
-func (c *errorCondition) complies(f Fetcher) bool {
+func (c *errorCondition) complies(acc accessor.Accessor) bool {
 	return false
 }
 

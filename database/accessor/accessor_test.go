@@ -1,4 +1,4 @@
-package record
+package accessor
 
 import (
 	"encoding/json"
@@ -95,6 +95,16 @@ func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed bool, exp
 	}
 }
 
+func testExists(t *testing.T, acc Accessor, key string, shouldSucceed bool) {
+	ok := acc.Exists(key)
+	switch {
+	case !ok && shouldSucceed:
+		t.Errorf("%s should report key %s as existing", acc.Type(), key)
+	case ok && !shouldSucceed:
+		t.Errorf("%s should report key %s as non-existing", acc.Type(), key)
+	}
+}
+
 func testSet(t *testing.T, acc Accessor, key string, shouldSucceed bool, valueToSet interface{}) {
 	err := acc.Set(key, valueToSet)
 	switch {
@@ -150,7 +160,7 @@ func TestAccessor(t *testing.T) {
 		testSet(t, acc, "B", true, false)
 	}
 
-	// get again
+	// get again to check if new values were set
 	for _, acc := range accs {
 		testGetString(t, acc, "S", true, "coconut")
 		testGetInt(t, acc, "I", true, 44)
@@ -170,19 +180,69 @@ func TestAccessor(t *testing.T) {
 
 	// failures
 	for _, acc := range accs {
-		testGetString(t, acc, "S", false, 1)
-		testGetInt(t, acc, "I", false, 44)
-		testGetInt(t, acc, "I8", false, 512)
-		testGetInt(t, acc, "I16", false, 1000000)
-		testGetInt(t, acc, "I32", false, 44)
-		testGetInt(t, acc, "I64", false, "44")
-		testGetInt(t, acc, "UI", false, 44)
-		testGetInt(t, acc, "UI8", false, 44)
-		testGetInt(t, acc, "UI16", false, 44)
-		testGetInt(t, acc, "UI32", false, 44)
-		testGetInt(t, acc, "UI64", false, 44)
-		testGetFloat(t, acc, "F32", false, 44.44)
-		testGetFloat(t, acc, "F64", false, 44.44)
-		testGetBool(t, acc, "B", false, false)
+		testSet(t, acc, "S", false, true)
+		testSet(t, acc, "S", false, false)
+		testSet(t, acc, "S", false, 1)
+		testSet(t, acc, "S", false, 1.1)
+
+		testSet(t, acc, "I", false, "1")
+		testSet(t, acc, "I8", false, "1")
+		testSet(t, acc, "I16", false, "1")
+		testSet(t, acc, "I32", false, "1")
+		testSet(t, acc, "I64", false, "1")
+		testSet(t, acc, "UI", false, "1")
+		testSet(t, acc, "UI8", false, "1")
+		testSet(t, acc, "UI16", false, "1")
+		testSet(t, acc, "UI32", false, "1")
+		testSet(t, acc, "UI64", false, "1")
+
+		testSet(t, acc, "F32", false, "1.1")
+		testSet(t, acc, "F64", false, "1.1")
+
+		testSet(t, acc, "B", false, "false")
+		testSet(t, acc, "B", false, 1)
+		testSet(t, acc, "B", false, 1.1)
 	}
+
+	// get again to check if values werent changed when an error occurred
+	for _, acc := range accs {
+		testGetString(t, acc, "S", true, "coconut")
+		testGetInt(t, acc, "I", true, 44)
+		testGetInt(t, acc, "I8", true, 44)
+		testGetInt(t, acc, "I16", true, 44)
+		testGetInt(t, acc, "I32", true, 44)
+		testGetInt(t, acc, "I64", true, 44)
+		testGetInt(t, acc, "UI", true, 44)
+		testGetInt(t, acc, "UI8", true, 44)
+		testGetInt(t, acc, "UI16", true, 44)
+		testGetInt(t, acc, "UI32", true, 44)
+		testGetInt(t, acc, "UI64", true, 44)
+		testGetFloat(t, acc, "F32", true, 44.44)
+		testGetFloat(t, acc, "F64", true, 44.44)
+		testGetBool(t, acc, "B", true, false)
+	}
+
+	// test existence
+	for _, acc := range accs {
+		testExists(t, acc, "S", true)
+		testExists(t, acc, "I", true)
+		testExists(t, acc, "I8", true)
+		testExists(t, acc, "I16", true)
+		testExists(t, acc, "I32", true)
+		testExists(t, acc, "I64", true)
+		testExists(t, acc, "UI", true)
+		testExists(t, acc, "UI8", true)
+		testExists(t, acc, "UI16", true)
+		testExists(t, acc, "UI32", true)
+		testExists(t, acc, "UI64", true)
+		testExists(t, acc, "F32", true)
+		testExists(t, acc, "F64", true)
+		testExists(t, acc, "B", true)
+	}
+
+	// test non-existence
+	for _, acc := range accs {
+		testExists(t, acc, "X", false)
+	}
+
 }

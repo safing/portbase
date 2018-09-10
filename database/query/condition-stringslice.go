@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/utils"
 )
 
@@ -44,8 +45,8 @@ func newStringSliceCondition(key string, operator uint8, value interface{}) *str
 
 }
 
-func (c *stringSliceCondition) complies(f Fetcher) bool {
-	comp, ok := f.GetString(c.key)
+func (c *stringSliceCondition) complies(acc accessor.Accessor) bool {
+	comp, ok := acc.GetString(c.key)
 	if !ok {
 		return false
 	}

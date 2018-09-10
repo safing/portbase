@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 type boolCondition struct {
@@ -42,8 +44,8 @@ func newBoolCondition(key string, operator uint8, value interface{}) *boolCondit
 	}
 }
 
-func (c *boolCondition) complies(f Fetcher) bool {
-	comp, ok := f.GetBool(c.key)
+func (c *boolCondition) complies(acc accessor.Accessor) bool {
+	comp, ok := acc.GetBool(c.key)
 	if !ok {
 		return false
 	}

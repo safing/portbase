@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 type floatCondition struct {
@@ -62,8 +64,8 @@ func newFloatCondition(key string, operator uint8, value interface{}) *floatCond
 	}
 }
 
-func (c *floatCondition) complies(f Fetcher) bool {
-	comp, ok := f.GetFloat(c.key)
+func (c *floatCondition) complies(acc accessor.Accessor) bool {
+	comp, ok := acc.GetFloat(c.key)
 	if !ok {
 		return false
 	}

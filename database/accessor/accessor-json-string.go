@@ -1,6 +1,8 @@
-package record
+package accessor
 
 import (
+	"fmt"
+
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -19,6 +21,24 @@ func NewJSONAccessor(json *string) *JSONAccessor {
 
 // Set sets the value identified by key.
 func (ja *JSONAccessor) Set(key string, value interface{}) error {
+	result := gjson.Get(*ja.json, key)
+	if result.Exists() {
+		switch value.(type) {
+		case string:
+			if result.Type != gjson.String {
+				return fmt.Errorf("tried to set field %s (%s) to a %T value", key, result.Type.String(), value)
+			}
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			if result.Type != gjson.Number {
+				return fmt.Errorf("tried to set field %s (%s) to a %T value", key, result.Type.String(), value)
+			}
+		case bool:
+			if result.Type != gjson.True && result.Type != gjson.False {
+				return fmt.Errorf("tried to set field %s (%s) to a %T value", key, result.Type.String(), value)
+			}
+		}
+	}
+
 	new, err := sjson.Set(*ja.json, key, value)
 	if err != nil {
 		return err

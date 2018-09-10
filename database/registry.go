@@ -3,10 +3,10 @@ package database
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"sync"
 
 	"github.com/tevino/abool"
@@ -40,12 +40,18 @@ var (
 
 	registry     map[string]*RegisteredDatabase
 	registryLock sync.Mutex
+
+	nameConstraint = regexp.MustCompile("^[A-Za-z0-9_-]{5,}$")
 )
 
 // RegisterDatabase registers a new database.
 func RegisterDatabase(new *RegisteredDatabase) error {
 	if !initialized.IsSet() {
 		return errors.New("database not initialized")
+	}
+
+	if !nameConstraint.MatchString(new.Name) {
+		return errors.New("database name must only contain alphanumeric and `_-` characters and must be at least 5 characters long")
 	}
 
 	registryLock.Lock()
@@ -57,48 +63,6 @@ func RegisterDatabase(new *RegisteredDatabase) error {
 		return saveRegistry()
 	}
 
-	return nil
-}
-
-// Initialize initialized the database
-func Initialize(location string) error {
-	if initialized.SetToIf(false, true) {
-		rootDir = location
-
-		err := checkRootDir()
-		if err != nil {
-			return fmt.Errorf("could not create/open database directory (%s): %s", rootDir, err)
-		}
-
-		err = loadRegistry()
-		if err != nil {
-			return fmt.Errorf("could not load database registry (%s): %s", path.Join(rootDir, registryFileName), err)
-		}
-
-		return nil
-	}
-	return errors.New("database already initialized")
-}
-
-func checkRootDir() error {
-	// open dir
-	dir, err := os.Open(rootDir)
-	if err != nil {
-		if err == os.ErrNotExist {
-			return os.MkdirAll(rootDir, 0700)
-		}
-		return err
-	}
-	defer dir.Close()
-
-	fileInfo, err := dir.Stat()
-	if err != nil {
-		return err
-	}
-
-	if fileInfo.Mode().Perm() != 0700 {
-		return dir.Chmod(0700)
-	}
 	return nil
 }
 

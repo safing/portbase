@@ -11,7 +11,7 @@ type Interface interface {
 	Get(key string) (record.Record, error)
 	Put(m record.Record) error
 	Delete(key string) error
-	Query(q *query.Query) (*iterator.Iterator, error)
+	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
 
 	ReadOnly() bool
 	Maintain() error

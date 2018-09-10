@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 type regexCondition struct {
@@ -35,8 +37,8 @@ func newRegexCondition(key string, operator uint8, value interface{}) *regexCond
 	}
 }
 
-func (c *regexCondition) complies(f Fetcher) bool {
-	comp, ok := f.GetString(c.key)
+func (c *regexCondition) complies(acc accessor.Accessor) bool {
+	comp, ok := acc.GetString(c.key)
 	if !ok {
 		return false
 	}

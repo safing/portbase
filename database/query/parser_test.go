@@ -144,7 +144,6 @@ func testParseError(t *testing.T, queryText string, expectedErrorString string) 
 func TestParseErrors(t *testing.T) {
 	// syntax
 	testParseError(t, `query`, `unexpected end at position 5`)
-	testParseError(t, `query test`, `invalid prefix: test`)
 	testParseError(t, `query test: where`, `unexpected end at position 17`)
 	testParseError(t, `query test: where (`, `unexpected end at position 19`)
 	testParseError(t, `query test: where )`, `unknown clause ")" at position 19`)

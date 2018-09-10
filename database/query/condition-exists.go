@@ -3,6 +3,8 @@ package query
 import (
 	"errors"
 	"fmt"
+
+	"github.com/Safing/portbase/database/accessor"
 )
 
 type existsCondition struct {
@@ -17,8 +19,8 @@ func newExistsCondition(key string, operator uint8) *existsCondition {
 	}
 }
 
-func (c *existsCondition) complies(f Fetcher) bool {
-	return f.Exists(c.key)
+func (c *existsCondition) complies(acc accessor.Accessor) bool {
+	return acc.Exists(c.key)
 }
 
 func (c *existsCondition) check() error {

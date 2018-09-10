@@ -1,10 +1,14 @@
 package query
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/Safing/portbase/database/accessor"
+)
 
 // Condition is an interface to provide a common api to all condition types.
 type Condition interface {
-	complies(f Fetcher) bool
+	complies(acc accessor.Accessor) bool
 	check() error
 	string() string
 }
