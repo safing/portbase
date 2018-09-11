@@ -4,74 +4,63 @@ import (
 	"errors"
 	"sync"
   "fmt"
-  "path"
 
-	"github.com/tevino/abool"
   "github.com/Safing/portbase/database/storage"
-	"github.com/Safing/portbase/database/record"
 )
 
 var (
-	databases     = make(map[string]*Controller)
-	databasesLock sync.Mutex
-
-	shuttingDown = abool.NewBool(false)
+	controllers     = make(map[string]*Controller)
+	controllersLock sync.Mutex
 )
 
-func splitKeyAndGetDatabase(key string) (db *Controller, dbKey string, err error) {
-  var dbName string
-  dbName, dbKey = record.ParseKey(key)
-  db, err = getDatabase(dbName)
-  if err != nil {
-    return nil, "", err
-  }
-  return
-}
-
-func getDatabase(name string) (*Controller, error) {
+func getController(name string) (*Controller, error) {
   if !initialized.IsSet() {
     return nil, errors.New("database not initialized")
   }
 
-	databasesLock.Lock()
-	defer databasesLock.Unlock()
+	controllersLock.Lock()
+	defer controllersLock.Unlock()
 
   // return database if already started
-	db, ok := databases[name]
+	controller, ok := controllers[name]
 	if ok {
-    return db, nil
+    return controller, nil
 	}
 
-  registryLock.Lock()
-  defer registryLock.Unlock()
+	// get db registration
+	registeredDB, err := getDatabase(name)
+	if err != nil {
+		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+	}
 
-  // check if database exists at all
-  registeredDB, ok := registry[name]
-  if !ok {
-    return nil, fmt.Errorf(`database "%s" not registered`, name)
-  }
+	// get location
+	dbLocation, err := getLocation(name, registeredDB.StorageType)
+	if err != nil {
+		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+	}
 
   // start database
-  storageInt, err := storage.StartDatabase(name, registeredDB.StorageType, path.Join(rootDir, name, registeredDB.StorageType))
+  storageInt, err := storage.StartDatabase(name, registeredDB.StorageType, dbLocation)
   if err != nil {
     return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
   }
 
-  db, err = newController(storageInt)
+	// create controller
+  controller, err = newController(storageInt)
   if err != nil {
     return nil, fmt.Errorf(`could not create controller for database %s: %s`, name, err)
   }
 
-  databases[name] = db
-  return db, nil
+  controllers[name] = controller
+  return controller, nil
 }
 
 // InjectDatabase injects an already running database into the system.
 func InjectDatabase(name string, storageInt storage.Interface) error {
-	databasesLock.Lock()
-	defer databasesLock.Unlock()
+	controllersLock.Lock()
+	defer controllersLock.Unlock()
 
-	_, ok := databases[name]
+	_, ok := controllers[name]
 	if ok {
 		return errors.New(`database "%s" already loaded`)
 	}
@@ -88,11 +77,11 @@ func InjectDatabase(name string, storageInt storage.Interface) error {
     return fmt.Errorf(`database not of type "injected"`)
   }
 
-  db, err := newController(storageInt)
+  controller, err := newController(storageInt)
   if err != nil {
     return fmt.Errorf(`could not create controller for database %s: %s`, name, err)
   }
 
-	databases[name] = db
+	controllers[name] = controller
 	return nil
 }

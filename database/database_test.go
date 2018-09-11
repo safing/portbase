@@ -1,12 +1,16 @@
 package database
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/pprof"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Safing/portbase/database/record"
+	_ "github.com/Safing/portbase/database/storage/badger"
 )
 
 type TestRecord struct {
@@ -34,7 +38,46 @@ func (tr *TestRecord) Lock() {
 func (tr *TestRecord) Unlock() {
 }
 
-func TestDatabase(t *testing.T) {
+func makeKey(storageType, key string) string {
+	return fmt.Sprintf("%s:%s", storageType, key)
+}
+
+func testDatabase(t *testing.T, storageType string) {
+	dbName := fmt.Sprintf("testing-%s", storageType)
+	_, err := Register(&Database{
+		Name:        dbName,
+		Description: fmt.Sprintf("Unit Test Database for %s", storageType),
+		StorageType: storageType,
+		PrimaryAPI:  "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db := NewInterface(nil)
+
+	new := &TestRecord{}
+	new.SetKey(makeKey(dbName, "A"))
+	err = db.Put(new)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.Get(makeKey(dbName, "A"))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDatabaseSystem(t *testing.T) {
+
+	// panic after 10 seconds, to check for locks
+	go func() {
+		time.Sleep(10 * time.Second)
+		fmt.Println("===== TAKING TOO LONG FOR SHUTDOWN - PRINTING STACK TRACES =====")
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		os.Exit(1)
+	}()
 
 	testDir, err := ioutil.TempDir("", "testing-")
 	if err != nil {
@@ -47,21 +90,19 @@ func TestDatabase(t *testing.T) {
 	}
 	defer os.RemoveAll(testDir) // clean up
 
-	err = RegisterDatabase(&RegisteredDatabase{
-		Name:        "testing",
-		Description: "Unit Test Database",
-		StorageType: "badger",
-		PrimaryAPI:  "",
-	})
+	testDatabase(t, "badger")
+
+	err = Maintain()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db := NewInterface(nil)
+	err = MaintainThorough()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	new := &TestRecord{}
-	new.SetKey("testing:A")
-	err = db.Put(new)
+	err = Shutdown()
 	if err != nil {
 		t.Fatal(err)
 	}

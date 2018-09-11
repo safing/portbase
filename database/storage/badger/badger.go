@@ -116,7 +116,7 @@ func (b *Badger) Delete(key string) error {
 }
 
 // Query returns a an iterator for the supplied query.
-func (b *Badger) Query(q *query.Query) (*iterator.Iterator, error) {
+func (b *Badger) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	return nil, errors.New("query not implemented by badger")
 }
 

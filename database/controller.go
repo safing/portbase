@@ -17,7 +17,8 @@ type Controller struct {
 	storage   storage.Interface
 	writeLock sync.RWMutex
 	readLock  sync.RWMutex
-	migrating *abool.AtomicBool
+	migrating *abool.AtomicBool // TODO
+	hibernating *abool.AtomicBool // TODO
 }
 
 // newController creates a new controller for a storage.
@@ -25,6 +26,7 @@ func newController(storageInt storage.Interface) (*Controller, error) {
 	return &Controller{
 		storage:   storageInt,
 		migrating: abool.NewBool(false),
+		hibernating: abool.NewBool(false),
 	}, nil
 }
 
@@ -41,6 +43,10 @@ func (c *Controller) Get(key string) (record.Record, error) {
 
 	r, err := c.storage.Get(key)
 	if err != nil {
+		// replace not found error
+		if err == storage.ErrNotFound {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 
@@ -60,7 +66,7 @@ func (c *Controller) Put(r record.Record) error {
 		return ErrShuttingDown
 	}
 
-	if c.storage.ReadOnly() {
+	if c.ReadOnly() {
 		return ErrReadOnly
 	}
 

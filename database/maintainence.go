@@ -14,8 +14,8 @@ func Maintain() (err error) {
 
 // MaintainThorough runs the MaintainThorough method on all storages.
 func MaintainThorough() (err error) {
-  controllers := duplicateControllers()
-  for _, c := range controllers {
+  all := duplicateControllers()
+  for _, c := range all {
     err = c.MaintainThorough()
     if err != nil {
       return
@@ -24,26 +24,12 @@ func MaintainThorough() (err error) {
   return
 }
 
-// Shutdown shuts down the whole database system.
-func Shutdown() (err error) {
-  shuttingDown.Set()
+func duplicateControllers() (all []*Controller) {
+  controllersLock.Lock()
+  defer controllersLock.Unlock()
 
-  controllers := duplicateControllers()
   for _, c := range controllers {
-    err = c.Shutdown()
-    if err != nil {
-      return
-    }
-  }
-  return
-}
-
-func duplicateControllers() (controllers []*Controller) {
-  databasesLock.Lock()
-  defer databasesLock.Unlock()
-
-  for _, c := range databases {
-    controllers = append(controllers, c)
+    all = append(all, c)
   }
 
   return

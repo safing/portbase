@@ -10,7 +10,7 @@ import (
 type Factory func(name, location string) (Interface, error)
 
 var (
-	storages     map[string]Factory
+	storages     = make(map[string]Factory)
 	storagesLock sync.Mutex
 )
 
@@ -38,9 +38,9 @@ func StartDatabase(name, storageType, location string) (Interface, error) {
 	storagesLock.Lock()
 	defer storagesLock.Unlock()
 
-	factory, ok := storages[name]
+	factory, ok := storages[storageType]
 	if !ok {
-		return nil, fmt.Errorf("storage of this type (%s) does not exist", storageType)
+		return nil, fmt.Errorf("storage type %s not registered", storageType)
 	}
 
 	return factory(name, location)

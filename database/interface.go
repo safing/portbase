@@ -27,6 +27,19 @@ type Options struct {
 	AlwaysMakeCrownjewel bool
 }
 
+// Apply applies options to the record metadata.
+func (o *Options) Apply(r record.Record) {
+	if r.Meta() == nil {
+		r.SetMeta(&record.Meta{})
+	}
+	if o.AlwaysMakeSecret {
+		r.Meta().MakeSecret()
+	}
+	if o.AlwaysMakeCrownjewel {
+		r.Meta().MakeCrownJewel()
+	}
+}
+
 // NewInterface returns a new Interface to the database.
 func NewInterface(opts *Options) *Interface {
 	if opts == nil {
@@ -61,7 +74,7 @@ func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWri
 		dbName, dbKey = record.ParseKey(dbKey)
 	}
 
-	db, err = getDatabase(dbName)
+	db, err = getController(dbName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -72,6 +85,9 @@ func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWri
 
 	r, err = db.Get(dbKey)
 	if err != nil {
+		if err == ErrNotFound {
+			return nil, db, err
+		}
 		return nil, nil, err
 	}
 
@@ -108,26 +124,30 @@ func (i *Interface) InsertValue(key string, attribute string, value interface{})
 		return fmt.Errorf("failed to set value with %s: %s", acc.Type(), err)
 	}
 
+	i.options.Apply(r)
 	return db.Put(r)
 }
 
 // Put saves a record to the database.
 func (i *Interface) Put(r record.Record) error {
 	_, db, err := i.getRecord(r.DatabaseName(), r.DatabaseKey(), true, true)
-	if err != nil {
+	if err != nil && err != ErrNotFound {
 		return err
 	}
+
+	i.options.Apply(r)
 	return db.Put(r)
 }
 
-// PutNew saves a record to the database as a new record (ie. with a new creation timestamp).
+// PutNew saves a record to the database as a new record (ie. with new timestamps).
 func (i *Interface) PutNew(r record.Record) error {
 	_, db, err := i.getRecord(r.DatabaseName(), r.DatabaseKey(), true, true)
 	if err != nil && err != ErrNotFound {
 		return err
 	}
 
-	r.SetMeta(&record.Meta{})
+	i.options.Apply(r)
+	r.Meta().Reset()
 	return db.Put(r)
 }
 
@@ -141,6 +161,7 @@ func (i *Interface) SetAbsoluteExpiry(key string, time int64) error {
 	r.Lock()
 	defer r.Unlock()
 
+	i.options.Apply(r)
 	r.Meta().SetAbsoluteExpiry(time)
 	return db.Put(r)
 }
@@ -155,6 +176,7 @@ func (i *Interface) SetRelativateExpiry(key string, duration int64) error {
 	r.Lock()
 	defer r.Unlock()
 
+	i.options.Apply(r)
 	r.Meta().SetRelativateExpiry(duration)
 	return db.Put(r)
 }
@@ -169,6 +191,7 @@ func (i *Interface) MakeSecret(key string) error {
 	r.Lock()
 	defer r.Unlock()
 
+	i.options.Apply(r)
 	r.Meta().MakeSecret()
 	return db.Put(r)
 }
@@ -183,6 +206,7 @@ func (i *Interface) MakeCrownJewel(key string) error {
 	r.Lock()
 	defer r.Unlock()
 
+	i.options.Apply(r)
 	r.Meta().MakeCrownJewel()
 	return db.Put(r)
 }
@@ -197,13 +221,14 @@ func (i *Interface) Delete(key string) error {
 	r.Lock()
 	defer r.Unlock()
 
+	i.options.Apply(r)
 	r.Meta().Delete()
 	return db.Put(r)
 }
 
 // Query executes the given query on the database.
 func (i *Interface) Query(q *query.Query) (*iterator.Iterator, error) {
-	db, err := getDatabase(q.DatabaseName())
+	db, err := getController(q.DatabaseName())
 	if err != nil {
 		return nil, err
 	}
