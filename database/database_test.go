@@ -38,8 +38,8 @@ func (tr *TestRecord) Lock() {
 func (tr *TestRecord) Unlock() {
 }
 
-func makeKey(storageType, key string) string {
-	return fmt.Sprintf("%s:%s", storageType, key)
+func makeKey(dbName, key string) string {
+	return fmt.Sprintf("%s:%s", dbName, key)
 }
 
 func testDatabase(t *testing.T, storageType string) {
@@ -56,11 +56,36 @@ func testDatabase(t *testing.T, storageType string) {
 
 	db := NewInterface(nil)
 
-	new := &TestRecord{}
+	new := &TestRecord{
+		S:    "banana",
+		I:    42,
+		I8:   42,
+		I16:  42,
+		I32:  42,
+		I64:  42,
+		UI:   42,
+		UI8:  42,
+		UI16: 42,
+		UI32: 42,
+		UI64: 42,
+		F32:  42.42,
+		F64:  42.42,
+		B:    true,
+	}
+	new.SetMeta(&record.Meta{})
+	new.Meta().Update()
 	new.SetKey(makeKey(dbName, "A"))
 	err = db.Put(new)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	exists, err := db.Exists(makeKey(dbName, "A"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatalf("record %s should exist!", makeKey(dbName, "A"))
 	}
 
 	_, err = db.Get(makeKey(dbName, "A"))
@@ -91,6 +116,11 @@ func TestDatabaseSystem(t *testing.T) {
 	defer os.RemoveAll(testDir) // clean up
 
 	testDatabase(t, "badger")
+
+	err = MaintainRecordStates()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = Maintain()
 	if err != nil {

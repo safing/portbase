@@ -79,11 +79,11 @@ func (m *Meta) Delete() {
 }
 
 // CheckValidity checks whether the database record is valid.
-func (m *Meta) CheckValidity(now int64) (valid bool) {
+func (m *Meta) CheckValidity() (valid bool) {
 	switch {
 	case m.Deleted > 0:
 		return false
-	case m.Expires < now:
+	case m.Expires > 0 && m.Expires < time.Now().Unix():
 		return false
 	default:
 		return true

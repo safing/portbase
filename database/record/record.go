@@ -11,8 +11,8 @@ type Record interface {
 	Meta() *Meta
 	SetMeta(meta *Meta)
 
-	Marshal(format uint8) ([]byte, error)
-	MarshalRecord() ([]byte, error)
+	Marshal(r Record, format uint8) ([]byte, error)
+	MarshalRecord(r Record) ([]byte, error)
 
 	Lock()
 	Unlock()

@@ -30,7 +30,7 @@ func TestWrapper(t *testing.T) {
 		t.Error("data mismatch")
 	}
 
-	encoded, err := wrapper.Marshal(dsd.JSON)
+	encoded, err := wrapper.Marshal(wrapper, dsd.JSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestWrapper(t *testing.T) {
 	}
 
 	wrapper.SetMeta(&Meta{})
-	raw, err := wrapper.MarshalRecord()
+	raw, err := wrapper.MarshalRecord(wrapper)
 	if err != nil {
 		t.Fatal(err)
 	}

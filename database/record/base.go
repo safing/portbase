@@ -52,7 +52,7 @@ func (b *Base) SetMeta(meta *Meta) {
 }
 
 // Marshal marshals the object, without the database key or metadata
-func (b *Base) Marshal(format uint8) ([]byte, error) {
+func (b *Base) Marshal(self Record, format uint8) ([]byte, error) {
 	if b.Meta() == nil {
 		return nil, errors.New("missing meta")
 	}
@@ -61,7 +61,7 @@ func (b *Base) Marshal(format uint8) ([]byte, error) {
 		return nil, nil
 	}
 
-	dumped, err := dsd.Dump(b, format)
+	dumped, err := dsd.Dump(self, format)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (b *Base) Marshal(format uint8) ([]byte, error) {
 }
 
 // MarshalRecord packs the object, including metadata, into a byte array for saving in a database.
-func (b *Base) MarshalRecord() ([]byte, error) {
+func (b *Base) MarshalRecord(self Record) ([]byte, error) {
 	if b.Meta() == nil {
 		return nil, errors.New("missing meta")
 	}
@@ -85,7 +85,7 @@ func (b *Base) MarshalRecord() ([]byte, error) {
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := b.Marshal(dsd.JSON)
+	dataSection, err := b.Marshal(self, dsd.JSON)
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,7 @@ type Interface interface {
 	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
 
 	ReadOnly() bool
+	Injected() bool
 	Maintain() error
 	MaintainThorough() error
 	Shutdown() error

@@ -74,7 +74,7 @@ func NewWrapper(key string, meta *Meta, data []byte) (*Wrapper, error) {
 }
 
 // Marshal marshals the object, without the database key or metadata
-func (w *Wrapper) Marshal(storageType uint8) ([]byte, error) {
+func (w *Wrapper) Marshal(r Record, storageType uint8) ([]byte, error) {
 	if w.Meta() == nil {
 		return nil, errors.New("missing meta")
 	}
@@ -90,7 +90,7 @@ func (w *Wrapper) Marshal(storageType uint8) ([]byte, error) {
 }
 
 // MarshalRecord packs the object, including metadata, into a byte array for saving in a database.
-func (w *Wrapper) MarshalRecord() ([]byte, error) {
+func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 	// Duplication necessary, as the version from Base would call Base.Marshal instead of Wrapper.Marshal
 
 	if w.Meta() == nil {
@@ -108,7 +108,7 @@ func (w *Wrapper) MarshalRecord() ([]byte, error) {
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := w.Marshal(dsd.JSON)
+	dataSection, err := w.Marshal(r, dsd.JSON)
 	if err != nil {
 		return nil, err
 	}

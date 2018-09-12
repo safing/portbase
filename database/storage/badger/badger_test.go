@@ -3,6 +3,7 @@ package badger
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -46,7 +47,22 @@ func TestBadger(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a := &TestRecord{S: "banana"}
+	a := &TestRecord{
+		S:    "banana",
+		I:    42,
+		I8:   42,
+		I16:  42,
+		I32:  42,
+		I64:  42,
+		UI:   42,
+		UI8:  42,
+		UI16: 42,
+		UI32: 42,
+		UI64: 42,
+		F32:  42.42,
+		F64:  42.42,
+		B:    true,
+	}
 	a.SetMeta(&record.Meta{})
 	a.Meta().Update()
 	a.SetKey("test:A")
@@ -61,9 +77,38 @@ func TestBadger(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a1 := r1.(*TestRecord)
+	a1 := &TestRecord{}
+	_, err = record.Unwrap(r1, a1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if a.S != a1.S {
-		t.Fatal("mismatch")
+	if !reflect.DeepEqual(a, a1) {
+		t.Fatalf("mismatch, got %v", a1)
+	}
+
+	err = db.Delete("A")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.Get("A")
+	if err == nil {
+		t.Fatal("should fail")
+	}
+
+	err = db.Maintain()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.MaintainThorough()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Shutdown()
+	if err != nil {
+		t.Fatal(err)
 	}
 }

@@ -8,8 +8,8 @@ import (
 )
 
 func maintainer() {
-  ticker := time.NewTicker(1 * time.Hour)
-  tickerThorough := time.NewTicker(10 * time.Minute)
+  ticker := time.NewTicker(10 * time.Minute)
+  longTicker := time.NewTicker(1 * time.Hour)
   maintenanceWg.Add(1)
 
   for {
@@ -19,10 +19,14 @@ func maintainer() {
       if err != nil {
         log.Errorf("database: maintenance error: %s", err)
       }
-    case <- ticker.C:
-      err := database.MaintainThorough()
+    case <- longTicker.C:
+      err := database.MaintainRecordStates()
       if err != nil {
-        log.Errorf("database: maintenance (thorough) error: %s", err)
+        log.Errorf("database: record states maintenance error: %s", err)
+      }
+      err = database.MaintainThorough()
+      if err != nil {
+        log.Errorf("database: thorough maintenance error: %s", err)
       }
     case <-shutdownSignal:
       maintenanceWg.Done()

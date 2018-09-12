@@ -2,7 +2,6 @@ package database
 
 import (
 	"sync"
-	"time"
 
 	"github.com/tevino/abool"
 
@@ -35,6 +34,11 @@ func (c *Controller) ReadOnly() bool {
 	return c.storage.ReadOnly()
 }
 
+// Injected returns whether the storage is injected.
+func (c *Controller) Injected() bool {
+	return c.storage.Injected()
+}
+
 // Get return the record with the given key.
 func (c *Controller) Get(key string) (record.Record, error) {
 	if shuttingDown.IsSet() {
@@ -53,7 +57,7 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	r.Lock()
 	defer r.Unlock()
 
-	if !r.Meta().CheckValidity(time.Now().Unix()) {
+	if !r.Meta().CheckValidity() {
 		return nil, ErrNotFound
 	}
 
