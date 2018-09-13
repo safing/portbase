@@ -78,7 +78,7 @@ func TestBadger(t *testing.T) {
 	}
 
 	a1 := &TestRecord{}
-	_, err = record.Unwrap(r1, a1)
+	err = record.Unwrap(r1, a1)
 	if err != nil {
 		t.Fatal(err)
 	}

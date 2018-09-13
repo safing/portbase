@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Safing/portbase/container"
+	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/formats/dsd"
 )
 
@@ -97,4 +98,9 @@ func (b *Base) MarshalRecord(self Record) ([]byte, error) {
 // IsWrapped returns whether the record is a Wrapper.
 func (b *Base) IsWrapped() bool {
 	return false
+}
+
+// GetAccessor returns an accessor for this record, if available.
+func (b *Base) GetAccessor(self Record) accessor.Accessor {
+	return accessor.NewStructAccessor(self)
 }

@@ -6,19 +6,26 @@ import (
 	"sync"
 
 	"github.com/Safing/portbase/container"
+	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/formats/dsd"
 	"github.com/Safing/portbase/formats/varint"
 )
 
+// Wrapper wraps raw data and implements the Record interface.
 type Wrapper struct {
 	Base
+	sync.Mutex
+
 	Format uint8
 	Data   []byte
-	lock   sync.Mutex
 }
 
+// NewRawWrapper returns a record wrapper for the given data, including metadata. This is normally only used by storage backends when loading records.
 func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 	version, offset, err := varint.Unpack8(data)
+	if err != nil {
+		return nil, err
+	}
 	if version != 1 {
 		return nil, fmt.Errorf("incompatible record version: %d", version)
 	}
@@ -46,13 +53,13 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 			key,
 			newMeta,
 		},
+		sync.Mutex{},
 		format,
 		data[offset:],
-		sync.Mutex{},
 	}, nil
 }
 
-// NewWrapper returns a new model wrapper for the given data.
+// NewWrapper returns a new record wrapper for the given data.
 func NewWrapper(key string, meta *Meta, data []byte) (*Wrapper, error) {
 	format, _, err := varint.Unpack8(data)
 	if err != nil {
@@ -67,9 +74,9 @@ func NewWrapper(key string, meta *Meta, data []byte) (*Wrapper, error) {
 			dbKey:  dbKey,
 			meta:   meta,
 		},
+		sync.Mutex{},
 		format,
 		data,
-		sync.Mutex{},
 	}, nil
 }
 
@@ -117,34 +124,44 @@ func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 	return c.CompileData(), nil
 }
 
-// Lock locks the record.
-func (w *Wrapper) Lock() {
-	w.lock.Lock()
-}
-
-// Unlock unlocks the record.
-func (w *Wrapper) Unlock() {
-	w.lock.Unlock()
-}
+// // Lock locks the record.
+// func (w *Wrapper) Lock() {
+// 	w.lock.Lock()
+// }
+//
+// // Unlock unlocks the record.
+// func (w *Wrapper) Unlock() {
+// 	w.lock.Unlock()
+// }
 
 // IsWrapped returns whether the record is a Wrapper.
 func (w *Wrapper) IsWrapped() bool {
 	return true
 }
 
-func Unwrap(wrapped, new Record) (Record, error) {
+// Unwrap unwraps data into a record.
+func Unwrap(wrapped, new Record) error {
 	wrapper, ok := wrapped.(*Wrapper)
 	if !ok {
-		return nil, fmt.Errorf("cannot unwrap %T", wrapped)
+		return fmt.Errorf("cannot unwrap %T", wrapped)
 	}
 
 	_, err := dsd.Load(wrapper.Data, new)
 	if err != nil {
-		return nil, fmt.Errorf("database: failed to unwrap %T: %s", new, err)
+		return fmt.Errorf("failed to unwrap %T: %s", new, err)
 	}
 
 	new.SetKey(wrapped.Key())
 	new.SetMeta(wrapped.Meta())
 
-	return new, nil
+	return nil
+}
+
+// GetAccessor returns an accessor for this record, if available.
+func (w *Wrapper) GetAccessor(self Record) accessor.Accessor {
+	if len(w.Data) > 1 && w.Data[0] == JSON {
+		jsonData := w.Data[1:]
+		return accessor.NewJSONBytesAccessor(&jsonData)
+	}
+	return nil
 }

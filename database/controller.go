@@ -14,6 +14,10 @@ import (
 // A Controller takes care of all the extra database logic.
 type Controller struct {
 	storage   storage.Interface
+
+	hooks []*RegisteredHook
+	subscriptions []*Subscription
+
 	writeLock sync.RWMutex
 	readLock  sync.RWMutex
 	migrating *abool.AtomicBool // TODO
@@ -45,6 +49,19 @@ func (c *Controller) Get(key string) (record.Record, error) {
 		return nil, ErrShuttingDown
 	}
 
+	c.readLock.RLock()
+	defer c.readLock.RUnlock()
+
+	// process hooks
+	for _, hook := range c.hooks {
+		if hook.q.MatchesKey(key) {
+			err := hook.hook.PreGet(key)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	r, err := c.storage.Get(key)
 	if err != nil {
 		// replace not found error
@@ -57,6 +74,16 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	r.Lock()
 	defer r.Unlock()
 
+	// process hooks
+	for _, hook := range c.hooks {
+		if hook.q.Matches(r) {
+			r, err = hook.hook.PostGet(r)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if !r.Meta().CheckValidity() {
 		return nil, ErrNotFound
 	}
@@ -65,7 +92,7 @@ func (c *Controller) Get(key string) (record.Record, error) {
 }
 
 // Put saves a record in the database.
-func (c *Controller) Put(r record.Record) error {
+func (c *Controller) Put(r record.Record) (err error) {
 	if shuttingDown.IsSet() {
 		return ErrShuttingDown
 	}
@@ -74,12 +101,40 @@ func (c *Controller) Put(r record.Record) error {
 		return ErrReadOnly
 	}
 
+	r.Lock()
+	defer r.Unlock()
+
+	// process hooks
+	for _, hook := range c.hooks {
+		if hook.q.Matches(r) {
+		r, err = hook.hook.PrePut(r)
+		if err != nil {
+			return err
+		}
+	}
+	}
+
 	if r.Meta() == nil {
 		r.SetMeta(&record.Meta{})
 	}
 	r.Meta().Update()
 
-	return c.storage.Put(r)
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
+	err = c.storage.Put(r)
+	if err != nil {
+		return err
+	}
+
+	// process hooks
+	for _, hook := range c.hooks {
+		if hook.q.Matches(r) {
+			hook.hook.PostPut(r)
+		}
+	}
+
+	return nil
 }
 
 // Query executes the given query on the database.
@@ -87,20 +142,39 @@ func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iter
 	if shuttingDown.IsSet() {
 		return nil, ErrShuttingDown
 	}
-	return c.storage.Query(q, local, internal)
+
+	c.readLock.RLock()
+	it, err := c.storage.Query(q, local, internal)
+	if err != nil {
+		c.readLock.RUnlock()
+		return nil, err
+	}
+
+	go c.readUnlockerAfterQuery(it)
+	return it, nil
+}
+
+func (c *Controller) readUnlockerAfterQuery(it *iterator.Iterator) {
+	<- it.Done
+	c.readLock.RUnlock()
 }
 
 // Maintain runs the Maintain method no the storage.
 func (c *Controller) Maintain() error {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
 	return c.storage.Maintain()
 }
 
 // MaintainThorough runs the MaintainThorough method no the storage.
 func (c *Controller) MaintainThorough() error {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
 	return c.storage.MaintainThorough()
 }
 
 // Shutdown shuts down the storage.
 func (c *Controller) Shutdown() error {
+	// TODO: should we wait for gets/puts/queries to complete?
 	return c.storage.Shutdown()
 }

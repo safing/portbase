@@ -3,98 +3,63 @@
 /*
 Package database provides a universal interface for interacting with the database.
 
-The Lazy Database
+A Lazy Database
 
 The database system can handle Go structs as well as serialized data by the dsd package.
 While data is in transit within the system, it does not know which form it currently has. Only when it reaches its destination, it must ensure that it is either of a certain type or dump it.
 
-Internals
+Record Interface
 
-The database system uses the Model interface to transparently handle all types of structs that get saved in the database. Structs include Base struct to fulfill most parts of the Model interface.
+The database system uses the Record interface to transparently handle all types of structs that get saved in the database. Structs include the Base struct to fulfill most parts of the Record interface.
 
-Boilerplate Code
+Boilerplate Code:
 
-Receiving model, using as struct:
+    type Example struct {
+      record.Base
+      sync.Mutex
 
-  // At some point, declare a pointer to your model.
-  // This is only used to identify the model, so you can reuse it safely for this purpose
-  var cowModel *Cow // only use this as parameter for database.EnsureModel-like functions
-
-  receivedModel := <- models // chan database.Model
-  cow, ok := database.SilentEnsureModel(receivedModel, cowModel).(*Cow)
-  if !ok {
-    panic("received model does not match expected model")
-  }
-
-  // more verbose, in case you need better error handling
-  receivedModel := <- models // chan database.Model
-  genericModel, err := database.EnsureModel(receivedModel, cowModel)
-  if err != nil {
-    panic(err)
-  }
-  cow, ok := genericModel.(*Cow)
-  if !ok {
-    panic("received model does not match expected model")
-  }
-
-Receiving a model, dumping:
-
-  // receivedModel <- chan database.Model
-  bytes, err := database.DumpModel(receivedModel, dsd.JSON) // or other dsd format
-  if err != nil {
-    panic(err)
-  }
-
-Model definition:
-
-  // Cow makes moo.
-  type Cow struct {
-    database.Base
-    // Fields...
-  }
-
-  var cowModel *Cow // only use this as parameter for database.EnsureModel-like functions
-
-  func init() {
-    database.RegisterModel(cowModel, func() database.Model { return new(Cow) })
-  }
-
-  // this all you need, but you might find the following code helpful:
-
-  var cowNamespace = datastore.NewKey("/Cow")
-
-  // Create saves Cow with the provided name in the default namespace.
-  func (m *Cow) Create(name string) error {
-    return m.CreateObject(&cowNamespace, name, m)
-  }
-
-  // CreateInNamespace saves Cow with the provided name in the provided namespace.
-  func (m *Cow) CreateInNamespace(namespace *datastore.Key, name string) error {
-    return m.CreateObject(namespace, name, m)
-  }
-
-  // Save saves Cow.
-  func (m *Cow) Save() error {
-    return m.SaveObject(m)
-  }
-
-  // GetCow fetches Cow with the provided name from the default namespace.
-  func GetCow(name string) (*Cow, error) {
-    return GetCowFromNamespace(&cowNamespace, name)
-  }
-
-  // GetCowFromNamespace fetches Cow with the provided name from the provided namespace.
-  func GetCowFromNamespace(namespace *datastore.Key, name string) (*Cow, error) {
-    object, err := database.GetAndEnsureModel(namespace, name, cowModel)
-    if err != nil {
-      return nil, err
+      Name  string
+      Score int
     }
-    model, ok := object.(*Cow)
-    if !ok {
-      return nil, database.NewMismatchError(object, cowModel)
+
+    var (
+      db = database.NewInterface(nil)
+    )
+
+    // GetExample gets an Example from the database.
+    func GetExample(key string) (*Example, error) {
+      r, err := db.Get(key)
+      if err != nil {
+        return nil, err
+      }
+
+      // unwrap
+      if r.IsWrapped() {
+        // only allocate a new struct, if we need it
+        new := &Example{}
+        err = record.Unwrap(r, new)
+        if err != nil {
+          return nil, err
+        }
+        return new, nil
+      }
+
+      // or adjust type
+      new, ok := r.(*Example)
+      if !ok {
+        return nil, fmt.Errorf("record not of type *Example, but %T", r)
+      }
+      return new, nil
     }
-    return model, nil
-  }
+
+    func (e *Example) Save() error {
+      return db.Put(e)
+    }
+
+    func (e *Example) SaveAs(key string) error {
+      e.SetKey(key)
+      return db.PutNew(e)
+    }
 
 */
 package database

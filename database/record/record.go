@@ -1,5 +1,9 @@
 package record
 
+import (
+	"github.com/Safing/portbase/database/accessor"
+)
+
 // Record provides an interface for uniformally handling database records.
 type Record interface {
 	Key() string          // test:config
@@ -11,8 +15,9 @@ type Record interface {
 	Meta() *Meta
 	SetMeta(meta *Meta)
 
-	Marshal(r Record, format uint8) ([]byte, error)
-	MarshalRecord(r Record) ([]byte, error)
+	Marshal(self Record, format uint8) ([]byte, error)
+	MarshalRecord(self Record) ([]byte, error)
+	GetAccessor(self Record) accessor.Accessor
 
 	Lock()
 	Unlock()

@@ -3,40 +3,16 @@ package database
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
+	"reflect"
 	"runtime/pprof"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/Safing/portbase/database/record"
+	q "github.com/Safing/portbase/database/query"
 	_ "github.com/Safing/portbase/database/storage/badger"
 )
-
-type TestRecord struct {
-	record.Base
-	lock sync.Mutex
-	S    string
-	I    int
-	I8   int8
-	I16  int16
-	I32  int32
-	I64  int64
-	UI   uint
-	UI8  uint8
-	UI16 uint16
-	UI32 uint32
-	UI64 uint64
-	F32  float32
-	F64  float64
-	B    bool
-}
-
-func (tr *TestRecord) Lock() {
-}
-
-func (tr *TestRecord) Unlock() {
-}
 
 func makeKey(dbName, key string) string {
 	return fmt.Sprintf("%s:%s", dbName, key)
@@ -56,26 +32,20 @@ func testDatabase(t *testing.T, storageType string) {
 
 	db := NewInterface(nil)
 
-	new := &TestRecord{
-		S:    "banana",
-		I:    42,
-		I8:   42,
-		I16:  42,
-		I32:  42,
-		I64:  42,
-		UI:   42,
-		UI8:  42,
-		UI16: 42,
-		UI32: 42,
-		UI64: 42,
-		F32:  42.42,
-		F64:  42.42,
-		B:    true,
+	A := NewExample(makeKey(dbName, "A"), "Herbert", 411)
+	err = A.Save()
+	if err != nil {
+		t.Fatal(err)
 	}
-	new.SetMeta(&record.Meta{})
-	new.Meta().Update()
-	new.SetKey(makeKey(dbName, "A"))
-	err = db.Put(new)
+
+	B := NewExample(makeKey(dbName, "B"), "Fritz", 347)
+	err = B.Save()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	C := NewExample(makeKey(dbName, "C"), "Norbert", 217)
+	err = C.Save()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,10 +58,40 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatalf("record %s should exist!", makeKey(dbName, "A"))
 	}
 
-	_, err = db.Get(makeKey(dbName, "A"))
+	A1, err := GetExample(makeKey(dbName, "A"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !reflect.DeepEqual(A, A1) {
+		log.Fatalf("A and A1 mismatch, A1: %v", A1)
+	}
+
+	query, err := q.New(dbName).Where(
+		q.And(
+			q.Where("Name", q.EndsWith, "bert"),
+			q.Where("Score", q.GreaterThan, 100),
+		),
+	).Check()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	it, err := db.Query(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cnt := 0
+	for _ = range it.Next {
+		cnt++
+	}
+	if it.Error != nil {
+		t.Fatal(it.Error)
+	}
+	if cnt != 2 {
+		t.Fatal("expected two records")
+	}
+
 }
 
 func TestDatabaseSystem(t *testing.T) {

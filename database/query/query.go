@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/database/record"
 )
 
@@ -74,8 +73,6 @@ func (q *Query) Check() (*Query, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		q.where = &noCond{}
 	}
 
 	q.checked = true
@@ -96,8 +93,28 @@ func (q *Query) IsChecked() bool {
 	return q.checked
 }
 
+// MatchesKey checks whether the query matches the supplied database key (key without database prefix).
+func (q *Query) MatchesKey(dbKey string) bool {
+	if !strings.HasPrefix(dbKey, q.dbKeyPrefix) {
+		return false
+	}
+	return true
+}
+
 // Matches checks whether the query matches the supplied data object.
-func (q *Query) Matches(acc accessor.Accessor) bool {
+func (q *Query) Matches(r record.Record) bool {
+	if !strings.HasPrefix(r.DatabaseKey(), q.dbKeyPrefix) {
+		return false
+	}
+
+	if q.where == nil {
+		return false
+	}
+
+	acc := r.GetAccessor(r)
+	if acc == nil {
+		return false
+	}
 	return q.where.complies(acc)
 }
 

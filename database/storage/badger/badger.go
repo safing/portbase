@@ -7,7 +7,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 
-	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/database/iterator"
 	"github.com/Safing/portbase/database/query"
 	"github.com/Safing/portbase/database/record"
@@ -139,29 +138,24 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 				continue
 			}
 
-			if len(r.Data) > 1 {
-				jsonData := r.Data[1:]
-				acc := accessor.NewJSONBytesAccessor(&jsonData)
-				if q.Matches(acc) {
-
-					copiedData, err := item.ValueCopy(nil)
-					if err != nil {
-						return err
-					}
-					new, err := record.NewRawWrapper(b.name, string(item.Key()), copiedData)
-					if err != nil {
-						return err
-					}
+			acc := r.GetAccessor(r)
+			if acc != nil && q.Matches(acc) {
+				copiedData, err := item.ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				new, err := record.NewRawWrapper(b.name, string(item.Key()), copiedData)
+				if err != nil {
+					return err
+				}
+				select {
+				case queryIter.Next <- new:
+				default:
 					select {
 					case queryIter.Next <- new:
-					default:
-						select {
-						case queryIter.Next <- new:
-						case <-time.After(1 * time.Minute):
-							return errors.New("query timeout")
-						}
+					case <-time.After(1 * time.Minute):
+						return errors.New("query timeout")
 					}
-
 				}
 			}
 
@@ -173,6 +167,7 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 		queryIter.Error = err
 	}
 	close(queryIter.Next)
+	close(queryIter.Done)
 }
 
 // ReadOnly returns whether the database is read only.
