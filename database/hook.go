@@ -15,39 +15,37 @@ type Hook interface {
 
 	UsesPrePut() bool
 	PrePut(r record.Record) (record.Record, error)
-
-	UsesPostPut() bool
-	PostPut(r record.Record)
 }
 
 // RegisteredHook is a registered database hook.
 type RegisteredHook struct {
-	q    *query.Query
-	hook Hook
+	q *query.Query
+	h Hook
 }
 
 // RegisterHook registeres a hook for records matching the given query in the database.
-func RegisterHook(q *query.Query, hook Hook) error {
+func RegisterHook(q *query.Query, hook Hook) (*RegisteredHook, error) {
 	_, err := q.Check()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c, err := getController(q.DatabaseName())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.readLock.Lock()
-	defer c.readLock.Lock()
+	defer c.readLock.Unlock()
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 
-	c.hooks = append(c.hooks, &RegisteredHook{
-		q:    q,
-		hook: hook,
-	})
-	return nil
+	rh := &RegisteredHook{
+		q: q,
+		h: hook,
+	}
+	c.hooks = append(c.hooks, rh)
+	return rh, nil
 }
 
 // Cancel unhooks the hook.
@@ -58,7 +56,7 @@ func (h *RegisteredHook) Cancel() error {
 	}
 
 	c.readLock.Lock()
-	defer c.readLock.Lock()
+	defer c.readLock.Unlock()
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 

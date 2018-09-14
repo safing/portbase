@@ -4,8 +4,23 @@ import (
 	"github.com/Safing/portbase/database/record"
 )
 
-// HookBase implements the Hook interface.
+// HookBase implements the Hook interface and provides dummy functions to reduce boilerplate.
 type HookBase struct {
+}
+
+// UsesPreGet implements the Hook interface and returns false.
+func (b *HookBase) UsesPreGet() bool {
+	return false
+}
+
+// UsesPostGet implements the Hook interface and returns false.
+func (b *HookBase) UsesPostGet() bool {
+	return false
+}
+
+// UsesPrePut implements the Hook interface and returns false.
+func (b *HookBase) UsesPrePut() bool {
+	return false
 }
 
 // PreGet implements the Hook interface.
@@ -21,9 +36,4 @@ func (b *HookBase) PostGet(r record.Record) (record.Record, error) {
 // PrePut implements the Hook interface.
 func (b *HookBase) PrePut(r record.Record) (record.Record, error) {
 	return r, nil
-}
-
-// PostPut implements the Hook interface.
-func (b *HookBase) PostPut(r record.Record) {
-	return
 }

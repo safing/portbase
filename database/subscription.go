@@ -25,7 +25,7 @@ func Subscribe(q *query.Query) (*Subscription, error) {
 	}
 
 	c.readLock.Lock()
-	defer c.readLock.Lock()
+	defer c.readLock.Unlock()
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 
@@ -45,7 +45,7 @@ func (s *Subscription) Cancel() error {
 	}
 
 	c.readLock.Lock()
-	defer c.readLock.Lock()
+	defer c.readLock.Unlock()
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 

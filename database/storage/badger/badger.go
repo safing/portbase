@@ -138,13 +138,12 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 				continue
 			}
 
-			acc := r.GetAccessor(r)
-			if acc != nil && q.Matches(acc) {
+			if q.MatchesRecord(r) {
 				copiedData, err := item.ValueCopy(nil)
 				if err != nil {
 					return err
 				}
-				new, err := record.NewRawWrapper(b.name, string(item.Key()), copiedData)
+				new, err := record.NewRawWrapper(b.name, r.DatabaseKey(), copiedData)
 				if err != nil {
 					return err
 				}

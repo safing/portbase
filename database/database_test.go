@@ -30,6 +30,19 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatal(err)
 	}
 
+	// hook
+	hook, err := RegisterHook(q.New(dbName).MustBeValid(), &HookBase{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sub
+	sub, err := Subscribe(q.New(dbName).MustBeValid())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// interface
 	db := NewInterface(nil)
 
 	A := NewExample(makeKey(dbName, "A"), "Herbert", 411)
@@ -92,6 +105,15 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatal("expected two records")
 	}
 
+	err = hook.Cancel()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = sub.Cancel()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func TestDatabaseSystem(t *testing.T) {
@@ -99,7 +121,7 @@ func TestDatabaseSystem(t *testing.T) {
 	// panic after 10 seconds, to check for locks
 	go func() {
 		time.Sleep(10 * time.Second)
-		fmt.Println("===== TAKING TOO LONG FOR SHUTDOWN - PRINTING STACK TRACES =====")
+		fmt.Println("===== TAKING TOO LONG - PRINTING STACK TRACES =====")
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		os.Exit(1)
 	}()

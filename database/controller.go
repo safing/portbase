@@ -54,8 +54,8 @@ func (c *Controller) Get(key string) (record.Record, error) {
 
 	// process hooks
 	for _, hook := range c.hooks {
-		if hook.q.MatchesKey(key) {
-			err := hook.hook.PreGet(key)
+		if hook.h.UsesPreGet() && hook.q.MatchesKey(key) {
+			err := hook.h.PreGet(key)
 			if err != nil {
 				return nil, err
 			}
@@ -76,8 +76,8 @@ func (c *Controller) Get(key string) (record.Record, error) {
 
 	// process hooks
 	for _, hook := range c.hooks {
-		if hook.q.Matches(r) {
-			r, err = hook.hook.PostGet(r)
+		if hook.h.UsesPostGet() && hook.q.Matches(r) {
+			r, err = hook.h.PostGet(r)
 			if err != nil {
 				return nil, err
 			}
@@ -106,12 +106,12 @@ func (c *Controller) Put(r record.Record) (err error) {
 
 	// process hooks
 	for _, hook := range c.hooks {
-		if hook.q.Matches(r) {
-		r, err = hook.hook.PrePut(r)
-		if err != nil {
-			return err
+		if hook.h.UsesPrePut() && hook.q.Matches(r) {
+			r, err = hook.h.PrePut(r)
+			if err != nil {
+				return err
+			}
 		}
-	}
 	}
 
 	if r.Meta() == nil {
@@ -127,10 +127,13 @@ func (c *Controller) Put(r record.Record) (err error) {
 		return err
 	}
 
-	// process hooks
-	for _, hook := range c.hooks {
-		if hook.q.Matches(r) {
-			hook.hook.PostPut(r)
+	// process subscriptions
+	for _, sub := range c.subscriptions {
+		if sub.q.Matches(r) {
+			select {
+			case sub.Feed <- r:
+			default:
+			}
 		}
 	}
 

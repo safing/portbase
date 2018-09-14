@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Safing/portbase/database/query"
 	"github.com/Safing/portbase/database/record"
 )
 
@@ -42,6 +43,7 @@ func TestBadger(t *testing.T) {
 	}
 	defer os.RemoveAll(testDir) // clean up
 
+	// start
 	db, err := NewBadger("test", testDir)
 	if err != nil {
 		t.Fatal(err)
@@ -67,11 +69,13 @@ func TestBadger(t *testing.T) {
 	a.Meta().Update()
 	a.SetKey("test:A")
 
+	// put record
 	err = db.Put(a)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// get and compare
 	r1, err := db.Get("A")
 	if err != nil {
 		t.Fatal(err)
@@ -87,26 +91,46 @@ func TestBadger(t *testing.T) {
 		t.Fatalf("mismatch, got %v", a1)
 	}
 
+	// test query
+	q := query.New("").MustBeValid()
+	it, err := db.Query(q, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cnt := 0
+	for _ = range it.Next {
+		cnt++
+	}
+	if it.Error != nil {
+		t.Fatal(err)
+	}
+	if cnt != 1 {
+		t.Fatalf("unexpected query result count: %d", cnt)
+	}
+
+	// delete
 	err = db.Delete("A")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// check if its gone
 	_, err = db.Get("A")
 	if err == nil {
 		t.Fatal("should fail")
 	}
 
+	// maintenance
 	err = db.Maintain()
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	err = db.MaintainThorough()
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// shutdown
 	err = db.Shutdown()
 	if err != nil {
 		t.Fatal(err)

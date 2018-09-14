@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/database/record"
 )
 
@@ -101,14 +102,10 @@ func (q *Query) MatchesKey(dbKey string) bool {
 	return true
 }
 
-// Matches checks whether the query matches the supplied data object.
-func (q *Query) Matches(r record.Record) bool {
-	if !strings.HasPrefix(r.DatabaseKey(), q.dbKeyPrefix) {
-		return false
-	}
-
+// MatchesRecord checks whether the query matches the supplied database record (value only).
+func (q *Query) MatchesRecord(r record.Record) bool {
 	if q.where == nil {
-		return false
+		return true
 	}
 
 	acc := r.GetAccessor(r)
@@ -118,14 +115,33 @@ func (q *Query) Matches(r record.Record) bool {
 	return q.where.complies(acc)
 }
 
+// MatchesAccessor checks whether the query matches the supplied accessor (value only).
+func (q *Query) MatchesAccessor(acc accessor.Accessor) bool {
+	if q.where == nil {
+		return true
+	}
+	return q.where.complies(acc)
+}
+
+// Matches checks whether the query matches the supplied database record.
+func (q *Query) Matches(r record.Record) bool {
+	if q.MatchesKey(r.DatabaseKey()) {
+		return true
+	}
+	return q.MatchesRecord(r)
+}
+
 // Print returns the string representation of the query.
 func (q *Query) Print() string {
-	where := q.where.string()
-	if where != "" {
-		if strings.HasPrefix(where, "(") {
-			where = where[1 : len(where)-1]
+	var where string
+	if q.where != nil {
+		where = q.where.string()
+		if where != "" {
+			if strings.HasPrefix(where, "(") {
+				where = where[1 : len(where)-1]
+			}
+			where = fmt.Sprintf(" where %s", where)
 		}
-		where = fmt.Sprintf(" where %s", where)
 	}
 
 	var orderBy string

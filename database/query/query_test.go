@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/Safing/portbase/database/accessor"
+	"github.com/Safing/portbase/database/record"
 )
 
 var (
@@ -46,12 +46,12 @@ var (
 }`
 )
 
-func testQuery(t *testing.T, acc accessor.Accessor, shouldMatch bool, condition Condition) {
+func testQuery(t *testing.T, r record.Record, shouldMatch bool, condition Condition) {
 	q := New("test:").Where(condition).MustBeValid()
 
-	// fmt.Printf("%s\n", q.String())
+	// fmt.Printf("%s\n", q.Print())
 
-	matched := q.Matches(acc)
+	matched := q.Matches(r)
 	switch {
 	case !matched && shouldMatch:
 		t.Errorf("should match: %s", q.Print())
@@ -65,36 +65,39 @@ func TestQuery(t *testing.T) {
 	// if !gjson.Valid(testJSON) {
 	// 	t.Fatal("test json is invalid")
 	// }
-	f := accessor.NewJSONAccessor(&testJSON)
+	r, err := record.NewWrapper("", nil, append([]byte("J"), []byte(testJSON)...))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	testQuery(t, f, true, Where("age", Equals, 100))
-	testQuery(t, f, true, Where("age", GreaterThan, uint8(99)))
-	testQuery(t, f, true, Where("age", GreaterThanOrEqual, 99))
-	testQuery(t, f, true, Where("age", GreaterThanOrEqual, 100))
-	testQuery(t, f, true, Where("age", LessThan, 101))
-	testQuery(t, f, true, Where("age", LessThanOrEqual, "101"))
-	testQuery(t, f, true, Where("age", LessThanOrEqual, 100))
+	testQuery(t, r, true, Where("age", Equals, 100))
+	testQuery(t, r, true, Where("age", GreaterThan, uint8(99)))
+	testQuery(t, r, true, Where("age", GreaterThanOrEqual, 99))
+	testQuery(t, r, true, Where("age", GreaterThanOrEqual, 100))
+	testQuery(t, r, true, Where("age", LessThan, 101))
+	testQuery(t, r, true, Where("age", LessThanOrEqual, "101"))
+	testQuery(t, r, true, Where("age", LessThanOrEqual, 100))
 
-	testQuery(t, f, true, Where("temperature", FloatEquals, 120.413))
-	testQuery(t, f, true, Where("temperature", FloatGreaterThan, 120))
-	testQuery(t, f, true, Where("temperature", FloatGreaterThanOrEqual, 120))
-	testQuery(t, f, true, Where("temperature", FloatGreaterThanOrEqual, 120.413))
-	testQuery(t, f, true, Where("temperature", FloatLessThan, 121))
-	testQuery(t, f, true, Where("temperature", FloatLessThanOrEqual, "121"))
-	testQuery(t, f, true, Where("temperature", FloatLessThanOrEqual, "120.413"))
+	testQuery(t, r, true, Where("temperature", FloatEquals, 120.413))
+	testQuery(t, r, true, Where("temperature", FloatGreaterThan, 120))
+	testQuery(t, r, true, Where("temperature", FloatGreaterThanOrEqual, 120))
+	testQuery(t, r, true, Where("temperature", FloatGreaterThanOrEqual, 120.413))
+	testQuery(t, r, true, Where("temperature", FloatLessThan, 121))
+	testQuery(t, r, true, Where("temperature", FloatLessThanOrEqual, "121"))
+	testQuery(t, r, true, Where("temperature", FloatLessThanOrEqual, "120.413"))
 
-	testQuery(t, f, true, Where("lastly.yay", SameAs, "final"))
-	testQuery(t, f, true, Where("lastly.yay", Contains, "ina"))
-	testQuery(t, f, true, Where("lastly.yay", StartsWith, "fin"))
-	testQuery(t, f, true, Where("lastly.yay", EndsWith, "nal"))
-	testQuery(t, f, true, Where("lastly.yay", In, "draft,final"))
-	testQuery(t, f, true, Where("lastly.yay", In, "final,draft"))
+	testQuery(t, r, true, Where("lastly.yay", SameAs, "final"))
+	testQuery(t, r, true, Where("lastly.yay", Contains, "ina"))
+	testQuery(t, r, true, Where("lastly.yay", StartsWith, "fin"))
+	testQuery(t, r, true, Where("lastly.yay", EndsWith, "nal"))
+	testQuery(t, r, true, Where("lastly.yay", In, "draft,final"))
+	testQuery(t, r, true, Where("lastly.yay", In, "final,draft"))
 
-	testQuery(t, f, true, Where("happy", Is, true))
-	testQuery(t, f, true, Where("happy", Is, "true"))
-	testQuery(t, f, true, Where("happy", Is, "t"))
-	testQuery(t, f, true, Not(Where("happy", Is, "0")))
-	testQuery(t, f, true, And(
+	testQuery(t, r, true, Where("happy", Is, true))
+	testQuery(t, r, true, Where("happy", Is, "true"))
+	testQuery(t, r, true, Where("happy", Is, "t"))
+	testQuery(t, r, true, Not(Where("happy", Is, "0")))
+	testQuery(t, r, true, And(
 		Where("happy", Is, "1"),
 		Not(Or(
 			Where("happy", Is, false),
@@ -102,8 +105,8 @@ func TestQuery(t *testing.T) {
 		)),
 	))
 
-	testQuery(t, f, true, Where("happy", Exists, nil))
+	testQuery(t, r, true, Where("happy", Exists, nil))
 
-	testQuery(t, f, true, Where("created", Matches, "^2014-[0-9]{2}-[0-9]{2}T"))
+	testQuery(t, r, true, Where("created", Matches, "^2014-[0-9]{2}-[0-9]{2}T"))
 
 }
