@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// Variable Type IDs for frontend Identification. Values over 100 are free for custom use.
+// Variable Type IDs for frontend Identification. Values from 100 are free for custom use.
 const (
 	OptTypeString      uint8 = 1
 	OptTypeStringArray uint8 = 2
