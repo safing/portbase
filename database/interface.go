@@ -228,10 +228,42 @@ func (i *Interface) Delete(key string) error {
 
 // Query executes the given query on the database.
 func (i *Interface) Query(q *query.Query) (*iterator.Iterator, error) {
+	_, err := q.Check()
+	if err != nil {
+		return nil, err
+	}
+
 	db, err := getController(q.DatabaseName())
 	if err != nil {
 		return nil, err
 	}
 
 	return db.Query(q, i.options.Local, i.options.Internal)
+}
+
+// Subscribe subscribes to updates matching the given query.
+func (i *Interface) Subscribe(q *query.Query) (*Subscription, error) {
+	_, err := q.Check()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := getController(q.DatabaseName())
+	if err != nil {
+		return nil, err
+	}
+
+	c.readLock.Lock()
+	defer c.readLock.Unlock()
+	c.writeLock.Lock()
+	defer c.writeLock.Unlock()
+
+	sub := &Subscription{
+		q:        q,
+		local:    i.options.Local,
+		internal: i.options.Internal,
+		Feed:     make(chan record.Record, 100),
+	}
+	c.subscriptions = append(c.subscriptions, sub)
+	return sub, nil
 }

@@ -129,7 +129,7 @@ func (c *Controller) Put(r record.Record) (err error) {
 
 	// process subscriptions
 	for _, sub := range c.subscriptions {
-		if sub.q.Matches(r) {
+		if r.Meta().CheckPermission(sub.local, sub.internal) && sub.q.Matches(r) {
 			select {
 			case sub.Feed <- r:
 			default:

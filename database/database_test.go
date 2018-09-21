@@ -36,14 +36,14 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatal(err)
 	}
 
+	// interface
+	db := NewInterface(nil)
+
 	// sub
-	sub, err := Subscribe(q.New(dbName).MustBeValid())
+	sub, err := db.Subscribe(q.New(dbName).MustBeValid())
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// interface
-	db := NewInterface(nil)
 
 	A := NewExample(makeKey(dbName, "A"), "Herbert", 411)
 	err = A.Save()

@@ -1,5 +1,3 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package api
 
 import (
@@ -8,21 +6,24 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func NewRouter() *mux.Router {
-	router := mux.NewRouter().StrictSlash(true)
+var (
+	additionalRoutes map[string]func(arg1 http.ResponseWriter, arg2 *http.Request)
+)
 
-	for _, route := range routes {
-		var handler http.Handler
+func RegisterAdditionalRoute(path string, handleFunc func(arg1 http.ResponseWriter, arg2 *http.Request)) {
+	if additionalRoutes == nil {
+		additionalRoutes = make(map[string]func(arg1 http.ResponseWriter, arg2 *http.Request))
+	}
+	additionalRoutes[path] = handleFunc
+}
 
-		handler = route.Handler
-		handler = Logger(handler, route.Name)
+func Serve() {
 
-		router.
-			Methods(route.Method).
-			PathPrefix(route.Path).
-			Name(route.Name).
-			Handler(handler)
+	router := mux.NewRouter()
+	router.HandleFunc("/api/database/v1", startDatabaseAPI)
+
+	for path, handleFunc := range additionalRoutes {
+		router.HandleFunc(path, handleFunc)
 	}
 
-	return router
 }
