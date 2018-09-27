@@ -7,18 +7,6 @@ import (
 	"sync"
 )
 
-// Variable Type IDs for frontend Identification. Values from 100 are free for custom use.
-const (
-	OptTypeString      uint8 = 1
-	OptTypeStringArray uint8 = 2
-	OptTypeInt         uint8 = 3
-	OptTypeBool        uint8 = 4
-
-	ExpertiseLevelUser      uint8 = 1
-	ExpertiseLevelExpert    uint8 = 2
-	ExpertiseLevelDeveloper uint8 = 3
-)
-
 var (
 	optionsLock sync.RWMutex
 	options     = make(map[string]*Option)
@@ -26,18 +14,6 @@ var (
 	// ErrIncompleteCall is return when RegisterOption is called with empty mandatory values.
 	ErrIncompleteCall = errors.New("could not register config option: all fields, except for the validationRegex are mandatory")
 )
-
-// Option describes a configuration option.
-type Option struct {
-	Name            string
-	Key             string
-	Description     string
-	ExpertiseLevel  uint8
-	OptType         uint8
-	DefaultValue    interface{}
-	ValidationRegex string
-	compiledRegex   *regexp.Regexp
-}
 
 // Register registers a new configuration option.
 func Register(option *Option) error {

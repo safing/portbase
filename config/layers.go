@@ -5,15 +5,14 @@ import (
 	"sync"
 	"fmt"
 
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+	"github.com/Safing/portbase/log"
 )
 
 var (
 	configLock sync.RWMutex
 
-	userConfig    = ""
-	defaultConfig = ""
+	userConfig    = make(map[string]interface{})
+	defaultConfig = make(map[string]interface{})
 
 	// ErrInvalidJSON is returned by SetConfig and SetDefaultConfig if they receive invalid json.
 	ErrInvalidJSON = errors.New("json string invalid")
@@ -22,112 +21,109 @@ var (
 	ErrInvalidOptionType = errors.New("invalid option value type")
 )
 
-// SetConfig sets the (prioritized) user defined config.
-func SetConfig(json string) error {
-	if !gjson.Valid(json) {
-		return ErrInvalidJSON
-	}
-
+// setConfig sets the (prioritized) user defined config.
+func setConfig(m map[string]interface{}) error {
 	configLock.Lock()
 	defer configLock.Unlock()
-	userConfig = json
+	userConfig = m
 	resetValidityFlag()
+
+	go pushFullUpdate()
 
 	return nil
 }
 
 // SetDefaultConfig sets the (fallback) default config.
-func SetDefaultConfig(json string) error {
-	if !gjson.Valid(json) {
-		return ErrInvalidJSON
-	}
-
+func SetDefaultConfig(m map[string]interface{}) error {
 	configLock.Lock()
 	defer configLock.Unlock()
-	defaultConfig = json
+	defaultConfig = m
 	resetValidityFlag()
+
+	go pushFullUpdate()
 
 	return nil
 }
 
-func validateValue(name string, value interface{}) error {
+func validateValue(name string, value interface{}) (*Option, error) {
 	optionsLock.RLock()
 	defer optionsLock.RUnlock()
 
 	option, ok := options[name]
 	if !ok {
-		switch value.(type) {
-		case string:
-			return nil
-		case []string:
-			return nil
-		case int:
-			return nil
-		case bool:
-			return nil
-		default:
-			return ErrInvalidOptionType
-		}
+		return nil, errors.New("config option does not exist")
 	}
 
 	switch v := value.(type) {
 	case string:
 		if option.OptType != OptTypeString {
-			return fmt.Errorf("expected type string for option %s, got type %T", name, v)
+			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), name, v)
 		}
 		if option.compiledRegex != nil {
 			if !option.compiledRegex.MatchString(v) {
-				return fmt.Errorf("validation failed: string \"%s\" did not match regex for option %s", v, name)
+				return nil, fmt.Errorf("validation failed: string \"%s\" did not match regex for option %s", v, name)
 			}
 		}
-		return nil
+		return option, nil
 	case []string:
 		if option.OptType != OptTypeStringArray {
-			return fmt.Errorf("expected type string for option %s, got type %T", name, v)
+			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), name, v)
 		}
 		if option.compiledRegex != nil {
 			for pos, entry := range v {
 				if !option.compiledRegex.MatchString(entry) {
-					return fmt.Errorf("validation failed: string \"%s\" at index %d did not match regex for option %s", entry, pos, name)
+					return nil, fmt.Errorf("validation failed: string \"%s\" at index %d did not match regex for option %s", entry, pos, name)
 				}
 			}
 		}
-		return nil
-	case int:
+		return option, nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		if option.OptType != OptTypeInt {
-			return fmt.Errorf("expected type int for option %s, got type %T", name, v)
+			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), name, v)
 		}
-		return nil
+		if option.compiledRegex != nil {
+			if !option.compiledRegex.MatchString(fmt.Sprintf("%d", v)) {
+				return nil, fmt.Errorf("validation failed: number \"%d\" did not match regex for option %s", v, name)
+			}
+		}
+		return option, nil
 	case bool:
 		if option.OptType != OptTypeBool {
-			return fmt.Errorf("expected type bool for option %s, got type %T", name, v)
+			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), name, v)
 		}
-		return nil
+		return option, nil
 	default:
-		return ErrInvalidOptionType
+		return nil, fmt.Errorf("invalid option value type: %T", value)
 	}
 }
 
 // SetConfigOption sets a single value in the (prioritized) user defined config.
 func SetConfigOption(name string, value interface{}) error {
+	return setConfigOption(name, value, true)
+}
+
+func setConfigOption(name string, value interface{}, push bool) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
 	var err error
-	var newConfig string
 
 	if value == nil {
-		newConfig, err = sjson.Delete(userConfig, name)
+		delete(userConfig, name)
 	} else {
-		err = validateValue(name, value)
+		var option *Option
+		option, err = validateValue(name, value)
 		if err == nil {
-			newConfig, err = sjson.Set(userConfig, name, value)
+			userConfig[name] = value
+			if push {
+				go pushUpdate(option)
+			}
 		}
 	}
 
 	if err == nil {
-		userConfig = newConfig
 		resetValidityFlag()
+		go saveConfig()
 	}
 
 	return err
@@ -135,23 +131,29 @@ func SetConfigOption(name string, value interface{}) error {
 
 // SetDefaultConfigOption sets a single value in the (fallback) default config.
 func SetDefaultConfigOption(name string, value interface{}) error {
+	return setDefaultConfigOption(name, value, true)
+}
+
+func setDefaultConfigOption(name string, value interface{}, push bool) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
 	var err error
-	var newConfig string
 
 	if value == nil {
-		newConfig, err = sjson.Delete(defaultConfig, name)
+		delete(defaultConfig, name)
 	} else {
-		err = validateValue(name, value)
+		var option *Option
+		option, err = validateValue(name, value)
 		if err == nil {
-			newConfig, err = sjson.Set(defaultConfig, name, value)
+			defaultConfig[name] = value
+			if push {
+				go pushUpdate(option)
+			}
 		}
 	}
 
 	if err == nil {
-		defaultConfig = newConfig
 		resetValidityFlag()
 	}
 
@@ -159,72 +161,113 @@ func SetDefaultConfigOption(name string, value interface{}) error {
 }
 
 // findValue find the correct value in the user or default config.
-func findValue(name string) (result gjson.Result) {
+func findValue(name string) (result interface{}) {
 	configLock.RLock()
 	defer configLock.RUnlock()
 
-	result = gjson.Get(userConfig, name)
-	if !result.Exists() {
-		result = gjson.Get(defaultConfig, name)
+	result, ok := userConfig[name]
+	if ok {
+		return
 	}
-	return result
+
+	result, ok = defaultConfig[name]
+	if ok {
+		return
+	}
+
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	option, ok := options[name]
+	if ok {
+		return option.DefaultValue
+	}
+
+	log.Errorf("config: request for unregistered option: %s", name)
+	return nil
 }
 
 // findStringValue validates and returns the value with the given name.
 func findStringValue(name string, fallback string) (value string) {
 	result := findValue(name)
-	if !result.Exists() {
+	if result == nil {
 		return fallback
 	}
-	if result.Type != gjson.String {
-		return fallback
+	v, ok := result.(string)
+	if ok {
+		return v
 	}
-	return result.String()
+	return fallback
 }
 
 // findStringArrayValue validates and returns the value with the given name.
 func findStringArrayValue(name string, fallback []string) (value []string) {
 	result := findValue(name)
-	if !result.Exists() {
+	if result == nil {
 		return fallback
 	}
-	if !result.IsArray() {
-		return fallback
-	}
-	results := result.Array()
-	for _, r := range results {
-		if r.Type != gjson.String {
-			return fallback
+
+	v, ok := result.([]interface{})
+	if ok {
+		new := make([]string, len(v))
+		for i, val := range v {
+			s, ok := val.(string)
+			if ok {
+				new[i] = s
+			} else {
+				return fallback
+			}
 		}
-		value = append(value, r.String())
+		return new
 	}
-	return value
+
+	return fallback
 }
 
 // findIntValue validates and returns the value with the given name.
 func findIntValue(name string, fallback int64) (value int64) {
 	result := findValue(name)
-	if !result.Exists() {
+	if result == nil {
 		return fallback
 	}
-	if result.Type != gjson.Number {
-		return fallback
+	switch v := result.(type) {
+	case int:
+		return int64(v)
+	case int8:
+		return int64(v)
+	case int16:
+		return int64(v)
+	case int32:
+		return int64(v)
+	case int64:
+		return v
+	case uint:
+		return int64(v)
+	case uint8:
+		return int64(v)
+	case uint16:
+		return int64(v)
+	case uint32:
+		return int64(v)
+	case uint64:
+		return int64(v)
+	case float32:
+		return int64(v)
+	case float64:
+		return int64(v)
 	}
-	return result.Int()
+	return fallback
 }
 
 // findBoolValue validates and returns the value with the given name.
 func findBoolValue(name string, fallback bool) (value bool) {
 	result := findValue(name)
-	if !result.Exists() {
+	if result == nil {
 		return fallback
 	}
-	switch result.Type {
-	case gjson.True:
-		return true
-	case gjson.False:
-		return false
-	default:
-		return fallback
+	v, ok := result.(bool)
+	if ok {
+		return v
 	}
+	return fallback
 }

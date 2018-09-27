@@ -2,14 +2,41 @@ package config
 
 import (
 	"testing"
+
+	"github.com/Safing/portbase/log"
 )
+
+func parseAndSetConfig(jsonData string) error {
+	m, err := JSONToMap([]byte(jsonData))
+	if err != nil {
+		return err
+	}
+
+	return setConfig(m)
+}
+
+func parseAndSetDefaultConfig(jsonData string) error {
+	m, err := JSONToMap([]byte(jsonData))
+	if err != nil {
+		return err
+	}
+
+	return SetDefaultConfig(m)
+}
 
 func TestGet(t *testing.T) {
 
-	err := SetConfig(`
+	err := log.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = parseAndSetConfig(`
   {
     "monkey": "1",
-		"zebra": ["black", "white"],
+		"zebras": {
+			"zebra": ["black", "white"]
+		},
     "elephant": 2,
 		"hot": true,
 		"cold": false
@@ -19,7 +46,7 @@ func TestGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = SetDefaultConfig(`
+	err = parseAndSetDefaultConfig(`
   {
     "monkey": "0",
     "snake": "0",
@@ -35,7 +62,7 @@ func TestGet(t *testing.T) {
 		t.Fatalf("monkey should be 1, is %s", monkey())
 	}
 
-	zebra := GetAsStringArray("zebra", []string{})
+	zebra := GetAsStringArray("zebras/zebra", []string{})
 	if len(zebra()) != 2 || zebra()[0] != "black" || zebra()[1] != "white" {
 		t.Fatalf("zebra should be [\"black\", \"white\"], is %v", zebra())
 	}
@@ -55,7 +82,7 @@ func TestGet(t *testing.T) {
 		t.Fatalf("cold should be false, is %v", cold())
 	}
 
-	err = SetConfig(`
+	err = parseAndSetConfig(`
   {
     "monkey": "3"
   }
@@ -79,7 +106,7 @@ func TestGet(t *testing.T) {
 
 func BenchmarkGetAsStringCached(b *testing.B) {
 	// Setup
-	err := SetConfig(`
+	err := parseAndSetConfig(`
   {
     "monkey": "banana"
   }
@@ -100,7 +127,7 @@ func BenchmarkGetAsStringCached(b *testing.B) {
 
 func BenchmarkGetAsStringRefetch(b *testing.B) {
 	// Setup
-	err := SetConfig(`
+	err := parseAndSetConfig(`
   {
     "monkey": "banana"
   }
@@ -120,7 +147,7 @@ func BenchmarkGetAsStringRefetch(b *testing.B) {
 
 func BenchmarkGetAsIntCached(b *testing.B) {
 	// Setup
-	err := SetConfig(`
+	err := parseAndSetConfig(`
   {
     "monkey": 1
   }
@@ -141,7 +168,7 @@ func BenchmarkGetAsIntCached(b *testing.B) {
 
 func BenchmarkGetAsIntRefetch(b *testing.B) {
 	// Setup
-	err := SetConfig(`
+	err := parseAndSetConfig(`
   {
     "monkey": 1
   }
