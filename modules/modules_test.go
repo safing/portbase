@@ -79,7 +79,7 @@ func TestOrdering(t *testing.T) {
 func resetModules() {
 	for _, module := range modules {
 		module.Active.UnSet()
-		module.starting = false
+		module.inTransition = false
 	}
 }
 

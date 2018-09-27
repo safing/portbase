@@ -22,13 +22,13 @@ var (
 
 // Module represents a module.
 type Module struct {
-	Name   string
-	Active *abool.AtomicBool
+	Name         string
+	Active       *abool.AtomicBool
+	inTransition bool
 
-	prep     func() error
-	start    func() error
-	starting bool
-	stop     func() error
+	prep  func() error
+	start func() error
+	stop  func() error
 
 	dependencies []string
 }

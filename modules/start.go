@@ -41,7 +41,6 @@ func Start() error {
 	err = startModules()
 	if err != nil {
 		log.Critical(err.Error())
-		Shutdown()
 		return err
 	}
 
@@ -73,7 +72,7 @@ moduleLoop:
 		switch {
 		case module.Active.IsSet():
 			active++
-		case module.starting:
+		case module.inTransition:
 			modulesInProgress = true
 		default:
 			for _, depName := range module.dependencies {
@@ -104,7 +103,7 @@ moduleLoop:
 func startModules() error {
 	var modulesStarting sync.WaitGroup
 
-	reports := make(chan error, 0)
+	reports := make(chan error, 10)
 	for {
 		readyToStart, done, err := checkStartStatus()
 		if err != nil {
@@ -117,15 +116,16 @@ func startModules() error {
 
 		for _, module := range readyToStart {
 			modulesStarting.Add(1)
-			module.starting = true
+			module.inTransition = true
 			nextModule := module // workaround go vet alert
 			go func() {
 				startErr := nextModule.start()
 				if startErr != nil {
-					reports <- fmt.Errorf("modules: could not start module %s: %s", nextModule.Name, err)
+					reports <- fmt.Errorf("modules: could not start module %s: %s", nextModule.Name, startErr)
 				} else {
-					log.Debugf("modules: started %s", nextModule.Name)
+					log.Infof("modules: started %s", nextModule.Name)
 					nextModule.Active.Set()
+					nextModule.inTransition = false
 					reports <- nil
 				}
 				modulesStarting.Done()
