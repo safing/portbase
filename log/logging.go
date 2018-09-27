@@ -138,10 +138,10 @@ func Start() error {
 		SetFileLevels(newFileLevels)
 	}
 
+	fmt.Println(fmt.Sprintf("%s%s ▶ BOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), endColor()))
 	go writer()
-	Info("logging: started")
-	return nil
 
+	return nil
 }
 
 // Shutdown writes remaining log lines and then stops the logger.

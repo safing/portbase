@@ -43,13 +43,7 @@ func writer() {
 				case line = <-logBuffer:
 					writeLine(line)
 				case <-time.After(10 * time.Millisecond):
-					writeLine(&logLine{
-						"===== LOGGING STOPPED =====",
-						WarningLevel,
-						time.Now(),
-						"",
-						0,
-					})
+					fmt.Println(fmt.Sprintf("%s%s ◀ EOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), endColor()))
 					return
 				}
 			}
