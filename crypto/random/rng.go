@@ -27,14 +27,14 @@ func init() {
 
 	config.Register(&config.Option{
 		Name:            "RNG Cipher",
-		Key:             "random.rng_cipher",
+		Key:             "random/rng_cipher",
 		Description:     "Cipher to use for the Fortuna RNG. Requires restart to take effect.",
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeString,
 		DefaultValue:    "aes",
 		ValidationRegex: "^(aes|serpent)$",
 	})
-	rngCipherOption = config.GetAsString("random.rng_cipher", "aes")
+	rngCipherOption = config.GetAsString("random/rng_cipher", "aes")
 }
 
 func prep() error {

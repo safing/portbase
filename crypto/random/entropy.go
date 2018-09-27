@@ -17,14 +17,14 @@ var (
 func init() {
 	config.Register(&config.Option{
 		Name:            "Minimum Feed Entropy",
-		Key:             "random.min_feed_entropy",
+		Key:             "random/min_feed_entropy",
 		Description:     "The minimum amount of entropy before a entropy source is feed to the RNG, in bits.",
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
 		DefaultValue:    256,
 		ValidationRegex: "^[0-9]{3,5}$",
 	})
-	minFeedEntropy = config.GetAsInt("random.min_feed_entropy", 256)
+	minFeedEntropy = config.GetAsInt("random/min_feed_entropy", 256)
 }
 
 // The Feeder is used to feed entropy to the RNG.
