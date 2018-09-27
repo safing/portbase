@@ -66,9 +66,9 @@ func TestConversion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load error (string): %s", err)
 	}
-	tb := b.(*[]byte)
+	tb := b.([]byte)
 
-	if !bytes.Equal(*tb, []byte("def")) {
+	if !bytes.Equal(tb, []byte("def")) {
 		t.Errorf("Load (string): subject and loaded object are not equal (%v != %v)", tb, []byte("def"))
 	}
 
