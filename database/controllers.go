@@ -30,7 +30,7 @@ func getController(name string) (*Controller, error) {
 	// get db registration
 	registeredDB, err := getDatabase(name)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+		return nil, fmt.Errorf(`could not start database %s: %s`, name, err)
 	}
 
 	// get location
@@ -56,13 +56,13 @@ func getController(name string) (*Controller, error) {
 }
 
 // InjectDatabase injects an already running database into the system.
-func InjectDatabase(name string, storageInt storage.Interface) error {
+func InjectDatabase(name string, storageInt storage.Interface) (*Controller, error) {
 	controllersLock.Lock()
 	defer controllersLock.Unlock()
 
 	_, ok := controllers[name]
 	if ok {
-		return errors.New(`database "%s" already loaded`)
+		return nil, errors.New(`database "%s" already loaded`)
 	}
 
   registryLock.Lock()
@@ -71,17 +71,17 @@ func InjectDatabase(name string, storageInt storage.Interface) error {
   // check if database is registered
   registeredDB, ok := registry[name]
   if !ok {
-    return fmt.Errorf(`database "%s" not registered`, name)
+    return nil, fmt.Errorf(`database "%s" not registered`, name)
   }
   if registeredDB.StorageType != "injected" {
-    return fmt.Errorf(`database not of type "injected"`)
+    return nil, fmt.Errorf(`database not of type "injected"`)
   }
 
   controller, err := newController(storageInt)
   if err != nil {
-    return fmt.Errorf(`could not create controller for database %s: %s`, name, err)
+    return nil, fmt.Errorf(`could not create controller for database %s: %s`, name, err)
   }
 
 	controllers[name] = controller
-	return nil
+	return controller, nil
 }

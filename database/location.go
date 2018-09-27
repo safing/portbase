@@ -39,6 +39,11 @@ func ensureDirectory(dirPath string) error {
 	return nil
 }
 
+// GetDatabaseRoot returns the root directory of the database.
+func GetDatabaseRoot() string {
+	return rootDir
+}
+
 // getLocation returns the storage location for the given name and type.
 func getLocation(name, storageType string) (string, error) {
 	location := path.Join(rootDir, databasesSubDir, name, storageType)

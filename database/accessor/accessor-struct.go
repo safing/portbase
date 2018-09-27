@@ -86,6 +86,15 @@ func (sa *StructAccessor) Set(key string, value interface{}) error {
 	return nil
 }
 
+// Get returns the value found by the given json key and whether it could be successfully extracted.
+func (sa *StructAccessor) Get(key string) (value interface{}, ok bool) {
+	field := sa.object.FieldByName(key)
+	if !field.IsValid() || !field.CanInterface() {
+		return nil, false
+	}
+	return field.Interface(), true
+}
+
 // GetString returns the string found by the given json key and whether it could be successfully extracted.
 func (sa *StructAccessor) GetString(key string) (value string, ok bool) {
 	field := sa.object.FieldByName(key)
@@ -93,6 +102,20 @@ func (sa *StructAccessor) GetString(key string) (value string, ok bool) {
 		return "", false
 	}
 	return field.String(), true
+}
+
+// GetStringArray returns the []string found by the given json key and whether it could be successfully extracted.
+func (sa *StructAccessor) GetStringArray(key string) (value []string, ok bool) {
+	field := sa.object.FieldByName(key)
+	if !field.IsValid() || field.Kind() != reflect.Slice || !field.CanInterface() {
+		return nil, false
+	}
+	v := field.Interface()
+	slice, ok := v.([]string)
+	if !ok {
+		return nil, false
+	}
+	return slice, true
 }
 
 // GetInt returns the int found by the given json key and whether it could be successfully extracted.

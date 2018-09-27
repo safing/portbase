@@ -16,10 +16,11 @@ func TestWrapper(t *testing.T) {
 	_ = m
 
 	// create test data
-	testData := []byte(`J{"a": "b"}`)
+	testData := []byte(`{"a": "b"}`)
+	encodedTestData := []byte(`J{"a": "b"}`)
 
 	// test wrapper
-	wrapper, err := NewWrapper("test:a", &Meta{}, testData)
+	wrapper, err := NewWrapper("test:a", &Meta{}, JSON, testData)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +35,7 @@ func TestWrapper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(testData, encoded) {
+	if !bytes.Equal(encodedTestData, encoded) {
 		t.Error("marshal mismatch")
 	}
 

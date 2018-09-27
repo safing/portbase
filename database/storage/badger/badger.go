@@ -163,7 +163,7 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 	})
 
 	if err != nil {
-		queryIter.Error = err
+		queryIter.Err = err
 	}
 	close(queryIter.Next)
 	close(queryIter.Done)

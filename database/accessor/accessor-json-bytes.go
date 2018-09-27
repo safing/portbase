@@ -36,6 +36,10 @@ func (ja *JSONBytesAccessor) Set(key string, value interface{}) error {
 			if result.Type != gjson.True && result.Type != gjson.False {
 				return fmt.Errorf("tried to set field %s (%s) to a %T value", key, result.Type.String(), value)
 			}
+		case []string:
+			if !result.IsArray() {
+				return fmt.Errorf("tried to set field %s (%s) to a %T value", key, result.Type.String(), value)
+			}
 		}
 	}
 
@@ -47,6 +51,15 @@ func (ja *JSONBytesAccessor) Set(key string, value interface{}) error {
 	return nil
 }
 
+// Get returns the value found by the given json key and whether it could be successfully extracted.
+func (ja *JSONBytesAccessor) Get(key string) (value interface{}, ok bool) {
+	result := gjson.GetBytes(*ja.json, key)
+	if !result.Exists() {
+		return nil, false
+	}
+	return result.Value(), true
+}
+
 // GetString returns the string found by the given json key and whether it could be successfully extracted.
 func (ja *JSONBytesAccessor) GetString(key string) (value string, ok bool) {
 	result := gjson.GetBytes(*ja.json, key)
@@ -54,6 +67,24 @@ func (ja *JSONBytesAccessor) GetString(key string) (value string, ok bool) {
 		return emptyString, false
 	}
 	return result.String(), true
+}
+
+// GetStringArray returns the []string found by the given json key and whether it could be successfully extracted.
+func (ja *JSONBytesAccessor) GetStringArray(key string) (value []string, ok bool) {
+	result := gjson.GetBytes(*ja.json, key)
+	if !result.Exists() && !result.IsArray() {
+		return nil, false
+	}
+	slice := result.Array()
+	new := make([]string, len(slice))
+	for i, res := range slice {
+		if res.Type == gjson.String {
+			new[i] = res.String()
+		} else {
+			return nil, false
+		}
+	}
+	return new, true
 }
 
 // GetInt returns the int found by the given json key and whether it could be successfully extracted.

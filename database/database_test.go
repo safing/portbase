@@ -98,8 +98,8 @@ func testDatabase(t *testing.T, storageType string) {
 	for _ = range it.Next {
 		cnt++
 	}
-	if it.Error != nil {
-		t.Fatal(it.Error)
+	if it.Err != nil {
+		t.Fatal(it.Err)
 	}
 	if cnt != 2 {
 		t.Fatal("expected two records")
