@@ -2,11 +2,13 @@ package api
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 	"github.com/tevino/abool"
+	"github.com/tidwall/gjson"
 
 	"github.com/Safing/portbase/container"
 	"github.com/Safing/portbase/database"
@@ -50,7 +52,7 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 	}
 	wsConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		errMsg := fmt.Sprintf("could not upgrade to websocket: %s", err)
+		errMsg := fmt.Sprintf("could not upgrade: %s", err)
 		log.Error(errMsg)
 		http.Error(w, errMsg, 400)
 		return
@@ -78,11 +80,12 @@ func (api *DatabaseAPI) handler() {
 	//    124|ok|<key>|<data>
 	//    124|done
 	//    124|error|<message>
+	//    124|warning|<message> // error with single record, operation continues
 	// 125|sub|<query>
 	//    125|upd|<key>|<data>
 	//    125|new|<key>|<data>
 	//    125|delete|<key>|<data>
-	//    125|warning|<message> // does not cancel the subscription
+	//    125|warning|<message> // error with single record, operation continues
 	// 127|qsub|<query>
 	//    127|ok|<key>|<data>
 	//    127|done
@@ -90,7 +93,7 @@ func (api *DatabaseAPI) handler() {
 	//    127|upd|<key>|<data>
 	//    127|new|<key>|<data>
 	//    127|delete|<key>|<data>
-	//    127|warning|<message> // does not cancel the subscription
+	//    127|warning|<message> // error with single record, operation continues
 
 	// 128|create|<key>|<data>
 	//    128|success
@@ -115,7 +118,7 @@ func (api *DatabaseAPI) handler() {
 			return
 		}
 
-		parts := bytes.SplitN(msg, []byte("|"), 2)
+		parts := bytes.SplitN(msg, []byte("|"), 3)
 		if len(parts) != 3 {
 			api.send(nil, dbMsgTypeError, []byte("bad request: malformed message"))
 			continue
@@ -137,7 +140,7 @@ func (api *DatabaseAPI) handler() {
 		case "create", "update", "insert":
 
 			// split key and payload
-			dataParts := bytes.SplitN(parts[2], []byte("|"), 1)
+			dataParts := bytes.SplitN(parts[2], []byte("|"), 2)
 			if len(dataParts) != 2 {
 				api.send(nil, dbMsgTypeError, []byte("bad request: malformed message"))
 				continue
@@ -146,10 +149,10 @@ func (api *DatabaseAPI) handler() {
 			switch string(parts[1]) {
 			case "create":
 				// 128|create|<key>|<data>
-				go api.handleCreate(parts[0], string(dataParts[0]), dataParts[1])
+				go api.handlePut(parts[0], string(dataParts[0]), dataParts[1], true)
 			case "update":
 				// 129|update|<key>|<data>
-				go api.handleUpdate(parts[0], string(dataParts[0]), dataParts[1])
+				go api.handlePut(parts[0], string(dataParts[0]), dataParts[1], false)
 			case "insert":
 				// 130|insert|<key>|<data>
 				go api.handleInsert(parts[0], string(dataParts[0]), dataParts[1])
@@ -224,6 +227,7 @@ func (api *DatabaseAPI) handleQuery(opID []byte, queryText string) {
 	//    124|done
 	//    124|warning|<message>
 	//    124|error|<message>
+	//    124|warning|<message> // error with single record, operation continues
 
 	var err error
 
@@ -250,8 +254,8 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 		}
 		api.send(opID, dbMsgTypeOk, data)
 	}
-	if it.Error != nil {
-		api.send(opID, dbMsgTypeError, []byte(err.Error()))
+	if it.Err != nil {
+		api.send(opID, dbMsgTypeError, []byte(it.Err.Error()))
 		return false
 	}
 
@@ -266,7 +270,7 @@ func (api *DatabaseAPI) handleSub(opID []byte, queryText string) {
 	//    125|upd|<key>|<data>
 	//    125|new|<key>|<data>
 	//    125|delete|<key>
-	//    125|warning|<message> // does not cancel the subscription
+	//    125|warning|<message> // error with single record, operation continues
 	var err error
 
 	q, err := query.ParseQuery(queryText)
@@ -314,7 +318,7 @@ func (api *DatabaseAPI) handleQsub(opID []byte, queryText string) {
 	//    127|upd|<key>|<data>
 	//    127|new|<key>|<data>
 	//    127|delete|<key>
-	//    127|warning|<message> // does not cancel the subscription
+	//    127|warning|<message> // error with single record, operation continues
 
 	var err error
 
@@ -335,20 +339,92 @@ func (api *DatabaseAPI) handleQsub(opID []byte, queryText string) {
 	api.processSub(opID, sub)
 }
 
-func (api *DatabaseAPI) handleCreate(opID []byte, key string, data []byte) {
+func (api *DatabaseAPI) handlePut(opID []byte, key string, data []byte, create bool) {
 	// 128|create|<key>|<data>
 	//    128|success
 	//    128|error|<message>
-}
-func (api *DatabaseAPI) handleUpdate(opID []byte, key string, data []byte) {
+
 	// 129|update|<key>|<data>
 	//    129|success
 	//    129|error|<message>
+
+	raw := make([]byte, len(data)+1)
+	raw[0] = record.JSON
+	copy(raw[1:], data)
+
+	dbName, dbKey := record.ParseKey(key)
+
+	r, err := record.NewRawWrapper(dbName, dbKey, raw)
+	if err != nil {
+		api.send(opID, dbMsgTypeError, []byte(err.Error()))
+		return
+	}
+
+	if create {
+		err = api.db.PutNew(r)
+	} else {
+		err = api.db.Put(r)
+	}
+	if err != nil {
+		api.send(opID, dbMsgTypeError, []byte(err.Error()))
+		return
+	}
+	api.send(opID, dbMsgTypeSuccess, nil)
 }
+
 func (api *DatabaseAPI) handleInsert(opID []byte, key string, data []byte) {
 	// 130|insert|<key>|<data>
 	//    130|success
 	//    130|error|<message>
+
+	r, err := api.db.Get(key)
+	if err != nil {
+		api.send(opID, dbMsgTypeError, []byte(err.Error()))
+		return
+	}
+
+	acc := r.GetAccessor(r)
+
+	result := gjson.ParseBytes(data)
+	anythingPresent := false
+	var insertError error
+	result.ForEach(func(key gjson.Result, value gjson.Result) bool {
+		anythingPresent = true
+		if !key.Exists() {
+			insertError = errors.New("values must be in a map")
+			return false
+		}
+		if key.Type != gjson.String {
+			insertError = errors.New("keys must be strings")
+			return false
+		}
+		if !value.Exists() {
+			insertError = errors.New("non-existent value")
+			return false
+		}
+		insertError = acc.Set(key.String(), value.Value())
+		if insertError != nil {
+			return false
+		}
+		return true
+	})
+
+	if insertError != nil {
+		api.send(opID, dbMsgTypeError, []byte(insertError.Error()))
+		return
+	}
+	if !anythingPresent {
+		api.send(opID, dbMsgTypeError, []byte("could not find any valid values"))
+		return
+	}
+
+	err = api.db.Put(r)
+	if err != nil {
+		api.send(opID, dbMsgTypeError, []byte(err.Error()))
+		return
+	}
+
+	api.send(opID, dbMsgTypeSuccess, nil)
 }
 
 func (api *DatabaseAPI) shutdown() {
