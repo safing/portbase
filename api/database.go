@@ -111,6 +111,9 @@ func (api *DatabaseAPI) handler() {
 	// 130|insert|<key>|<data>
 	//    130|success
 	//    130|error|<message>
+	// 131|delete|<key>
+	//    131|success
+	//    131|error|<message>
 
 	for {
 
@@ -145,7 +148,6 @@ func (api *DatabaseAPI) handler() {
 			// 127|qsub|<query>
 			go api.handleQsub(parts[0], string(parts[2]))
 		case "create", "update", "insert":
-
 			// split key and payload
 			dataParts := bytes.SplitN(parts[2], []byte("|"), 2)
 			if len(dataParts) != 2 {
@@ -164,7 +166,9 @@ func (api *DatabaseAPI) handler() {
 				// 130|insert|<key>|<data>
 				go api.handleInsert(parts[0], string(dataParts[0]), dataParts[1])
 			}
-
+		case "delete":
+			// 131|delete|<key>
+			go api.handleDelete(parts[0], string(parts[2]))
 		default:
 			api.send(parts[0], dbMsgTypeError, "bad request: unknown method", nil)
 		}
@@ -442,6 +446,19 @@ func (api *DatabaseAPI) handleInsert(opID []byte, key string, data []byte) {
 		return
 	}
 
+	api.send(opID, dbMsgTypeSuccess, emptyString, nil)
+}
+
+func (api *DatabaseAPI) handleDelete(opID []byte, key string) {
+	// 131|delete|<key>
+	//    131|success
+	//    131|error|<message>
+
+	err := api.db.Delete(key)
+	if err != nil {
+		api.send(opID, dbMsgTypeError, err.Error(), nil)
+		return
+	}
 	api.send(opID, dbMsgTypeSuccess, emptyString, nil)
 }
 
