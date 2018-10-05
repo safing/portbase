@@ -31,6 +31,7 @@ func init() {
 		Description:     "Cipher to use for the Fortuna RNG. Requires restart to take effect.",
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeString,
+		ExternalOptType: "string list",
 		DefaultValue:    "aes",
 		ValidationRegex: "^(aes|serpent)$",
 	})
