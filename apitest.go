@@ -63,7 +63,7 @@ func main() {
 	go func() {
 		for {
 			for i := 0; i < 1000; i++ {
-				time.Sleep(1 * time.Second)
+				time.Sleep(10 * time.Second)
 				if i%2 == 0 {
 					config.SetConfigOption("test/explode_on_error", i)
 				} else {
@@ -72,6 +72,63 @@ func main() {
 			}
 		}
 	}()
+
+	// More test configs
+	config.Register(&config.Option{
+		Name:           "Activate this",
+		Key:            "test/activate",
+		Description:    "Activates something.",
+		ExpertiseLevel: config.ExpertiseLevelDeveloper,
+		OptType:        config.OptTypeBool,
+		DefaultValue:   false,
+	})
+	config.Register(&config.Option{
+		Name:           "Cover Name",
+		Key:            "test/cover_name",
+		Description:    "A cover name to be used for dangerous things.",
+		ExpertiseLevel: config.ExpertiseLevelUser,
+		OptType:        config.OptTypeString,
+		DefaultValue:   "Mr. Smith",
+	})
+	config.Register(&config.Option{
+		Name:            "Operation profile",
+		Key:             "test/op_profile",
+		Description:     "Set operation profile.",
+		ExpertiseLevel:  config.ExpertiseLevelUser,
+		OptType:         config.OptTypeString,
+		ExternalOptType: "string list",
+		DefaultValue:    "normal",
+		ValidationRegex: "^(eco|normal|speed)$",
+	})
+	config.Register(&config.Option{
+		Name:            "Block Autonomous Systems",
+		Key:             "test/block_as",
+		Description:     "Specify Autonomous Systems to be blocked by ASN Number or Organisation Name prefix.",
+		ExpertiseLevel:  config.ExpertiseLevelUser,
+		OptType:         config.OptTypeStringArray,
+		DefaultValue:    []string{},
+		ValidationRegex: "^(AS[0-9]{1,10}|[A-Za-z0-9 \\.-_]+)$",
+	})
+	config.Register(&config.Option{
+		Name:            "Favor Countries",
+		Key:             "test/fav_countries",
+		Description:     "Specify favored Countries. These will be favored if route costs are similar.",
+		ExpertiseLevel:  config.ExpertiseLevelUser,
+		OptType:         config.OptTypeStringArray,
+		ExternalOptType: "country list",
+		DefaultValue:    []string{},
+		ValidationRegex: "^([A-Z0-9]{2})$",
+	})
+	config.Register(&config.Option{
+		Name:            "TLS Inspection",
+		Key:             "test/inspect_tls",
+		Description:     "TLS traffic will be inspected to ensure its valid and uses good options.",
+		ExpertiseLevel:  config.ExpertiseLevelExpert,
+		OptType:         config.OptTypeInt,
+		ExternalOptType: "security level",
+		DefaultValue:    0,
+		ValidationRegex: "^(0|1|2|3)$",
+	})
 
 	// Shutdown
 	// catch interrupt for clean shutdown
