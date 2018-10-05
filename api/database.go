@@ -24,7 +24,7 @@ const (
 	dbMsgTypeSuccess = "success"
 	dbMsgTypeUpd     = "upd"
 	dbMsgTypeNew     = "new"
-	dbMsgTypeDelete  = "delete"
+	dbMsgTypeDel     = "del"
 	dbMsgTypeWarning = "warning"
 
 	dbApiSeperator = "|"
@@ -91,7 +91,7 @@ func (api *DatabaseAPI) handler() {
 	// 125|sub|<query>
 	//    125|upd|<key>|<data>
 	//    125|new|<key>|<data>
-	//    125|delete|<key>|<data>
+	//    127|del|<key>
 	//    125|warning|<message> // error with single record, operation continues
 	// 127|qsub|<query>
 	//    127|ok|<key>|<data>
@@ -99,7 +99,7 @@ func (api *DatabaseAPI) handler() {
 	//    127|error|<message>
 	//    127|upd|<key>|<data>
 	//    127|new|<key>|<data>
-	//    127|delete|<key>|<data>
+	//    127|del|<key>
 	//    127|warning|<message> // error with single record, operation continues
 
 	// 128|create|<key>|<data>
@@ -240,7 +240,7 @@ func (api *DatabaseAPI) handleGet(opID []byte, key string) {
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
 		return
 	}
-	api.send(opID, dbMsgTypeOk, r.DatabaseKey(), data)
+	api.send(opID, dbMsgTypeOk, r.Key(), data)
 }
 
 func (api *DatabaseAPI) handleQuery(opID []byte, queryText string) {
@@ -274,7 +274,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 		if err != nil {
 			api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 		}
-		api.send(opID, dbMsgTypeOk, r.DatabaseKey(), data)
+		api.send(opID, dbMsgTypeOk, r.Key(), data)
 	}
 	if it.Err != nil {
 		api.send(opID, dbMsgTypeError, it.Err.Error(), nil)
@@ -325,7 +325,11 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 			api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 		}
 		// TODO: use upd, new and delete msgTypes
-		api.send(opID, dbMsgTypeUpd, r.DatabaseKey(), data)
+		if r.Meta().Deleted > 0 {
+			api.send(opID, dbMsgTypeDel, r.Key(), nil)
+		} else {
+			api.send(opID, dbMsgTypeUpd, r.Key(), data)
+		}
 	}
 	if sub.Err != nil {
 		api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
@@ -374,9 +378,7 @@ func (api *DatabaseAPI) handlePut(opID []byte, key string, data []byte, create b
 	raw[0] = record.JSON
 	copy(raw[1:], data)
 
-	dbName, dbKey := record.ParseKey(key)
-
-	r, err := record.NewRawWrapper(dbName, dbKey, raw)
+	r, err := record.NewWrapper(key, nil, record.JSON, data)
 	if err != nil {
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
 		return

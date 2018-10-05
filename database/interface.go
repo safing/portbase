@@ -218,9 +218,6 @@ func (i *Interface) Delete(key string) error {
 		return err
 	}
 
-	r.Lock()
-	defer r.Unlock()
-
 	i.options.Apply(r)
 	r.Meta().Delete()
 	return db.Put(r)

@@ -37,9 +37,18 @@ func (s *ConfigStorageInterface) Get(key string) (record.Record, error) {
 
 // Put stores a record in the database.
 func (s *ConfigStorageInterface) Put(r record.Record) error {
+  if r.Meta().Deleted > 0 {
+    return setConfigOption(r.DatabaseKey(), nil, false)
+  }
+
   acc := r.GetAccessor(r)
   if acc == nil {
     return errors.New("invalid data")
+  }
+
+  val, ok := acc.Get("Value")
+  if !ok || val == nil {
+    return setConfigOption(r.DatabaseKey(), nil, false)
   }
 
   optionsLock.RLock()
@@ -61,7 +70,7 @@ func (s *ConfigStorageInterface) Put(r record.Record) error {
     value, ok = acc.GetBool("Value")
   }
   if !ok {
-    return errors.New("expected new value in \"Value\"")
+    return errors.New("received invalid value in \"Value\"")
   }
 
   err := setConfigOption(r.DatabaseKey(), value, false)
@@ -99,7 +108,7 @@ func (s *ConfigStorageInterface) processQuery(q *query.Query, it *iterator.Itera
 
   sort.Sort(sortableOptions(opts))
 
-  for _, opt := range options {
+  for _, opt := range opts {
     r, err := opt.Export()
     if err != nil {
       it.Finish(err)
