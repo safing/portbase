@@ -112,7 +112,7 @@ func main() {
 	config.Register(&config.Option{
 		Name:            "Favor Countries",
 		Key:             "test/fav_countries",
-		Description:     "Specify favored Countries. These will be favored if route costs are similar.",
+		Description:     "Specify favored Countries. These will be favored if route costs are similar. Specify with 2-Letter County Code, use \"A1\" for Anonymous Proxies and \"A2\" for Satellite Providers. Database used is provided by MaxMind.",
 		ExpertiseLevel:  config.ExpertiseLevelUser,
 		OptType:         config.OptTypeStringArray,
 		ExternalOptType: "country list",
@@ -126,8 +126,8 @@ func main() {
 		ExpertiseLevel:  config.ExpertiseLevelExpert,
 		OptType:         config.OptTypeInt,
 		ExternalOptType: "security level",
-		DefaultValue:    0,
-		ValidationRegex: "^(0|1|2|3)$",
+		DefaultValue:    3,
+		ValidationRegex: "^(1|2|3)$",
 	})
 
 	// Shutdown
