@@ -19,7 +19,7 @@ func RegisterAdditionalRoute(path string, handler http.Handler) {
 	additionalRoutes[path] = handler
 }
 
-func logger(next http.Handler) http.Handler {
+func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ew := NewEnrichedResponseWriter(w)
 		next.ServeHTTP(ew, r)
@@ -36,7 +36,7 @@ func Serve() {
 		router.Handle(path, handler)
 	}
 
-	router.Use(logger)
+	router.Use(RequestLogger)
 
 	http.Handle("/", router)
 	http.HandleFunc("/api/database/v1", startDatabaseAPI)
