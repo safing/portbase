@@ -133,12 +133,12 @@ func registerAsDatabase() error {
 		PrimaryAPI:  "",
 	})
   if err != nil {
-    return nil
+    return err
   }
 
   controller, err := database.InjectDatabase("config", &ConfigStorageInterface{})
   if err != nil {
-    return nil
+    return err
   }
 
   dbController = controller

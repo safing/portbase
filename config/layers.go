@@ -19,7 +19,23 @@ var (
 
 	// ErrInvalidOptionType is returned by SetConfigOption and SetDefaultConfigOption if given an unsupported option type.
 	ErrInvalidOptionType = errors.New("invalid option value type")
+
+	changedSignal = make(chan struct{}, 0)
 )
+
+// Changed signals if any config option was changed.
+func Changed() <-chan struct{} {
+	configLock.RLock()
+	defer configLock.RUnlock()
+	return changedSignal
+}
+
+// triggerChange signals listeners that a config option was changed.
+func triggerChange() {
+	// must be locked!
+	close(changedSignal)
+	changedSignal = make(chan struct{}, 0)
+}
 
 // setConfig sets the (prioritized) user defined config.
 func setConfig(m map[string]interface{}) error {
@@ -29,6 +45,7 @@ func setConfig(m map[string]interface{}) error {
 	resetValidityFlag()
 
 	go pushFullUpdate()
+	triggerChange()
 
 	return nil
 }
@@ -41,6 +58,7 @@ func SetDefaultConfig(m map[string]interface{}) error {
 	resetValidityFlag()
 
 	go pushFullUpdate()
+	triggerChange()
 
 	return nil
 }
@@ -124,6 +142,7 @@ func setConfigOption(name string, value interface{}, push bool) error {
 	if err == nil {
 		resetValidityFlag()
 		go saveConfig()
+		triggerChange()
 	}
 
 	return err
@@ -155,6 +174,7 @@ func setDefaultConfigOption(name string, value interface{}, push bool) error {
 
 	if err == nil {
 		resetValidityFlag()
+		triggerChange()
 	}
 
 	return err
