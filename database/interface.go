@@ -3,6 +3,9 @@ package database
 import (
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/bluele/gcache"
 
 	"github.com/Safing/portbase/database/accessor"
 	"github.com/Safing/portbase/database/iterator"
@@ -17,14 +20,18 @@ const (
 // Interface provides a method to access the database with attached options.
 type Interface struct {
 	options *Options
+	cache   gcache.Cache
 }
 
 // Options holds options that may be set for an Interface instance.
 type Options struct {
-	Local                bool
-	Internal             bool
-	AlwaysMakeSecret     bool
-	AlwaysMakeCrownjewel bool
+	Local                     bool
+	Internal                  bool
+	AlwaysMakeSecret          bool
+	AlwaysMakeCrownjewel      bool
+	AlwaysSetRelativateExpiry int64
+	AlwaysSetAbsoluteExpiry   int64
+	CacheSize                 int
 }
 
 // Apply applies options to the record metadata.
@@ -38,6 +45,11 @@ func (o *Options) Apply(r record.Record) {
 	if o.AlwaysMakeCrownjewel {
 		r.Meta().MakeCrownJewel()
 	}
+	if o.AlwaysSetAbsoluteExpiry > 0 {
+		r.Meta().SetAbsoluteExpiry(o.AlwaysSetAbsoluteExpiry)
+	} else if o.AlwaysSetRelativateExpiry > 0 {
+		r.Meta().SetRelativateExpiry(o.AlwaysSetRelativateExpiry)
+	}
 }
 
 // NewInterface returns a new Interface to the database.
@@ -46,8 +58,31 @@ func NewInterface(opts *Options) *Interface {
 		opts = &Options{}
 	}
 
-	return &Interface{
+	new := &Interface{
 		options: opts,
+	}
+	if opts.CacheSize > 0 {
+		new.cache = gcache.New(opts.CacheSize).ARC().Expiration(time.Hour).Build()
+	}
+	return new
+}
+
+func (i *Interface) checkCache(key string) (record.Record, bool) {
+	if i.cache != nil {
+		cacheVal, err := i.cache.Get(key)
+		if err == nil {
+			r, ok := cacheVal.(record.Record)
+			if ok {
+				return r, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func (i *Interface) updateCache(r record.Record) {
+	if i.cache != nil {
+		i.cache.Set(r.Key(), r)
 	}
 }
 
@@ -65,6 +100,14 @@ func (i *Interface) Exists(key string) (bool, error) {
 
 // Get return the record with the given key.
 func (i *Interface) Get(key string) (record.Record, error) {
+	r, ok := i.checkCache(key)
+	if ok {
+		if !r.Meta().CheckPermission(i.options.Local, i.options.Internal) {
+			return nil, ErrPermissionDenied
+		}
+		return r, nil
+	}
+
 	r, _, err := i.getRecord(getDBFromKey, key, true, false)
 	return r, err
 }
@@ -136,6 +179,8 @@ func (i *Interface) Put(r record.Record) error {
 	}
 
 	i.options.Apply(r)
+
+	i.updateCache(r)
 	return db.Put(r)
 }
 
@@ -146,8 +191,9 @@ func (i *Interface) PutNew(r record.Record) error {
 		return err
 	}
 
-	i.options.Apply(r)
 	r.Meta().Reset()
+	i.options.Apply(r)
+	i.updateCache(r)
 	return db.Put(r)
 }
 
