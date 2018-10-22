@@ -33,6 +33,10 @@ type Module struct {
 	dependencies []string
 }
 
+func dummyAction() error {
+	return nil
+}
+
 // Register registers a new module.
 func Register(name string, prep, start, stop func() error, dependencies ...string) *Module {
 	newModule := &Module{
@@ -43,6 +47,18 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 		stop:         stop,
 		dependencies: dependencies,
 	}
+
+	// replace nil arguments with dummy action
+	if newModule.prep == nil {
+		newModule.prep = dummyAction
+	}
+	if newModule.start == nil {
+		newModule.start = dummyAction
+	}
+	if newModule.stop == nil {
+		newModule.stop = dummyAction
+	}
+
 	modulesLock.Lock()
 	defer modulesLock.Unlock()
 	modulesOrder = append(modulesOrder, newModule)
