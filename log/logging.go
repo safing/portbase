@@ -67,7 +67,10 @@ var (
 	shutdownSignal    = make(chan struct{}, 0)
 	shutdownWaitGroup sync.WaitGroup
 
-	started    = abool.NewBool(false)
+	initializing  = abool.NewBool(false)
+	started       = abool.NewBool(false)
+	startedSignal = make(chan struct{}, 0)
+
 	testErrors = abool.NewBool(false)
 )
 
@@ -106,7 +109,7 @@ func ParseLevel(level string) severity {
 
 func Start() error {
 
-	if !started.SetToIf(false, true) {
+	if !initializing.SetToIf(false, true) {
 		return nil
 	}
 
@@ -138,8 +141,10 @@ func Start() error {
 		SetFileLevels(newFileLevels)
 	}
 
-	fmt.Println(fmt.Sprintf("%s%s ▶ BOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), endColor()))
-	go writer()
+	startWriter()
+
+	started.Set()
+	close(startedSignal)
 
 	return nil
 }

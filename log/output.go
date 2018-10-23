@@ -4,8 +4,9 @@ package log
 
 import (
 	"fmt"
-	"github.com/Safing/portbase/taskmanager"
 	"time"
+
+	"github.com/Safing/portbase/taskmanager"
 )
 
 func writeLine(line *logLine) {
@@ -17,10 +18,15 @@ func writeLine(line *logLine) {
 
 }
 
+func startWriter() {
+	shutdownWaitGroup.Add(1)
+	fmt.Println(fmt.Sprintf("%s%s ▶ BOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), endColor()))
+	go writer()
+}
+
 func writer() {
 	var line *logLine
 	startedTask := false
-	shutdownWaitGroup.Add(1)
 	defer shutdownWaitGroup.Done()
 
 	for {
