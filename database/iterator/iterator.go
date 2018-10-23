@@ -6,9 +6,9 @@ import (
 
 // Iterator defines the iterator structure.
 type Iterator struct {
-	Next  chan record.Record
-	Done  chan struct{}
-	Error error
+	Next chan record.Record
+	Done chan struct{}
+	Err  error
 }
 
 // New creates a new Iterator.
@@ -17,4 +17,10 @@ func New() *Iterator {
 		Next: make(chan record.Record, 10),
 		Done: make(chan struct{}),
 	}
+}
+
+func (it *Iterator) Finish(err error) {
+	close(it.Next)
+	close(it.Done)
+	it.Err = err
 }

@@ -42,10 +42,11 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 		return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
 	}
 
-	format, _, err := varint.Unpack8(data[offset:])
+	format, n, err := varint.Unpack8(data[offset:])
 	if err != nil {
 		return nil, fmt.Errorf("could not get dsd format: %s", err)
 	}
+	offset += n
 
 	return &Wrapper{
 		Base{
@@ -60,12 +61,7 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 }
 
 // NewWrapper returns a new record wrapper for the given data.
-func NewWrapper(key string, meta *Meta, data []byte) (*Wrapper, error) {
-	format, _, err := varint.Unpack8(data)
-	if err != nil {
-		return nil, fmt.Errorf("could not get dsd format: %s", err)
-	}
-
+func NewWrapper(key string, meta *Meta, format uint8, data []byte) (*Wrapper, error) {
 	dbName, dbKey := ParseKey(key)
 
 	return &Wrapper{
@@ -81,7 +77,7 @@ func NewWrapper(key string, meta *Meta, data []byte) (*Wrapper, error) {
 }
 
 // Marshal marshals the object, without the database key or metadata
-func (w *Wrapper) Marshal(r Record, storageType uint8) ([]byte, error) {
+func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 	if w.Meta() == nil {
 		return nil, errors.New("missing meta")
 	}
@@ -90,10 +86,15 @@ func (w *Wrapper) Marshal(r Record, storageType uint8) ([]byte, error) {
 		return nil, nil
 	}
 
-	if storageType != dsd.AUTO && storageType != w.Format {
+	if format != dsd.AUTO && format != w.Format {
 		return nil, errors.New("could not dump model, wrapped object format mismatch")
 	}
-	return w.Data, nil
+
+	data := make([]byte, len(w.Data)+1)
+	data[0] = w.Format
+	copy(data[1:], w.Data)
+
+	return data, nil
 }
 
 // MarshalRecord packs the object, including metadata, into a byte array for saving in a database.
@@ -146,7 +147,7 @@ func Unwrap(wrapped, new Record) error {
 		return fmt.Errorf("cannot unwrap %T", wrapped)
 	}
 
-	_, err := dsd.Load(wrapper.Data, new)
+	_, err := dsd.LoadAsFormat(wrapper.Data, wrapper.Format, new)
 	if err != nil {
 		return fmt.Errorf("failed to unwrap %T: %s", new, err)
 	}
@@ -159,9 +160,8 @@ func Unwrap(wrapped, new Record) error {
 
 // GetAccessor returns an accessor for this record, if available.
 func (w *Wrapper) GetAccessor(self Record) accessor.Accessor {
-	if len(w.Data) > 1 && w.Data[0] == JSON {
-		jsonData := w.Data[1:]
-		return accessor.NewJSONBytesAccessor(&jsonData)
+	if w.Format == JSON && len(w.Data) > 0 {
+		return accessor.NewJSONBytesAccessor(&w.Data)
 	}
 	return nil
 }

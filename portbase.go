@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -39,6 +40,7 @@ func main() {
 	)
 	select {
 	case <-signalCh:
+		fmt.Println(" <INTERRUPT>")
 		log.Warning("main: program was interrupted, shutting down.")
 		modules.Shutdown()
 	case <-modules.ShuttingDown():

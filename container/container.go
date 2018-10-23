@@ -4,7 +4,7 @@ package container
 import (
 	"errors"
 
-	"github.com/Safing/safing-core/formats/varint"
+	"github.com/Safing/portbase/formats/varint"
 )
 
 // Container is []byte sclie on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation. (Error transportation requires use of varints for data)

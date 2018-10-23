@@ -40,9 +40,11 @@ func checkStopStatus() (readyToStop []*Module, done bool) {
 		}
 	}
 
-	// make list out of map
+	// make list out of map, minus modules in transition
 	for _, module := range activeModules {
-		readyToStop = append(readyToStop, module)
+		if !module.inTransition {
+			readyToStop = append(readyToStop, module)
+		}
 	}
 
 	return readyToStop, false
@@ -63,26 +65,26 @@ func Shutdown() error {
 		close(shutdownSignal)
 	}
 
-	reports := make(chan error, 0)
+	reports := make(chan error, 10)
 	for {
 		readyToStop, done := checkStopStatus()
 
 		if done {
-			log.Info("modules: shutdown complete")
-			return nil
+			break
 		}
 
 		for _, module := range readyToStop {
-			module.starting = false
+			module.inTransition = true
 			nextModule := module // workaround go vet alert
 			go func() {
 				err := nextModule.stop()
-				nextModule.Active.UnSet()
 				if err != nil {
 					reports <- fmt.Errorf("modules: could not stop module %s: %s", nextModule.Name, err)
 				} else {
 					reports <- nil
 				}
+				nextModule.Active.UnSet()
+				nextModule.inTransition = false
 			}()
 		}
 
@@ -93,4 +95,8 @@ func Shutdown() error {
 		}
 
 	}
+
+	log.Info("modules: shutdown complete")
+	log.Shutdown()
+	return nil
 }

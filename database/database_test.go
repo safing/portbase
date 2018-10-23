@@ -36,14 +36,14 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatal(err)
 	}
 
+	// interface
+	db := NewInterface(nil)
+
 	// sub
-	sub, err := Subscribe(q.New(dbName).MustBeValid())
+	sub, err := db.Subscribe(q.New(dbName).MustBeValid())
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// interface
-	db := NewInterface(nil)
 
 	A := NewExample(makeKey(dbName, "A"), "Herbert", 411)
 	err = A.Save()
@@ -98,8 +98,8 @@ func testDatabase(t *testing.T, storageType string) {
 	for _ = range it.Next {
 		cnt++
 	}
-	if it.Error != nil {
-		t.Fatal(it.Error)
+	if it.Err != nil {
+		t.Fatal(it.Err)
 	}
 	if cnt != 2 {
 		t.Fatal("expected two records")

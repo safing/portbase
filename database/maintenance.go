@@ -64,7 +64,7 @@ func MaintainRecordStates() error {
         toExpire = append(toExpire, r)
       }
     }
-    if it.Error != nil {
+    if it.Err != nil {
       return err
     }
 

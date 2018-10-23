@@ -116,7 +116,7 @@ func loadRegistry() error {
 
 	// parse
 	new := make(map[string]*Database)
-	err = json.Unmarshal(data, new)
+	err = json.Unmarshal(data, &new)
 	if err != nil {
 		return err
 	}

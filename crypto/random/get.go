@@ -25,25 +25,25 @@ type reader struct{}
 func init() {
 	config.Register(&config.Option{
 		Name:            "Reseed after x seconds",
-		Key:             "random.reseed_after_seconds",
+		Key:             "random/reseed_after_seconds",
 		Description:     "Number of seconds until reseed",
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
 		DefaultValue:    360, // ten minutes
 		ValidationRegex: "^[0-9]{2,5}$",
 	})
-	reseedAfterSeconds = config.GetAsInt("random.reseed_after_seconds", 360)
+	reseedAfterSeconds = config.GetAsInt("random/reseed_after_seconds", 360)
 
 	config.Register(&config.Option{
 		Name:            "Reseed after x bytes",
-		Key:             "random.reseed_after_bytes",
+		Key:             "random/reseed_after_bytes",
 		Description:     "Number of fetched bytes until reseed",
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
 		DefaultValue:    1000000, // one megabyte
 		ValidationRegex: "^[0-9]{0,9}$",
 	})
-	reseedAfterBytes = config.GetAsInt("random.reseed_after_bytes", 1000000)
+	reseedAfterBytes = config.GetAsInt("random/reseed_after_bytes", 1000000)
 
 	Reader = reader{}
 }

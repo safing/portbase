@@ -22,6 +22,15 @@ func log_fastcheck(level severity) bool {
 
 func log(level severity, msg string) {
 
+	if !started.IsSet() {
+		// resouce intense, but keeps logs before logging started.
+		go func(){
+			time.Sleep(1 * time.Second)
+			log(level, msg)
+		}()
+		return
+	}
+
 	// check if level is enabled
 	if !fileLevelsActive.IsSet() && uint32(level) < atomic.LoadUint32(logLevel) {
 		return

@@ -7,34 +7,13 @@ import (
 
 // Subscription is a database subscription for updates.
 type Subscription struct {
-	q    *query.Query
+	q        *query.Query
+	local    bool
+	internal bool
+	canceled bool
+
 	Feed chan record.Record
 	Err  error
-}
-
-// Subscribe subscribes to updates matching the given query.
-func Subscribe(q *query.Query) (*Subscription, error) {
-	_, err := q.Check()
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := getController(q.DatabaseName())
-	if err != nil {
-		return nil, err
-	}
-
-	c.readLock.Lock()
-	defer c.readLock.Unlock()
-	c.writeLock.Lock()
-	defer c.writeLock.Unlock()
-
-	sub := &Subscription{
-		q:    q,
-		Feed: make(chan record.Record, 100),
-	}
-	c.subscriptions = append(c.subscriptions, sub)
-	return sub, nil
 }
 
 // Cancel cancels the subscription.
@@ -48,6 +27,12 @@ func (s *Subscription) Cancel() error {
 	defer c.readLock.Unlock()
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
+
+	if s.canceled {
+		return nil
+	}
+	s.canceled = true
+	close(s.Feed)
 
 	for key, sub := range c.subscriptions {
 		if sub.q == s.q {

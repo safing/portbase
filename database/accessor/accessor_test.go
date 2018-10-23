@@ -3,10 +3,13 @@ package accessor
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/Safing/portbase/utils"
 )
 
 type TestStruct struct {
 	S    string
+	A    []string
 	I    int
 	I8   int8
 	I16  int16
@@ -25,6 +28,7 @@ type TestStruct struct {
 var (
 	testStruct = &TestStruct{
 		S:    "banana",
+		A:    []string{"black", "white"},
 		I:    42,
 		I8:   42,
 		I16:  42,
@@ -52,6 +56,19 @@ func testGetString(t *testing.T, acc Accessor, key string, shouldSucceed bool, e
 		t.Errorf("%s should have failed to get string with key %s, it returned %v", acc.Type(), key, v)
 	}
 	if v != expectedValue {
+		t.Errorf("%s returned an unexpected value: wanted %v, got %v", acc.Type(), expectedValue, v)
+	}
+}
+
+func testGetStringArray(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue []string) {
+	v, ok := acc.GetStringArray(key)
+	switch {
+	case !ok && shouldSucceed:
+		t.Errorf("%s failed to get []string with key %s", acc.Type(), key)
+	case ok && !shouldSucceed:
+		t.Errorf("%s should have failed to get []string with key %s, it returned %v", acc.Type(), key, v)
+	}
+	if !utils.StringSliceEqual(v, expectedValue) {
 		t.Errorf("%s returned an unexpected value: wanted %v, got %v", acc.Type(), expectedValue, v)
 	}
 }
@@ -127,6 +144,7 @@ func TestAccessor(t *testing.T) {
 	// get
 	for _, acc := range accs {
 		testGetString(t, acc, "S", true, "banana")
+		testGetStringArray(t, acc, "A", true, []string{"black", "white"})
 		testGetInt(t, acc, "I", true, 42)
 		testGetInt(t, acc, "I8", true, 42)
 		testGetInt(t, acc, "I16", true, 42)
@@ -145,6 +163,7 @@ func TestAccessor(t *testing.T) {
 	// set
 	for _, acc := range accs {
 		testSet(t, acc, "S", true, "coconut")
+		testSet(t, acc, "A", true, []string{"green", "blue"})
 		testSet(t, acc, "I", true, uint32(44))
 		testSet(t, acc, "I8", true, uint64(44))
 		testSet(t, acc, "I16", true, uint8(44))
@@ -163,6 +182,7 @@ func TestAccessor(t *testing.T) {
 	// get again to check if new values were set
 	for _, acc := range accs {
 		testGetString(t, acc, "S", true, "coconut")
+		testGetStringArray(t, acc, "A", true, []string{"green", "blue"})
 		testGetInt(t, acc, "I", true, 44)
 		testGetInt(t, acc, "I8", true, 44)
 		testGetInt(t, acc, "I16", true, 44)
@@ -184,6 +204,12 @@ func TestAccessor(t *testing.T) {
 		testSet(t, acc, "S", false, false)
 		testSet(t, acc, "S", false, 1)
 		testSet(t, acc, "S", false, 1.1)
+
+		testSet(t, acc, "A", false, "1")
+		testSet(t, acc, "A", false, true)
+		testSet(t, acc, "A", false, false)
+		testSet(t, acc, "A", false, 1)
+		testSet(t, acc, "A", false, 1.1)
 
 		testSet(t, acc, "I", false, "1")
 		testSet(t, acc, "I8", false, "1")
@@ -207,6 +233,7 @@ func TestAccessor(t *testing.T) {
 	// get again to check if values werent changed when an error occurred
 	for _, acc := range accs {
 		testGetString(t, acc, "S", true, "coconut")
+		testGetStringArray(t, acc, "A", true, []string{"green", "blue"})
 		testGetInt(t, acc, "I", true, 44)
 		testGetInt(t, acc, "I8", true, 44)
 		testGetInt(t, acc, "I16", true, 44)
@@ -225,6 +252,7 @@ func TestAccessor(t *testing.T) {
 	// test existence
 	for _, acc := range accs {
 		testExists(t, acc, "S", true)
+		testExists(t, acc, "A", true)
 		testExists(t, acc, "I", true)
 		testExists(t, acc, "I8", true)
 		testExists(t, acc, "I16", true)

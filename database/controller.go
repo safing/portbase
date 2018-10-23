@@ -129,7 +129,7 @@ func (c *Controller) Put(r record.Record) (err error) {
 
 	// process subscriptions
 	for _, sub := range c.subscriptions {
-		if sub.q.Matches(r) {
+		if r.Meta().CheckPermission(sub.local, sub.internal) && sub.q.Matches(r) {
 			select {
 			case sub.Feed <- r:
 			default:
@@ -155,6 +155,20 @@ func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iter
 
 	go c.readUnlockerAfterQuery(it)
 	return it, nil
+}
+
+// PushUpdate pushes a record update to subscribers.
+func (c *Controller) PushUpdate(r record.Record) {
+	if c != nil {
+		for _, sub := range c.subscriptions {
+			if r.Meta().CheckPermission(sub.local, sub.internal) && sub.q.Matches(r) {
+				select {
+				case sub.Feed <- r:
+				default:
+				}
+			}
+		}
+	}
 }
 
 func (c *Controller) readUnlockerAfterQuery(it *iterator.Iterator) {

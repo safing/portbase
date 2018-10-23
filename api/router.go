@@ -1,28 +1,47 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package api
 
 import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+
+	"github.com/Safing/portbase/log"
 )
 
-func NewRouter() *mux.Router {
-	router := mux.NewRouter().StrictSlash(true)
+var (
+	additionalRoutes map[string]http.Handler
+)
 
-	for _, route := range routes {
-		var handler http.Handler
+func RegisterAdditionalRoute(path string, handler http.Handler) {
+	if additionalRoutes == nil {
+		additionalRoutes = make(map[string]http.Handler)
+	}
+	additionalRoutes[path] = handler
+}
 
-		handler = route.Handler
-		handler = Logger(handler, route.Name)
+func RequestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ew := NewEnrichedResponseWriter(w)
+		next.ServeHTTP(ew, r)
+		log.Infof("api request: %s %d %s", r.RemoteAddr, ew.Status, r.RequestURI)
+	})
+}
 
-		router.
-			Methods(route.Method).
-			PathPrefix(route.Path).
-			Name(route.Name).
-			Handler(handler)
+func Serve() {
+
+	router := mux.NewRouter()
+	// router.HandleFunc("/api/database/v1", startDatabaseAPI)
+
+	for path, handler := range additionalRoutes {
+		router.Handle(path, handler)
 	}
 
-	return router
+	router.Use(RequestLogger)
+
+	http.Handle("/", router)
+	http.HandleFunc("/api/database/v1", startDatabaseAPI)
+
+	address := "127.0.0.1:18"
+	log.Infof("api: starting to listen on %s", address)
+	log.Errorf("api: failed to listen on %s: %s", address, http.ListenAndServe(address, nil))
 }

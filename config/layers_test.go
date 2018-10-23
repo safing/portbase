@@ -4,27 +4,26 @@ import "testing"
 
 func TestLayersGetters(t *testing.T) {
 
-	err := SetConfig("{invalid json")
-	if err == nil {
-		t.Error("expected error")
-	}
-
-	err = SetDefaultConfig("{invalid json")
-	if err == nil {
-		t.Error("expected error")
-	}
-
-	err = SetConfig(`
+	mapData, err := JSONToMap([]byte(`
 		{
 			"monkey": "1",
-			"zebra": ["black", "white"],
-			"weird_zebra": ["black", -1],
 			"elephant": 2,
-			"hot": true
+			"zebras": {
+				"zebra": ["black", "white"],
+				"weird_zebra": ["black", -1]
+			},
+			"env": {
+				"hot": true
+			}
 		}
-    `)
+    `))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+
+	err = setConfig(mapData)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Test missing values
@@ -61,7 +60,7 @@ func TestLayersGetters(t *testing.T) {
 		t.Error("expected fallback value: [fallback]")
 	}
 
-	mixedStringArray := GetAsStringArray("weird_zebra", []string{"fallback"})
+	mixedStringArray := GetAsStringArray("zebras/weird_zebra", []string{"fallback"})
 	if len(mixedStringArray()) != 1 || mixedStringArray()[0] != "fallback" {
 		t.Error("expected fallback value: [fallback]")
 	}
@@ -91,7 +90,7 @@ func TestLayersSetters(t *testing.T) {
 	})
 	Register(&Option{
 		Name:            "name",
-		Key:             "zebra",
+		Key:             "zebras/zebra",
 		Description:     "description",
 		ExpertiseLevel:  1,
 		OptType:         OptTypeStringArray,
@@ -121,7 +120,7 @@ func TestLayersSetters(t *testing.T) {
 	if err := SetConfigOption("monkey", "banana"); err != nil {
 		t.Error(err)
 	}
-	if err := SetConfigOption("zebra", []string{"black", "white"}); err != nil {
+	if err := SetConfigOption("zebras/zebra", []string{"black", "white"}); err != nil {
 		t.Error(err)
 	}
 	if err := SetDefaultConfigOption("elephant", 2); err != nil {
@@ -135,7 +134,7 @@ func TestLayersSetters(t *testing.T) {
 	if err := SetConfigOption("monkey", []string{"black", "white"}); err == nil {
 		t.Error("should fail")
 	}
-	if err := SetConfigOption("zebra", 2); err == nil {
+	if err := SetConfigOption("zebras/zebra", 2); err == nil {
 		t.Error("should fail")
 	}
 	if err := SetDefaultConfigOption("elephant", true); err == nil {
@@ -152,25 +151,25 @@ func TestLayersSetters(t *testing.T) {
 	if err := SetConfigOption("monkey", "dirt"); err == nil {
 		t.Error("should fail")
 	}
-	if err := SetConfigOption("zebra", []string{"Element649"}); err == nil {
+	if err := SetConfigOption("zebras/zebra", []string{"Element649"}); err == nil {
 		t.Error("should fail")
 	}
 
 	// unregistered checking
-	if err := SetConfigOption("invalid", "banana"); err != nil {
-		t.Error(err)
+	if err := SetConfigOption("invalid", "banana"); err == nil {
+		t.Error("should fail")
 	}
-	if err := SetConfigOption("invalid", []string{"black", "white"}); err != nil {
-		t.Error(err)
+	if err := SetConfigOption("invalid", []string{"black", "white"}); err == nil {
+		t.Error("should fail")
 	}
-	if err := SetConfigOption("invalid", 2); err != nil {
-		t.Error(err)
+	if err := SetConfigOption("invalid", 2); err == nil {
+		t.Error("should fail")
 	}
-	if err := SetConfigOption("invalid", true); err != nil {
-		t.Error(err)
+	if err := SetConfigOption("invalid", true); err == nil {
+		t.Error("should fail")
 	}
-	if err := SetConfigOption("invalid", []byte{0}); err != ErrInvalidOptionType {
-		t.Error("should fail with ErrInvalidOptionType")
+	if err := SetConfigOption("invalid", []byte{0}); err == nil {
+		t.Error("should fail")
 	}
 
 	// delete
