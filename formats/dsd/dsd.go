@@ -10,19 +10,19 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/pkg/bson"
+	// "github.com/pkg/bson"
 
-	"github.com/Safing/safing-core/formats/varint"
+	"github.com/Safing/portbase/formats/varint"
 )
 
 // define types
 const (
-	AUTO   = 0
-	STRING = 83 // S
-	BYTES  = 88 // X
-	JSON   = 74 // J
-	BSON   = 66 // B
-	// MSGP
+	AUTO    = 0
+	STRING  = 83 // S
+	BYTES   = 88 // X
+	JSON    = 74 // J
+	BSON    = 66 // B
+	GenCode = 71 // G (reserved)
 )
 
 // define errors
@@ -31,7 +31,6 @@ var errUnknownType = errors.New("dsd: tried to unpack unknown type")
 var errNotImplemented = errors.New("dsd: this type is not yet implemented")
 
 func Load(data []byte, t interface{}) (interface{}, error) {
-
 	if len(data) < 2 {
 		return nil, errNoMoreSpace
 	}
@@ -44,34 +43,36 @@ func Load(data []byte, t interface{}) (interface{}, error) {
 		return nil, errNoMoreSpace
 	}
 
+	return LoadAsFormat(data[read:], format, t)
+}
+
+func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error) {
 	switch format {
 	case STRING:
-		return string(data[read:]), nil
+		return string(data), nil
 	case BYTES:
-		r := data[read:]
-		return &r, nil
+		return data, nil
 	case JSON:
-		err := json.Unmarshal(data[read:], t)
+		err := json.Unmarshal(data, t)
 		if err != nil {
 			return nil, err
 		}
 		return t, nil
-	case BSON:
-		err := bson.Unmarshal(data[read:], t)
-		if err != nil {
-			return nil, err
-		}
-		return t, nil
-	// case MSGP:
-	//   err := t.UnmarshalMsg(data[read:])
-	//   if err != nil {
-	//     return nil, err
-	//   }
-	//   return t, nil
+		// case BSON:
+		// 	err := bson.Unmarshal(data[read:], t)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
+		// 	return t, nil
+		// case MSGP:
+		//   err := t.UnmarshalMsg(data[read:])
+		//   if err != nil {
+		//     return nil, err
+		//   }
+		//   return t, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("dsd: tried to load unknown type %d, data: %v", format, data))
 	}
-
 }
 
 func Dump(t interface{}, format uint8) ([]byte, error) {
@@ -101,11 +102,11 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-	case BSON:
-		data, err = bson.Marshal(t)
-		if err != nil {
-			return nil, err
-		}
+	// case BSON:
+	// 	data, err = bson.Marshal(t)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 	// case MSGP:
 	//   data, err := t.MarshalMsg(nil)
 	//   if err != nil {

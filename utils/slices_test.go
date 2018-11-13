@@ -13,23 +13,23 @@ var (
 )
 
 func TestStringInSlice(t *testing.T) {
-	if !StringInSlice("a", stringTestSlice) {
+	if !StringInSlice(stringTestSlice, "a") {
 		t.Fatal("string reported not in slice (1), but it is")
 	}
-	if !StringInSlice("d", stringTestSlice) {
+	if !StringInSlice(stringTestSlice, "d") {
 		t.Fatal("string reported not in slice (2), but it is")
 	}
-	if !StringInSlice("j", stringTestSlice) {
+	if !StringInSlice(stringTestSlice, "j") {
 		t.Fatal("string reported not in slice (3), but it is")
 	}
 
-	if StringInSlice("0", stringTestSlice) {
+	if StringInSlice(stringTestSlice, "0") {
 		t.Fatal("string reported in slice (1), but is not")
 	}
-	if StringInSlice("x", stringTestSlice) {
+	if StringInSlice(stringTestSlice, "x") {
 		t.Fatal("string reported in slice (2), but is not")
 	}
-	if StringInSlice("k", stringTestSlice) {
+	if StringInSlice(stringTestSlice, "k") {
 		t.Fatal("string reported in slice (3), but is not")
 	}
 }
@@ -37,12 +37,13 @@ func TestStringInSlice(t *testing.T) {
 func TestRemoveFromStringSlice(t *testing.T) {
 	test1 := DuplicateStrings(stringTestSlice)
 	test1 = RemoveFromStringSlice(test1, "b")
-	if StringInSlice("b", test1) {
+	if StringInSlice(test1, "b") {
 		t.Fatal("string reported in slice, but was removed")
 	}
 	if len(test1) != len(stringTestSlice)-1 {
 		t.Fatalf("new string slice length not as expected: is %d, should be %d\nnew slice is %v", len(test1), len(stringTestSlice)-1, test1)
 	}
+	RemoveFromStringSlice(test1, "b")
 }
 
 func TestDuplicateStrings(t *testing.T) {

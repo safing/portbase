@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func log_fastcheck(level severity) bool {
+func fastcheck(level severity) bool {
 	if fileLevelsActive.IsSet() {
 		return true
 	}
@@ -21,6 +21,15 @@ func log_fastcheck(level severity) bool {
 }
 
 func log(level severity, msg string) {
+
+	if !started.IsSet() {
+		// a bit resouce intense, but keeps logs before logging started.
+		go func(){
+			<-startedSignal
+			log(level, msg)
+		}()
+		return
+	}
 
 	// check if level is enabled
 	if !fileLevelsActive.IsSet() && uint32(level) < atomic.LoadUint32(logLevel) {
@@ -83,73 +92,73 @@ func log(level severity, msg string) {
 }
 
 func Tracef(things ...interface{}) {
-	if log_fastcheck(TraceLevel) {
+	if fastcheck(TraceLevel) {
 		log(TraceLevel, fmt.Sprintf(things[0].(string), things[1:]...))
 	}
 }
 
 func Trace(msg string) {
-	if log_fastcheck(TraceLevel) {
+	if fastcheck(TraceLevel) {
 		log(TraceLevel, msg)
 	}
 }
 
 func Debugf(things ...interface{}) {
-	if log_fastcheck(DebugLevel) {
+	if fastcheck(DebugLevel) {
 		log(DebugLevel, fmt.Sprintf(things[0].(string), things[1:]...))
 	}
 }
 
 func Debug(msg string) {
-	if log_fastcheck(DebugLevel) {
+	if fastcheck(DebugLevel) {
 		log(DebugLevel, msg)
 	}
 }
 
 func Infof(things ...interface{}) {
-	if log_fastcheck(InfoLevel) {
+	if fastcheck(InfoLevel) {
 		log(InfoLevel, fmt.Sprintf(things[0].(string), things[1:]...))
 	}
 }
 
 func Info(msg string) {
-	if log_fastcheck(InfoLevel) {
+	if fastcheck(InfoLevel) {
 		log(InfoLevel, msg)
 	}
 }
 
 func Warningf(things ...interface{}) {
-	if log_fastcheck(WarningLevel) {
+	if fastcheck(WarningLevel) {
 		log(WarningLevel, fmt.Sprintf(things[0].(string), things[1:]...))
 	}
 }
 
 func Warning(msg string) {
-	if log_fastcheck(WarningLevel) {
+	if fastcheck(WarningLevel) {
 		log(WarningLevel, msg)
 	}
 }
 
 func Errorf(things ...interface{}) {
-	if log_fastcheck(ErrorLevel) {
+	if fastcheck(ErrorLevel) {
 		log(ErrorLevel, fmt.Sprintf(things[0].(string), things[1:]...))
 	}
 }
 
 func Error(msg string) {
-	if log_fastcheck(ErrorLevel) {
+	if fastcheck(ErrorLevel) {
 		log(ErrorLevel, msg)
 	}
 }
 
 func Criticalf(things ...interface{}) {
-	if log_fastcheck(CriticalLevel) {
+	if fastcheck(CriticalLevel) {
 		log(CriticalLevel, fmt.Sprintf(things[0].(string), things[1:]...))
 	}
 }
 
 func Critical(msg string) {
-	if log_fastcheck(CriticalLevel) {
+	if fastcheck(CriticalLevel) {
 		log(CriticalLevel, msg)
 	}
 }

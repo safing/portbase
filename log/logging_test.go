@@ -10,6 +10,11 @@ import (
 // test waiting
 func TestLogging(t *testing.T) {
 
+	err := Start()
+	if err != nil {
+		t.Errorf("start failed: %s", err)
+	}
+
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")

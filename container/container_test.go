@@ -25,10 +25,10 @@ var (
 
 func TestContainerDataHandling(t *testing.T) {
 
-	c1 := NewContainer(utils.DuplicateBytes(testData))
+	c1 := New(utils.DuplicateBytes(testData))
 	c1c := c1.carbonCopy()
 
-	c2 := NewContainer()
+	c2 := New()
 	for i := 0; i < len(testData); i++ {
 		oneByte := make([]byte, 1)
 		c1c.WriteToSlice(oneByte)
@@ -36,7 +36,7 @@ func TestContainerDataHandling(t *testing.T) {
 	}
 	c2c := c2.carbonCopy()
 
-	c3 := NewContainer()
+	c3 := New()
 	for i := len(c2c.compartments) - 1; i >= c2c.offset; i-- {
 		c3.Prepend(c2c.compartments[i])
 	}
@@ -52,19 +52,19 @@ func TestContainerDataHandling(t *testing.T) {
 		c3c.WriteToSlice(d5[i : i+1])
 	}
 
-	c6 := NewContainer()
+	c6 := New()
 	c6.Replace(testData)
 
-	c7 := NewContainer(testDataSplitted[0])
+	c7 := New(testDataSplitted[0])
 	for i := 1; i < len(testDataSplitted); i++ {
 		c7.Append(testDataSplitted[i])
 	}
 
-	c8 := NewContainer(testDataSplitted...)
+	c8 := New(testDataSplitted...)
 	for i := 0; i < 110; i++ {
 		c8.Prepend(nil)
 	}
-	c8.Clean()
+	c8.clean()
 
 	compareMany(t, testData, c1.CompileData(), c2.CompileData(), c3.CompileData(), d4, d5, c6.CompileData(), c7.CompileData(), c8.CompileData())
 }
@@ -79,7 +79,7 @@ func compareMany(t *testing.T, reference []byte, other ...[]byte) {
 
 func TestContainerErrorHandling(t *testing.T) {
 
-	c1 := NewContainer(nil)
+	c1 := New(nil)
 
 	if c1.HasError() {
 		t.Error("should not have error")
@@ -91,7 +91,7 @@ func TestContainerErrorHandling(t *testing.T) {
 		t.Error("should have error")
 	}
 
-	c2 := NewContainer(append([]byte{0}, []byte("test error")...))
+	c2 := New(append([]byte{0}, []byte("test error")...))
 
 	if c2.HasError() {
 		t.Error("should not have error")
@@ -109,21 +109,75 @@ func TestContainerErrorHandling(t *testing.T) {
 
 }
 
+func TestDataFetching(t *testing.T) {
+	c1 := New(utils.DuplicateBytes(testData))
+	data := c1.GetMax(1)
+	if string(data[0]) != "T" {
+		t.Errorf("failed to GetMax(1), got %s, expected %s", string(data), "T")
+	}
+
+	_, err := c1.Get(1000)
+	if err == nil {
+		t.Error("should fail")
+	}
+}
+
+func TestBlocks(t *testing.T) {
+	c1 := New(utils.DuplicateBytes(testData))
+	c1.PrependLength()
+
+	n, err := c1.GetNextN8()
+	if err != nil {
+		t.Errorf("GetNextN8() failed: %s", err)
+	}
+	if n != 43 {
+		t.Errorf("n should be 43, was %d", n)
+	}
+	c1.PrependLength()
+
+	n2, err := c1.GetNextN16()
+	if err != nil {
+		t.Errorf("GetNextN16() failed: %s", err)
+	}
+	if n2 != 43 {
+		t.Errorf("n should be 43, was %d", n2)
+	}
+	c1.PrependLength()
+
+	n3, err := c1.GetNextN32()
+	if err != nil {
+		t.Errorf("GetNextN32() failed: %s", err)
+	}
+	if n3 != 43 {
+		t.Errorf("n should be 43, was %d", n3)
+	}
+	c1.PrependLength()
+
+	n4, err := c1.GetNextN64()
+	if err != nil {
+		t.Errorf("GetNextN64() failed: %s", err)
+	}
+	if n4 != 43 {
+		t.Errorf("n should be 43, was %d", n4)
+	}
+
+}
+
 func TestContainerBlockHandling(t *testing.T) {
 
-	c1 := NewContainer(utils.DuplicateBytes(testData))
+	c1 := New(utils.DuplicateBytes(testData))
 	c1.PrependLength()
 	c1.AppendAsBlock(testData)
 	c1c := c1.carbonCopy()
 
-	c2 := NewContainer(nil)
+	c2 := New(nil)
 	for i := 0; i < c1.Length(); i++ {
 		oneByte := make([]byte, 1)
 		c1c.WriteToSlice(oneByte)
 		c2.Append(oneByte)
 	}
 
-	c3 := NewContainer(testDataSplitted[0])
+	c3 := New(testDataSplitted[0])
 	for i := 1; i < len(testDataSplitted); i++ {
 		c3.Append(testDataSplitted[i])
 	}
@@ -154,9 +208,13 @@ func TestContainerBlockHandling(t *testing.T) {
 }
 
 func TestContainerMisc(t *testing.T) {
-	c1 := NewContainer()
+	c1 := New()
 	d1 := c1.CompileData()
 	if len(d1) > 0 {
 		t.Fatalf("empty container should not hold any data")
 	}
+}
+
+func TestDeprecated(t *testing.T) {
+	NewContainer(utils.DuplicateBytes(testData))
 }

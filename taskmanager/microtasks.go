@@ -3,7 +3,6 @@
 package taskmanager
 
 import (
-	"github.com/Safing/safing-core/modules"
 	"sync/atomic"
 	"time"
 
@@ -14,19 +13,23 @@ import (
 // (1) panic: sync: WaitGroup is reused before previous Wait has returned - should theoretically not happen
 // (2) sometimes there seems to some kind of race condition stuff, the test hangs and does not complete
 
-var microTasksModule *modules.Module
-var closedChannel chan bool
+var (
+	closedChannel chan bool
 
-var tasks *int32
+	tasks *int32
 
-var mediumPriorityClearance chan bool
-var lowPriorityClearance chan bool
-var veryLowPriorityClearance chan bool
+	mediumPriorityClearance  chan bool
+	lowPriorityClearance     chan bool
+	veryLowPriorityClearance chan bool
 
-var tasksDone chan bool
-var tasksDoneFlag *abool.AtomicBool
-var tasksWaiting chan bool
-var tasksWaitingFlag *abool.AtomicBool
+	tasksDone        chan bool
+	tasksDoneFlag    *abool.AtomicBool
+	tasksWaiting     chan bool
+	tasksWaitingFlag *abool.AtomicBool
+
+	shutdownSignal = make(chan struct{}, 0)
+	suttingDown    = abool.NewBool(false)
+)
 
 // StartMicroTask starts a new MicroTask. It will start immediately.
 func StartMicroTask() {
@@ -50,7 +53,7 @@ func newTaskIsWaiting() {
 
 // StartMediumPriorityMicroTask starts a new MicroTask (waiting its turn) if channel receives.
 func StartMediumPriorityMicroTask() chan bool {
-	if !microTasksModule.Active.IsSet() {
+	if suttingDown.IsSet() {
 		return closedChannel
 	}
 	if tasksWaitingFlag.SetToIf(false, true) {
@@ -61,7 +64,7 @@ func StartMediumPriorityMicroTask() chan bool {
 
 // StartLowPriorityMicroTask starts a new MicroTask (waiting its turn) if channel receives.
 func StartLowPriorityMicroTask() chan bool {
-	if !microTasksModule.Active.IsSet() {
+	if suttingDown.IsSet() {
 		return closedChannel
 	}
 	if tasksWaitingFlag.SetToIf(false, true) {
@@ -72,7 +75,7 @@ func StartLowPriorityMicroTask() chan bool {
 
 // StartVeryLowPriorityMicroTask starts a new MicroTask (waiting its turn) if channel receives.
 func StartVeryLowPriorityMicroTask() chan bool {
-	if !microTasksModule.Active.IsSet() {
+	if suttingDown.IsSet() {
 		return closedChannel
 	}
 	if tasksWaitingFlag.SetToIf(false, true) {
@@ -81,9 +84,17 @@ func StartVeryLowPriorityMicroTask() chan bool {
 	return veryLowPriorityClearance
 }
 
+func start() error {
+	return nil
+}
+
+func stop() error {
+	close(shutdownSignal)
+	return nil
+}
+
 func init() {
 
-	microTasksModule = modules.Register("Taskmanager:MicroTasks", 3)
 	closedChannel = make(chan bool, 0)
 	close(closedChannel)
 
@@ -107,7 +118,7 @@ func init() {
 		for {
 
 			// wait for an event to start new tasks
-			if microTasksModule.Active.IsSet() {
+			if !suttingDown.IsSet() {
 
 				// reset timer
 				// https://golang.org/pkg/time/#Timer.Reset
@@ -124,7 +135,7 @@ func init() {
 					}
 				case <-time.After(timoutTimerDuration):
 				case <-tasksDone:
-				case <-microTasksModule.Stop:
+				case <-shutdownSignal:
 				}
 
 			} else {
@@ -136,7 +147,7 @@ func init() {
 						<-tasksDone
 					}
 					// signal module completion
-					microTasksModule.StopComplete()
+					// microTasksModule.StopComplete()
 					// exit
 					return
 				}

@@ -3,145 +3,65 @@
 package modules
 
 import (
-	"container/list"
-	"os"
-	"time"
+	"errors"
+	"sync"
 
 	"github.com/tevino/abool"
 )
 
-var modules *list.List
-var addModule chan *Module
-var GlobalShutdown chan struct{}
-var loggingActive bool
+var (
+	startComplete = abool.NewBool(false)
 
+	modulesLock  sync.Mutex
+	modules      = make(map[string]*Module)
+	modulesOrder []*Module
+
+	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
+	ErrCleanExit = errors.New("clean exit requested")
+)
+
+// Module represents a module.
 type Module struct {
-	Name  string
-	Order uint8
+	Name         string
+	Active       *abool.AtomicBool
+	inTransition bool
 
-	Start         chan struct{}
-	Active        *abool.AtomicBool
-	startComplete chan struct{}
+	prep  func() error
+	start func() error
+	stop  func() error
 
-	Stop         chan struct{}
-	Stopped      *abool.AtomicBool
-	stopComplete chan struct{}
+	dependencies []string
 }
 
-func Register(name string, order uint8) *Module {
+func dummyAction() error {
+	return nil
+}
+
+// Register registers a new module.
+func Register(name string, prep, start, stop func() error, dependencies ...string) *Module {
 	newModule := &Module{
-		Name:          name,
-		Order:         order,
-		Start:         make(chan struct{}),
-		Active:        abool.NewBool(true),
-		startComplete: make(chan struct{}),
-
-		Stop:         make(chan struct{}),
-		Stopped:      abool.NewBool(false),
-		stopComplete: make(chan struct{}),
+		Name:         name,
+		Active:       abool.NewBool(false),
+		prep:         prep,
+		start:        start,
+		stop:         stop,
+		dependencies: dependencies,
 	}
-	addModule <- newModule
+
+	// replace nil arguments with dummy action
+	if newModule.prep == nil {
+		newModule.prep = dummyAction
+	}
+	if newModule.start == nil {
+		newModule.start = dummyAction
+	}
+	if newModule.stop == nil {
+		newModule.stop = dummyAction
+	}
+
+	modulesLock.Lock()
+	defer modulesLock.Unlock()
+	modulesOrder = append(modulesOrder, newModule)
+	modules[name] = newModule
 	return newModule
-}
-
-func (module *Module) addToList() {
-	if loggingActive {
-		logger.Infof("Modules: starting %s", module.Name)
-	}
-	for e := modules.Back(); e != nil; e = e.Prev() {
-		if module.Order > e.Value.(*Module).Order {
-			modules.InsertAfter(module, e)
-			return
-		}
-	}
-	modules.PushFront(module)
-}
-
-func (module *Module) stop() {
-	module.Active.UnSet()
-	defer module.Stopped.Set()
-	for {
-		select {
-		case module.Stop <- struct{}{}:
-		case <-module.stopComplete:
-			return
-		case <-time.After(1 * time.Second):
-			if loggingActive {
-				logger.Warningf("Modules: waiting for %s to stop...", module.Name)
-			}
-		}
-	}
-}
-
-func (module *Module) StopComplete() {
-	if loggingActive {
-		logger.Warningf("Modules: stopped %s", module.Name)
-	}
-	module.stopComplete <- struct{}{}
-}
-
-func (module *Module) start() {
-	module.Stopped.UnSet()
-	defer module.Active.Set()
-	for {
-		select {
-		case module.Start <- struct{}{}:
-		case <-module.startComplete:
-			return
-		}
-	}
-}
-
-func (module *Module) StartComplete() {
-	if loggingActive {
-		logger.Infof("Modules: starting %s", module.Name)
-	}
-	module.startComplete <- struct{}{}
-}
-
-func InitiateFullShutdown() {
-	close(GlobalShutdown)
-}
-
-func fullStop() {
-	for e := modules.Back(); e != nil; e = e.Prev() {
-		if e.Value.(*Module).Active.IsSet() {
-			e.Value.(*Module).stop()
-		}
-	}
-}
-
-func run() {
-	select {
-	case <-loggerRegistered:
-		logger.Info("Modules: starting")
-		loggingActive = true
-	case <-time.After(1 * time.Second):
-	}
-
-	for {
-		select {
-		case <-GlobalShutdown:
-			if loggingActive {
-				logger.Warning("Modules: stopping")
-			}
-			fullStop()
-			os.Exit(0)
-		case m := <-addModule:
-			m.addToList()
-			// go m.start()
-		}
-	}
-}
-
-func init() {
-
-	modules = list.New()
-	addModule = make(chan *Module, 10)
-	GlobalShutdown = make(chan struct{})
-	loggerRegistered = make(chan struct{}, 1)
-	loggingActive = false
-
-	go run()
-
 }
