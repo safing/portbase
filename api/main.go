@@ -5,18 +5,18 @@ import (
 )
 
 func init() {
-	modules.Register("api", prep, start, stop, "database")
+	modules.Register("api", prep, start, nil, "database")
 }
 
 func prep() error {
-	return nil
+	err := checkFlags()
+	if err != nil {
+		return err
+	}
+	return registerConfig()
 }
 
 func start() error {
 	go Serve()
-	return nil
-}
-
-func stop() error {
 	return nil
 }

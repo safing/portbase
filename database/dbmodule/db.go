@@ -31,7 +31,7 @@ func prep() error {
 func start() error {
 	err := database.Initialize(databaseDir)
 	if err == nil {
-		go maintainer()
+		startMaintainer()
 	}
 	return err
 }

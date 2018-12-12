@@ -27,12 +27,12 @@ const (
 	dbMsgTypeDel     = "del"
 	dbMsgTypeWarning = "warning"
 
-	dbApiSeperator = "|"
+	dbAPISeperator = "|"
 	emptyString    = ""
 )
 
 var (
-	dbApiSeperatorBytes = []byte(dbApiSeperator)
+	dbAPISeperatorBytes = []byte(dbAPISeperator)
 )
 
 // DatabaseAPI is a database API instance.
@@ -76,6 +76,8 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 
 	go new.handler()
 	go new.writer()
+
+	log.Infof("api request: init websocket %s %s", r.RemoteAddr, r.RequestURI)
 }
 
 func (api *DatabaseAPI) handler() {
@@ -210,16 +212,16 @@ func (api *DatabaseAPI) writer() {
 
 func (api *DatabaseAPI) send(opID []byte, msgType string, msgOrKey string, data []byte) {
 	c := container.New(opID)
-	c.Append(dbApiSeperatorBytes)
+	c.Append(dbAPISeperatorBytes)
 	c.Append([]byte(msgType))
 
 	if msgOrKey != emptyString {
-		c.Append(dbApiSeperatorBytes)
+		c.Append(dbAPISeperatorBytes)
 		c.Append([]byte(msgOrKey))
 	}
 
 	if len(data) > 0 {
-		c.Append(dbApiSeperatorBytes)
+		c.Append(dbAPISeperatorBytes)
 		c.Append(data)
 	}
 
@@ -270,14 +272,16 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 	}
 
 	for r := range it.Next {
+		r.Lock()
 		data, err := r.Marshal(r, record.JSON)
+		r.Unlock()
 		if err != nil {
 			api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 		}
 		api.send(opID, dbMsgTypeOk, r.Key(), data)
 	}
-	if it.Err != nil {
-		api.send(opID, dbMsgTypeError, it.Err.Error(), nil)
+	if it.Err() != nil {
+		api.send(opID, dbMsgTypeError, it.Err().Error(), nil)
 		return false
 	}
 
@@ -320,7 +324,9 @@ func (api *DatabaseAPI) registerSub(opID []byte, q *query.Query) (sub *database.
 
 func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 	for r := range sub.Feed {
+		r.Lock()
 		data, err := r.Marshal(r, record.JSON)
+		r.Unlock()
 		if err != nil {
 			api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 		}

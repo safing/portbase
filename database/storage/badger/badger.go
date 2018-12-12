@@ -121,7 +121,11 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 
-			data, err := item.Value()
+			var data []byte
+			err := item.Value(func(val []byte) error {
+				data = val
+				return nil
+			})
 			if err != nil {
 				return err
 			}
@@ -148,10 +152,14 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 					return err
 				}
 				select {
+				case <-queryIter.Done:
+					return nil
 				case queryIter.Next <- new:
 				default:
 					select {
 					case queryIter.Next <- new:
+					case <-queryIter.Done:
+						return nil
 					case <-time.After(1 * time.Minute):
 						return errors.New("query timeout")
 					}
@@ -162,11 +170,7 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 		return nil
 	})
 
-	if err != nil {
-		queryIter.Err = err
-	}
-	close(queryIter.Next)
-	close(queryIter.Done)
+	queryIter.Finish(err)
 }
 
 // ReadOnly returns whether the database is read only.

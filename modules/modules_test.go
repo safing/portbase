@@ -5,8 +5,8 @@ package modules
 import (
 	"errors"
 	"fmt"
-	"testing"
 	"sync"
+	"testing"
 	"time"
 )
 
@@ -79,7 +79,7 @@ func TestOrdering(t *testing.T) {
 func resetModules() {
 	for _, module := range modules {
 		module.Active.UnSet()
-		module.inTransition = false
+		module.inTransition.UnSet()
 	}
 }
 

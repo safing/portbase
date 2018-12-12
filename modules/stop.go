@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	shutdownSignal = make(chan struct{})
+	shutdownSignal       = make(chan struct{})
 	shutdownSignalClosed = abool.NewBool(false)
 )
 
@@ -42,7 +42,7 @@ func checkStopStatus() (readyToStop []*Module, done bool) {
 
 	// make list out of map, minus modules in transition
 	for _, module := range activeModules {
-		if !module.inTransition {
+		if !module.inTransition.IsSet() {
 			readyToStop = append(readyToStop, module)
 		}
 	}
@@ -74,7 +74,7 @@ func Shutdown() error {
 		}
 
 		for _, module := range readyToStop {
-			module.inTransition = true
+			module.inTransition.Set()
 			nextModule := module // workaround go vet alert
 			go func() {
 				err := nextModule.stop()
@@ -84,7 +84,7 @@ func Shutdown() error {
 					reports <- nil
 				}
 				nextModule.Active.UnSet()
-				nextModule.inTransition = false
+				nextModule.inTransition.UnSet()
 			}()
 		}
 

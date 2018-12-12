@@ -78,6 +78,11 @@ func (m *Meta) Delete() {
 	m.Deleted = time.Now().Unix()
 }
 
+// IsDeleted returns whether the record is deleted.
+func (m *Meta) IsDeleted() bool {
+	return m.Deleted > 0
+}
+
 // CheckValidity checks whether the database record is valid.
 func (m *Meta) CheckValidity() (valid bool) {
 	switch {

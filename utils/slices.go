@@ -1,22 +1,25 @@
 package utils
 
-// StringInSlice returns whether the given string is in the string slice.
-func StringInSlice(a []string, s string) bool {
-	for _, entry := range a {
+// IndexOfString returns the index of given string and -1 if its not part of the slice.
+func IndexOfString(a []string, s string) int {
+	for i, entry := range a {
 		if entry == s {
-			return true
+			return i
 		}
 	}
-	return false
+	return -1
+}
+
+// StringInSlice returns whether the given string is in the string slice.
+func StringInSlice(a []string, s string) bool {
+	return IndexOfString(a, s) >= 0
 }
 
 // RemoveFromStringSlice removes the given string from the slice and returns a new slice.
 func RemoveFromStringSlice(a []string, s string) []string {
-	for key, entry := range a {
-		if entry == s {
-			a = append(a[:key], a[key+1:]...)
-			return a
-		}
+	i := IndexOfString(a, s)
+	if i > 0 {
+		a = append(a[:i], a[i+1:]...)
 	}
 	return a
 }

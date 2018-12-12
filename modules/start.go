@@ -72,7 +72,7 @@ moduleLoop:
 		switch {
 		case module.Active.IsSet():
 			active++
-		case module.inTransition:
+		case module.inTransition.IsSet():
 			modulesInProgress = true
 		default:
 			for _, depName := range module.dependencies {
@@ -116,7 +116,7 @@ func startModules() error {
 
 		for _, module := range readyToStart {
 			modulesStarting.Add(1)
-			module.inTransition = true
+			module.inTransition.Set()
 			nextModule := module // workaround go vet alert
 			go func() {
 				startErr := nextModule.start()
@@ -125,7 +125,7 @@ func startModules() error {
 				} else {
 					log.Infof("modules: started %s", nextModule.Name)
 					nextModule.Active.Set()
-					nextModule.inTransition = false
+					nextModule.inTransition.UnSet()
 					reports <- nil
 				}
 				modulesStarting.Done()
