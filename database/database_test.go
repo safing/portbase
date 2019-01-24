@@ -131,7 +131,11 @@ func TestDatabaseSystem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = Initialize(testDir)
+	ok := SetLocation(testDir)
+	if !ok {
+		t.Fatal("database location already set")
+	}
+	err = Initialize()
 	if err != nil {
 		t.Fatal(err)
 	}

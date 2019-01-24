@@ -285,8 +285,34 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 		return false
 	}
 
-	api.send(opID, dbMsgTypeDone, emptyString, nil)
-	return true
+	for {
+		select {
+		case <-api.shutdownSignal:
+			// cancel query and return
+			it.Cancel()
+			return
+		case r := <-it.Next:
+			// process query feed
+			if r != nil {
+				// process record
+				r.Lock()
+				data, err := r.Marshal(r, record.JSON)
+				r.Unlock()
+				if err != nil {
+					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
+				}
+				api.send(opID, dbMsgTypeOk, r.Key(), data)
+			} else {
+				// sub feed ended
+				if it.Err() != nil {
+					api.send(opID, dbMsgTypeError, it.Err().Error(), nil)
+					return false
+				}
+				api.send(opID, dbMsgTypeDone, emptyString, nil)
+				return true
+			}
+		}
+	}
 }
 
 // func (api *DatabaseAPI) runQuery()
@@ -323,23 +349,36 @@ func (api *DatabaseAPI) registerSub(opID []byte, q *query.Query) (sub *database.
 }
 
 func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
-	for r := range sub.Feed {
-		r.Lock()
-		data, err := r.Marshal(r, record.JSON)
-		r.Unlock()
-		if err != nil {
-			api.send(opID, dbMsgTypeWarning, err.Error(), nil)
-			continue
+	for {
+		select {
+		case <-api.shutdownSignal:
+			// cancel sub and return
+			sub.Cancel()
+			return
+		case r := <-sub.Feed:
+			// process sub feed
+			if r != nil {
+				// process record
+				r.Lock()
+				data, err := r.Marshal(r, record.JSON)
+				r.Unlock()
+				if err != nil {
+					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
+					continue
+				}
+				// TODO: use upd, new and delete msgTypes
+				if r.Meta().IsDeleted() {
+					api.send(opID, dbMsgTypeDel, r.Key(), nil)
+				} else {
+					api.send(opID, dbMsgTypeUpd, r.Key(), data)
+				}
+			} else {
+				// sub feed ended
+				if sub.Err != nil {
+					api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
+				}
+			}
 		}
-		// TODO: use upd, new and delete msgTypes
-		if r.Meta().IsDeleted() {
-			api.send(opID, dbMsgTypeDel, r.Key(), nil)
-		} else {
-			api.send(opID, dbMsgTypeUpd, r.Key(), data)
-		}
-	}
-	if sub.Err != nil {
-		api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
 	}
 }
 
