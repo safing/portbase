@@ -6,7 +6,8 @@ import (
 
 // Record provides an interface for uniformally handling database records.
 type Record interface {
-	Key() string          // test:config
+	Key() string // test:config
+	KeyIsSet() bool
 	DatabaseName() string // test
 	DatabaseKey() string  // config
 

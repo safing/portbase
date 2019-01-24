@@ -98,8 +98,8 @@ func testDatabase(t *testing.T, storageType string) {
 	for _ = range it.Next {
 		cnt++
 	}
-	if it.Err != nil {
-		t.Fatal(it.Err)
+	if it.Err() != nil {
+		t.Fatal(it.Err())
 	}
 	if cnt != 2 {
 		t.Fatal("expected two records")
@@ -131,7 +131,11 @@ func TestDatabaseSystem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = Initialize(testDir)
+	ok := SetLocation(testDir)
+	if !ok {
+		t.Fatal("database location already set")
+	}
+	err = Initialize()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,22 +13,27 @@ import (
 
 // A Controller takes care of all the extra database logic.
 type Controller struct {
-	storage   storage.Interface
+	storage storage.Interface
 
-	hooks []*RegisteredHook
+	hooks         []*RegisteredHook
 	subscriptions []*Subscription
 
 	writeLock sync.RWMutex
-	readLock  sync.RWMutex
-	migrating *abool.AtomicBool // TODO
+	//  Lock: nobody may write
+	// RLock: concurrent writing
+	readLock sync.RWMutex
+	//  Lock: nobody may read
+	// RLock: concurrent reading
+
+	migrating   *abool.AtomicBool // TODO
 	hibernating *abool.AtomicBool // TODO
 }
 
 // newController creates a new controller for a storage.
 func newController(storageInt storage.Interface) (*Controller, error) {
 	return &Controller{
-		storage:   storageInt,
-		migrating: abool.NewBool(false),
+		storage:     storageInt,
+		migrating:   abool.NewBool(false),
 		hibernating: abool.NewBool(false),
 	}, nil
 }
@@ -101,9 +106,6 @@ func (c *Controller) Put(r record.Record) (err error) {
 		return ErrReadOnly
 	}
 
-	r.Lock()
-	defer r.Unlock()
-
 	// process hooks
 	for _, hook := range c.hooks {
 		if hook.h.UsesPrePut() && hook.q.Matches(r) {
@@ -160,6 +162,9 @@ func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iter
 // PushUpdate pushes a record update to subscribers.
 func (c *Controller) PushUpdate(r record.Record) {
 	if c != nil {
+		c.readLock.RLock()
+		defer c.readLock.RUnlock()
+
 		for _, sub := range c.subscriptions {
 			if r.Meta().CheckPermission(sub.local, sub.internal) && sub.q.Matches(r) {
 				select {
@@ -171,19 +176,28 @@ func (c *Controller) PushUpdate(r record.Record) {
 	}
 }
 
+func (c *Controller) addSubscription(sub *Subscription) {
+	c.readLock.Lock()
+	defer c.readLock.Unlock()
+	c.writeLock.Lock()
+	defer c.writeLock.Unlock()
+
+	c.subscriptions = append(c.subscriptions, sub)
+}
+
 func (c *Controller) readUnlockerAfterQuery(it *iterator.Iterator) {
-	<- it.Done
+	<-it.Done
 	c.readLock.RUnlock()
 }
 
-// Maintain runs the Maintain method no the storage.
+// Maintain runs the Maintain method on the storage.
 func (c *Controller) Maintain() error {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
 	return c.storage.Maintain()
 }
 
-// MaintainThorough runs the MaintainThorough method no the storage.
+// MaintainThorough runs the MaintainThorough method on the storage.
 func (c *Controller) MaintainThorough() error {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()

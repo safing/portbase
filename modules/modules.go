@@ -24,7 +24,7 @@ var (
 type Module struct {
 	Name         string
 	Active       *abool.AtomicBool
-	inTransition bool
+	inTransition *abool.AtomicBool
 
 	prep  func() error
 	start func() error
@@ -42,6 +42,7 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 	newModule := &Module{
 		Name:         name,
 		Active:       abool.NewBool(false),
+		inTransition: abool.NewBool(false),
 		prep:         prep,
 		start:        start,
 		stop:         stop,

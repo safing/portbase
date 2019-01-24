@@ -21,6 +21,11 @@ func (b *Base) Key() string {
 	return fmt.Sprintf("%s:%s", b.dbName, b.dbKey)
 }
 
+// KeyIsSet returns true if the database key is set.
+func (b *Base) KeyIsSet() bool {
+	return len(b.dbName) > 0 && len(b.dbKey) > 0
+}
+
 // DatabaseName returns the name of the database.
 func (b *Base) DatabaseName() string {
 	return b.dbName
@@ -45,6 +50,11 @@ func (b *Base) MoveTo(key string) {
 // Meta returns the metadata object for this record.
 func (b *Base) Meta() *Meta {
 	return b.meta
+}
+
+// CreateMeta sets a default metadata object for this record.
+func (b *Base) CreateMeta() {
+	b.meta = &Meta{}
 }
 
 // SetMeta sets the metadata on the database record, it should only be called after loading the record. Use MoveTo to save the record with another key.

@@ -178,6 +178,9 @@ func (i *Interface) Put(r record.Record) error {
 		return err
 	}
 
+	r.Lock()
+	defer r.Unlock()
+
 	i.options.Apply(r)
 
 	i.updateCache(r)
@@ -191,6 +194,12 @@ func (i *Interface) PutNew(r record.Record) error {
 		return err
 	}
 
+	r.Lock()
+	defer r.Unlock()
+
+	if r.Meta() == nil {
+		r.SetMeta(&record.Meta{})
+	}
 	r.Meta().Reset()
 	i.options.Apply(r)
 	i.updateCache(r)
@@ -296,17 +305,12 @@ func (i *Interface) Subscribe(q *query.Query) (*Subscription, error) {
 		return nil, err
 	}
 
-	c.readLock.Lock()
-	defer c.readLock.Unlock()
-	c.writeLock.Lock()
-	defer c.writeLock.Unlock()
-
 	sub := &Subscription{
 		q:        q,
 		local:    i.options.Local,
 		internal: i.options.Internal,
 		Feed:     make(chan record.Record, 100),
 	}
-	c.subscriptions = append(c.subscriptions, sub)
+	c.addSubscription(sub)
 	return sub, nil
 }

@@ -15,10 +15,18 @@ var (
 	shutdownSignal = make(chan struct{})
 )
 
-// Initialize initialized the database
-func Initialize(location string) error {
-	if initialized.SetToIf(false, true) {
+// SetLocation sets the location of the database. This is separate from the initialization to provide the location to other modules earlier.
+func SetLocation(location string) (ok bool) {
+	if !initialized.IsSet() && rootDir == "" {
 		rootDir = location
+		return true
+	}
+	return false
+}
+
+// Initialize initialized the database
+func Initialize() error {
+	if initialized.SetToIf(false, true) {
 
 		err := ensureDirectory(rootDir)
 		if err != nil {
