@@ -125,8 +125,8 @@ func (q *Query) MatchesAccessor(acc accessor.Accessor) bool {
 
 // Matches checks whether the query matches the supplied database record.
 func (q *Query) Matches(r record.Record) bool {
-	if q.MatchesKey(r.DatabaseKey()) {
-		return true
+	if !q.MatchesKey(r.DatabaseKey()) {
+		return false
 	}
 	return q.MatchesRecord(r)
 }

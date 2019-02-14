@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Safing/portbase/database/record"
+	"github.com/Safing/portbase/formats/dsd"
 )
 
 var (
@@ -65,7 +66,7 @@ func TestQuery(t *testing.T) {
 	// if !gjson.Valid(testJSON) {
 	// 	t.Fatal("test json is invalid")
 	// }
-	r, err := record.NewWrapper("", nil, append([]byte("J"), []byte(testJSON)...))
+	r, err := record.NewWrapper("", nil, dsd.JSON, []byte(testJSON))
 	if err != nil {
 		t.Fatal(err)
 	}
