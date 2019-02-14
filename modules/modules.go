@@ -10,8 +10,6 @@ import (
 )
 
 var (
-	startComplete = abool.NewBool(false)
-
 	modulesLock  sync.Mutex
 	modules      = make(map[string]*Module)
 	modulesOrder []*Module

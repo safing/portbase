@@ -89,6 +89,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test prep error
 	Register("prepfail", testFail, testStart("prepfail"), testStop("prepfail"))
@@ -101,6 +102,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test prep clean exit
 	Register("prepcleanexit", testCleanExit, testStart("prepcleanexit"), testStop("prepcleanexit"))
@@ -113,6 +115,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test invalid dependency
 	Register("database", testPrep, testStart("database"), testStop("database"), "invalid")
@@ -131,6 +134,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test dependency loop
 	Register("database", testPrep, testStart("database"), testStop("database"), "helper")
@@ -144,6 +148,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test failing module start
 	Register("startfail", testPrep, testFail, testStop("startfail"))
@@ -156,6 +161,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test failing module stop
 	Register("stopfail", testPrep, testStart("stopfail"), testFail)
@@ -172,6 +178,7 @@ func TestErrors(t *testing.T) {
 	modules = make(map[string]*Module)
 	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
+	startCompleteSignal = make(chan struct{})
 
 	// test help flag
 	helpFlag = true

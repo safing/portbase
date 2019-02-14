@@ -6,7 +6,30 @@ import (
 	"sync"
 
 	"github.com/Safing/portbase/log"
+	"github.com/tevino/abool"
 )
+
+var (
+	startComplete       = abool.NewBool(false)
+	startCompleteSignal = make(chan struct{})
+)
+
+// markStartComplete marks the startup as completed.
+func markStartComplete() {
+	if startComplete.SetToIf(false, true) {
+		close(startCompleteSignal)
+	}
+}
+
+// StartCompleted returns whether starting has completed.
+func StartCompleted() bool {
+	return startComplete.IsSet()
+}
+
+// WaitForStartCompletion returns as soon as starting has completed.
+func WaitForStartCompletion() <-chan struct{} {
+	return startCompleteSignal
+}
 
 // Start starts all modules in the correct order. In case of an error, it will automatically shutdown again.
 func Start() error {
@@ -44,8 +67,12 @@ func Start() error {
 		return err
 	}
 
-	startComplete.Set()
+	// complete startup
 	log.Infof("modules: started %d modules", len(modules))
+	if startComplete.SetToIf(false, true) {
+		close(startCompleteSignal)
+	}
+
 	return nil
 }
 
