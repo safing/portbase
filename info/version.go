@@ -56,7 +56,7 @@ func Version() string {
 
 func FullVersion() string {
 	s := ""
-	if strings.HasPrefix(commit, fmt.Sprintf("v%s-0-", version)) {
+	if strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
 		s += fmt.Sprintf("%s\nversion %s\n", name, version)
 	} else {
 		s += fmt.Sprintf("%s\ndevelopment build, built on top version %s\n", name, version)
