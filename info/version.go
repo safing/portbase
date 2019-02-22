@@ -47,7 +47,7 @@ func GetInfo() *Info {
 }
 
 func Version() string {
-	if strings.HasPrefix(commit, fmt.Sprintf("v%s-0-", version)) {
+	if strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
 		return version
 	} else {
 		return version + "*"
