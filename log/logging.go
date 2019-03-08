@@ -4,6 +4,7 @@ package log
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -107,7 +108,7 @@ func ParseLevel(level string) severity {
 	return 0
 }
 
-func Start() error {
+func Start() (err error) {
 
 	if !initializing.SetToIf(false, true) {
 		return nil
@@ -120,7 +121,8 @@ func Start() error {
 	if initialLogLevel > 0 {
 		atomic.StoreUint32(logLevel, uint32(initialLogLevel))
 	} else {
-		return fmt.Errorf("invalid log level \"%s\", falling back to level info", logLevelFlag)
+		err = fmt.Errorf("log warning: invalid log level \"%s\", falling back to level info", logLevelFlag)
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 	}
 
 	// get and set file loglevels
@@ -130,11 +132,15 @@ func Start() error {
 		for _, pair := range strings.Split(fileLogLevels, ",") {
 			splitted := strings.Split(pair, "=")
 			if len(splitted) != 2 {
-				return fmt.Errorf("invalid file log level \"%s\", ignoring", pair)
+				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				break
 			}
 			fileLevel := ParseLevel(splitted[1])
 			if fileLevel == 0 {
-				return fmt.Errorf("invalid file log level \"%s\", ignoring", pair)
+				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				break
 			}
 			newFileLevels[splitted[0]] = fileLevel
 		}
@@ -146,7 +152,7 @@ func Start() error {
 	started.Set()
 	close(startedSignal)
 
-	return nil
+	return err
 }
 
 // Shutdown writes remaining log lines and then stops the logger.
