@@ -57,6 +57,14 @@ func (b *Base) CreateMeta() {
 	b.meta = &Meta{}
 }
 
+// UpdateMeta creates the metadata if it does not exist and updates it.
+func (b *Base) UpdateMeta() {
+	if b.meta == nil {
+		b.meta = &Meta{}
+	}
+	b.meta.Update()
+}
+
 // SetMeta sets the metadata on the database record, it should only be called after loading the record. Use MoveTo to save the record with another key.
 func (b *Base) SetMeta(meta *Meta) {
 	b.meta = meta

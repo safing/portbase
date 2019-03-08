@@ -106,3 +106,15 @@ func (m *Meta) CheckPermission(local, internal bool) (permitted bool) {
 		return true
 	}
 }
+
+// Duplicate returns a new copy of Meta.
+func (m *Meta) Duplicate() *Meta {
+	return &Meta{
+		Created:   m.Created,
+		Modified:  m.Modified,
+		Expires:   m.Expires,
+		Deleted:   m.Deleted,
+		secret:    m.secret,
+		cronjewel: m.cronjewel,
+	}
+}

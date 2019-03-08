@@ -15,6 +15,8 @@ type Record interface {
 	MoveTo(key string) // test:config
 	Meta() *Meta
 	SetMeta(meta *Meta)
+	CreateMeta()
+	UpdateMeta()
 
 	Marshal(self Record, format uint8) ([]byte, error)
 	MarshalRecord(self Record) ([]byte, error)

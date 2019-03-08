@@ -36,9 +36,7 @@ type Options struct {
 
 // Apply applies options to the record metadata.
 func (o *Options) Apply(r record.Record) {
-	if r.Meta() == nil {
-		r.SetMeta(&record.Meta{})
-	}
+	r.UpdateMeta()
 	if o.AlwaysMakeSecret {
 		r.Meta().MakeSecret()
 	}
@@ -198,7 +196,7 @@ func (i *Interface) PutNew(r record.Record) error {
 	defer r.Unlock()
 
 	if r.Meta() == nil {
-		r.SetMeta(&record.Meta{})
+		r.CreateMeta()
 	}
 	r.Meta().Reset()
 	i.options.Apply(r)

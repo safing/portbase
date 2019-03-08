@@ -116,11 +116,6 @@ func (c *Controller) Put(r record.Record) (err error) {
 		}
 	}
 
-	if r.Meta() == nil {
-		r.SetMeta(&record.Meta{})
-	}
-	r.Meta().Update()
-
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
 
