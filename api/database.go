@@ -420,11 +420,20 @@ func (api *DatabaseAPI) handlePut(opID []byte, key string, data []byte, create b
 	//    129|success
 	//    129|error|<message>
 
-	raw := make([]byte, len(data)+1)
-	raw[0] = record.JSON
-	copy(raw[1:], data)
+	if len(data) < 2 {
+		api.send(opID, dbMsgTypeError, "bad request: malformed message", nil)
+		return
+	}
 
-	r, err := record.NewWrapper(key, nil, record.JSON, data)
+	// FIXME: remove transition code
+	if data[0] != record.JSON {
+		typedData := make([]byte, len(data)+1)
+		typedData[0] = record.JSON
+		copy(typedData[1:], data)
+		data = typedData
+	}
+
+	r, err := record.NewWrapper(key, nil, data[0], data[1:])
 	if err != nil {
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
 		return
