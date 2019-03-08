@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/tevino/abool"
@@ -53,16 +54,19 @@ func checkStopStatus() (readyToStop []*Module, done bool) {
 // Shutdown stops all modules in the correct order.
 func Shutdown() error {
 
+	if shutdownSignalClosed.SetToIf(false, true) {
+		close(shutdownSignal)
+	} else {
+		// shutdown was already issued
+		return errors.New("shutdown already initiated")
+	}
+
 	if startComplete.IsSet() {
 		log.Warning("modules: starting shutdown...")
 		modulesLock.Lock()
 		defer modulesLock.Unlock()
 	} else {
 		log.Warning("modules: aborting, shutting down...")
-	}
-
-	if shutdownSignalClosed.SetToIf(false, true) {
-		close(shutdownSignal)
 	}
 
 	reports := make(chan error, 10)
