@@ -21,6 +21,18 @@ func init() {
 }
 
 func prep() error {
+	err := CheckVersion()
+	if err != nil {
+		return err
+	}
+
+	if PrintVersion() {
+		return modules.ErrCleanExit
+	}
+	return nil
+}
+
+func CheckVersion() error {
 	if !strings.HasSuffix(os.Args[0], ".test") {
 		if name == "[NAME]" ||
 			version == "[version unknown]" ||
@@ -33,12 +45,15 @@ func prep() error {
 			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
 		}
 	}
+	return nil
+}
 
+func PrintVersion() (printed bool) {
 	if showVersion {
 		fmt.Println(FullVersion())
-		return modules.ErrCleanExit
+		return true
 	}
-	return nil
+	return false
 }
 
 func start() error {
