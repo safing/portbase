@@ -24,7 +24,8 @@ func log(level severity, msg string) {
 
 	if !started.IsSet() {
 		// a bit resouce intense, but keeps logs before logging started.
-		go func(){
+		// FIXME: create option to disable logging
+		go func() {
 			<-startedSignal
 			log(level, msg)
 		}()
