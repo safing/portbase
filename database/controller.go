@@ -50,12 +50,12 @@ func (c *Controller) Injected() bool {
 
 // Get return the record with the given key.
 func (c *Controller) Get(key string) (record.Record, error) {
+	c.readLock.RLock()
+	defer c.readLock.RUnlock()
+
 	if shuttingDown.IsSet() {
 		return nil, ErrShuttingDown
 	}
-
-	c.readLock.RLock()
-	defer c.readLock.RUnlock()
 
 	// process hooks
 	for _, hook := range c.hooks {
@@ -98,6 +98,9 @@ func (c *Controller) Get(key string) (record.Record, error) {
 
 // Put saves a record in the database.
 func (c *Controller) Put(r record.Record) (err error) {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
 	if shuttingDown.IsSet() {
 		return ErrShuttingDown
 	}
@@ -115,9 +118,6 @@ func (c *Controller) Put(r record.Record) (err error) {
 			}
 		}
 	}
-
-	c.writeLock.RLock()
-	defer c.writeLock.RUnlock()
 
 	err = c.storage.Put(r)
 	if err != nil {
@@ -139,11 +139,13 @@ func (c *Controller) Put(r record.Record) (err error) {
 
 // Query executes the given query on the database.
 func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
+	c.readLock.RLock()
+
 	if shuttingDown.IsSet() {
+		c.readLock.RUnlock()
 		return nil, ErrShuttingDown
 	}
 
-	c.readLock.RLock()
 	it, err := c.storage.Query(q, local, internal)
 	if err != nil {
 		c.readLock.RUnlock()
@@ -159,6 +161,10 @@ func (c *Controller) PushUpdate(r record.Record) {
 	if c != nil {
 		c.readLock.RLock()
 		defer c.readLock.RUnlock()
+
+		if shuttingDown.IsSet() {
+			return
+		}
 
 		for _, sub := range c.subscriptions {
 			if r.Meta().CheckPermission(sub.local, sub.internal) && sub.q.Matches(r) {
@@ -177,6 +183,10 @@ func (c *Controller) addSubscription(sub *Subscription) {
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 
+	if shuttingDown.IsSet() {
+		return
+	}
+
 	c.subscriptions = append(c.subscriptions, sub)
 }
 
@@ -189,6 +199,11 @@ func (c *Controller) readUnlockerAfterQuery(it *iterator.Iterator) {
 func (c *Controller) Maintain() error {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		return nil
+	}
+
 	return c.storage.Maintain()
 }
 
@@ -196,11 +211,21 @@ func (c *Controller) Maintain() error {
 func (c *Controller) MaintainThorough() error {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		return nil
+	}
+
 	return c.storage.MaintainThorough()
 }
 
 // Shutdown shuts down the storage.
 func (c *Controller) Shutdown() error {
-	// TODO: should we wait for gets/puts/queries to complete?
+	// aquire full locks
+	c.readLock.Lock()
+	defer c.readLock.Unlock()
+	c.writeLock.Lock()
+	defer c.writeLock.Unlock()
+
 	return c.storage.Shutdown()
 }

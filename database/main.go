@@ -50,10 +50,14 @@ func Initialize() error {
 func Shutdown() (err error) {
 	if shuttingDown.SetToIf(false, true) {
 		close(shutdownSignal)
+	} else {
+		return
 	}
 
-	all := duplicateControllers()
-	for _, c := range all {
+	controllersLock.RLock()
+	defer controllersLock.RUnlock()
+
+	for _, c := range controllers {
 		err = c.Shutdown()
 		if err != nil {
 			return
