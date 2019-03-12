@@ -19,38 +19,6 @@ func ShuttingDown() <-chan struct{} {
 	return shutdownSignal
 }
 
-func checkStopStatus() (readyToStop []*Module, done bool) {
-	active := 0
-
-	// collect all active modules
-	activeModules := make(map[string]*Module)
-	for _, module := range modules {
-		if module.Active.IsSet() {
-			active++
-			activeModules[module.Name] = module
-		}
-	}
-	if active == 0 {
-		return nil, true
-	}
-
-	// remove modules that others depend on
-	for _, module := range activeModules {
-		for _, depName := range module.dependencies {
-			delete(activeModules, depName)
-		}
-	}
-
-	// make list out of map, minus modules in transition
-	for _, module := range activeModules {
-		if !module.inTransition.IsSet() {
-			readyToStop = append(readyToStop, module)
-		}
-	}
-
-	return readyToStop, false
-}
-
 // Shutdown stops all modules in the correct order.
 func Shutdown() error {
 
@@ -69,38 +37,67 @@ func Shutdown() error {
 		log.Warning("modules: aborting, shutting down...")
 	}
 
-	reports := make(chan error, 10)
-	for {
-		readyToStop, done := checkStopStatus()
-
-		if done {
-			break
-		}
-
-		for _, module := range readyToStop {
-			module.inTransition.Set()
-			nextModule := module // workaround go vet alert
-			go func() {
-				err := nextModule.stop()
-				if err != nil {
-					reports <- fmt.Errorf("modules: could not stop module %s: %s", nextModule.Name, err)
-				} else {
-					reports <- nil
-				}
-				nextModule.Active.UnSet()
-				nextModule.inTransition.UnSet()
-			}()
-		}
-
-		err := <-reports
-		if err != nil {
-			log.Error(err.Error())
-			return err
-		}
-
+	err := stopModules()
+	if err != nil {
+		log.Error(err.Error())
+		return err
 	}
 
 	log.Info("modules: shutdown complete")
 	log.Shutdown()
 	return nil
+}
+
+func stopModules() error {
+	var rep *report
+	reports := make(chan *report)
+	execCnt := 0
+	reportCnt := 0
+
+	// get number of started modules
+	startedCnt := 0
+	for _, m := range modules {
+		if m.Started.IsSet() {
+			startedCnt++
+		}
+	}
+
+	for {
+		// find modules to exec
+		for _, m := range modules {
+			if m.ReadyToStop() {
+				execCnt++
+				m.inTransition.Set()
+
+				execM := m
+				go func() {
+					reports <- &report{
+						module: execM,
+						err:    execM.stop(),
+					}
+				}()
+			}
+		}
+
+		// check for dep loop
+		if execCnt == reportCnt {
+			return fmt.Errorf("modules: dependency loop detected, cannot continue")
+		}
+
+		// wait for reports
+		rep = <-reports
+		rep.module.inTransition.UnSet()
+		if rep.err != nil {
+			return fmt.Errorf("modules: could not stop module %s: %s", rep.module.Name, rep.err)
+		}
+		reportCnt++
+		rep.module.Stopped.Set()
+		log.Infof("modules: stopped %s", rep.module.Name)
+
+		// exit if done
+		if reportCnt == startedCnt {
+			return nil
+		}
+
+	}
 }

@@ -11,16 +11,23 @@ import (
 )
 
 var (
+	orderLock     sync.Mutex
 	startOrder    string
 	shutdownOrder string
 )
 
-func testPrep() error {
-	return nil
+func testPrep(name string) func() error {
+	return func() error {
+		// fmt.Printf("prep %s\n", name)
+		return nil
+	}
 }
 
 func testStart(name string) func() error {
 	return func() error {
+		orderLock.Lock()
+		defer orderLock.Unlock()
+		// fmt.Printf("start %s\n", name)
 		startOrder = fmt.Sprintf("%s>%s", startOrder, name)
 		return nil
 	}
@@ -28,6 +35,9 @@ func testStart(name string) func() error {
 
 func testStop(name string) func() error {
 	return func() error {
+		orderLock.Lock()
+		defer orderLock.Unlock()
+		// fmt.Printf("stop %s\n", name)
 		shutdownOrder = fmt.Sprintf("%s>%s", shutdownOrder, name)
 		return nil
 	}
@@ -43,12 +53,21 @@ func testCleanExit() error {
 
 func TestOrdering(t *testing.T) {
 
-	Register("database", testPrep, testStart("database"), testStop("database"))
-	Register("stats", testPrep, testStart("stats"), testStop("stats"), "database")
-	Register("service", testPrep, testStart("service"), testStop("service"), "database")
-	Register("analytics", testPrep, testStart("analytics"), testStop("analytics"), "stats", "database")
+	Register("database", testPrep("database"), testStart("database"), testStop("database"))
+	Register("stats", testPrep("stats"), testStart("stats"), testStop("stats"), "database")
+	Register("service", testPrep("service"), testStart("service"), testStop("service"), "database")
+	Register("analytics", testPrep("analytics"), testStart("analytics"), testStop("analytics"), "stats", "database")
 
-	Start()
+	err := Start()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if startOrder != ">database>service>stats>analytics" &&
+		startOrder != ">database>stats>service>analytics" &&
+		startOrder != ">database>stats>analytics>service" {
+		t.Errorf("start order mismatch, was %s", startOrder)
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -60,13 +79,11 @@ func TestOrdering(t *testing.T) {
 		}
 		wg.Done()
 	}()
-	Shutdown()
-
-	if startOrder != ">database>service>stats>analytics" &&
-		startOrder != ">database>stats>service>analytics" &&
-		startOrder != ">database>stats>analytics>service" {
-		t.Errorf("start order mismatch, was %s", startOrder)
+	err = Shutdown()
+	if err != nil {
+		t.Error(err)
 	}
+
 	if shutdownOrder != ">analytics>service>stats>database" &&
 		shutdownOrder != ">analytics>stats>service>database" &&
 		shutdownOrder != ">service>analytics>stats>database" {
@@ -74,12 +91,31 @@ func TestOrdering(t *testing.T) {
 	}
 
 	wg.Wait()
+
+	printAndRemoveModules()
+}
+
+func printAndRemoveModules() {
+	modulesLock.Lock()
+	defer modulesLock.Unlock()
+
+	fmt.Printf("All %d modules:\n", len(modules))
+	for _, m := range modules {
+		fmt.Printf("module %s: %+v\n", m.Name, m)
+	}
+
+	modules = make(map[string]*Module)
 }
 
 func resetModules() {
 	for _, module := range modules {
-		module.Active.UnSet()
+		module.Prepped.UnSet()
+		module.Started.UnSet()
+		module.Stopped.UnSet()
 		module.inTransition.UnSet()
+
+		module.depModules = make([]*Module, 0)
+		module.depModules = make([]*Module, 0)
 	}
 }
 
@@ -87,7 +123,6 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
@@ -100,7 +135,6 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
@@ -113,18 +147,11 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
 	// test invalid dependency
-	Register("database", testPrep, testStart("database"), testStop("database"), "invalid")
-	// go func() {
-	// 	time.Sleep(1 * time.Second)
-	// 	fmt.Println("===== TAKING TOO LONG FOR SHUTDOWN - PRINTING STACK TRACES =====")
-	// 	pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-	// 	os.Exit(1)
-	// }()
+	Register("database", nil, testStart("database"), testStop("database"), "invalid")
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
@@ -132,13 +159,12 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
 	// test dependency loop
-	Register("database", testPrep, testStart("database"), testStop("database"), "helper")
-	Register("helper", testPrep, testStart("helper"), testStop("helper"), "database")
+	Register("database", nil, testStart("database"), testStop("database"), "helper")
+	Register("helper", nil, testStart("helper"), testStop("helper"), "database")
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
@@ -146,12 +172,11 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
 	// test failing module start
-	Register("startfail", testPrep, testFail, testStop("startfail"))
+	Register("startfail", nil, testFail, testStop("startfail"))
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
@@ -159,12 +184,11 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
 	// test failing module stop
-	Register("stopfail", testPrep, testStart("stopfail"), testFail)
+	Register("stopfail", nil, testStart("stopfail"), testFail)
 	err = Start()
 	if err != nil {
 		t.Error("should not fail")
@@ -176,7 +200,6 @@ func TestErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
-	modulesOrder = make([]*Module, 0)
 	startComplete.UnSet()
 	startCompleteSignal = make(chan struct{})
 
