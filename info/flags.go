@@ -15,7 +15,7 @@ var (
 )
 
 func init() {
-	modules.Register("info", prep, start, stop)
+	modules.Register("info", prep, nil, nil)
 
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 }
@@ -32,6 +32,7 @@ func prep() error {
 	return nil
 }
 
+// CheckVersion checks if the metadata is ok.
 func CheckVersion() error {
 	if !strings.HasSuffix(os.Args[0], ".test") {
 		if name == "[NAME]" ||
@@ -48,18 +49,11 @@ func CheckVersion() error {
 	return nil
 }
 
+// PrintVersion prints the version, if requested, and returns if it did so.
 func PrintVersion() (printed bool) {
 	if showVersion {
 		fmt.Println(FullVersion())
 		return true
 	}
 	return false
-}
-
-func start() error {
-	return nil
-}
-
-func stop() error {
-	return nil
 }
