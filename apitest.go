@@ -36,7 +36,7 @@ import (
 func main() {
 
 	// Set Info
-	info.Set("Portbase API Development Helper", "0.0.1")
+	info.Set("Portbase API Development Helper", "0.0.1", "GPLv3", false)
 
 	// Register some dummy config vars
 

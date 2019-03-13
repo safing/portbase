@@ -10,16 +10,21 @@ var (
 	name         = "[NAME]"
 	version      = "[version unknown]"
 	commit       = "[commit unknown]"
+	license      = "[license unknown]"
 	buildOptions = "[options unknown]"
 	buildUser    = "[user unknown]"
 	buildHost    = "[host unknown]"
 	buildDate    = "[date unknown]"
 	buildSource  = "[source unknown]"
+
+	compareVersion bool
 )
 
+// Info holds the programs meta information.
 type Info struct {
 	Name         string
 	Version      string
+	License      string
 	Commit       string
 	BuildOptions string
 	BuildUser    string
@@ -28,16 +33,21 @@ type Info struct {
 	BuildSource  string
 }
 
-func Set(setName string, setVersion string) {
+// Set sets meta information via the main routine. This should be the first thing your program calls.
+func Set(setName string, setVersion string, setLicenseName string, compareVersionToTag bool) {
 	name = setName
 	version = setVersion
+	license = setLicenseName
+	compareVersion = compareVersionToTag
 }
 
+// GetInfo returns all the meta information about the program.
 func GetInfo() *Info {
 	return &Info{
 		Name:         name,
 		Version:      version,
 		Commit:       commit,
+		License:      license,
 		BuildOptions: buildOptions,
 		BuildUser:    buildUser,
 		BuildHost:    buildHost,
@@ -46,17 +56,18 @@ func GetInfo() *Info {
 	}
 }
 
+// Version returns the short version string.
 func Version() string {
-	if strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
+	if !compareVersion || strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
 		return version
-	} else {
-		return version + "*"
 	}
+	return version + "*"
 }
 
+// FullVersion returns the full and detailed version string.
 func FullVersion() string {
 	s := ""
-	if strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
+	if !compareVersion || strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
 		s += fmt.Sprintf("%s\nversion %s\n", name, version)
 	} else {
 		s += fmt.Sprintf("%s\ndevelopment build, built on top version %s\n", name, version)
@@ -66,6 +77,6 @@ func FullVersion() string {
 	s += fmt.Sprintf("  using options %s\n", strings.Replace(buildOptions, "§", " ", -1))
 	s += fmt.Sprintf("  by %s@%s\n", buildUser, buildHost)
 	s += fmt.Sprintf("  on %s\n", buildDate)
-	s += fmt.Sprintf("\nLicensed under the AGPL license.\nThe source code is available here: %s", buildSource)
+	s += fmt.Sprintf("\nLicensed under the %s license.\nThe source code is available here: %s", license, buildSource)
 	return s
 }

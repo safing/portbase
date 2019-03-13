@@ -15,7 +15,7 @@ import (
 func main() {
 
 	// Set Info
-	info.Set("Portbase", "0.0.1")
+	info.Set("Portbase", "0.0.1", "GPLv3", false)
 
 	// Start
 	err := modules.Start()

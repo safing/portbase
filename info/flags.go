@@ -38,6 +38,7 @@ func CheckVersion() error {
 		if name == "[NAME]" ||
 			version == "[version unknown]" ||
 			commit == "[commit unknown]" ||
+			license == "[license unknown]" ||
 			buildOptions == "[options unknown]" ||
 			buildUser == "[user unknown]" ||
 			buildHost == "[host unknown]" ||
