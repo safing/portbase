@@ -11,6 +11,7 @@ import (
 	"github.com/Safing/portbase/database/query"
 	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/storage"
+	"github.com/Safing/portbase/log"
 )
 
 var (
@@ -44,8 +45,8 @@ type StorageInterface struct {
 
 // Get returns a database record.
 func (s *StorageInterface) Get(key string) (record.Record, error) {
-	notsLock.Lock()
-	defer notsLock.Unlock()
+	notsLock.RLock()
+	defer notsLock.RUnlock()
 
 	// transform key
 	if strings.HasPrefix(key, "all/") {
@@ -72,8 +73,8 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 }
 
 func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
-	notsLock.Lock()
-	defer notsLock.Unlock()
+	notsLock.RLock()
+	defer notsLock.RUnlock()
 
 	// send all notifications
 	for _, n := range nots {
@@ -107,10 +108,9 @@ func registerAsDatabase() error {
 
 // Put stores a record in the database.
 func (s *StorageInterface) Put(r record.Record) error {
-	r.Lock()
+	// record is already locked!
 	key := r.DatabaseKey()
 	n, err := EnsureNotification(r)
-	r.Unlock()
 
 	if err != nil {
 		return ErrInvalidData
@@ -123,22 +123,32 @@ func (s *StorageInterface) Put(r record.Record) error {
 		return ErrInvalidPath
 	}
 
-	notsLock.Lock()
+	// continue in goroutine
+	go updateNotificationFromDatabasePut(n, key)
+
+	return nil
+}
+
+func updateNotificationFromDatabasePut(n *Notification, key string) {
+	// seperate goroutine in order to correctly lock notsLock
+	notsLock.RLock()
 	origN, ok := nots[key]
-	notsLock.Unlock()
+	notsLock.RUnlock()
 
 	if ok {
+		// existing notification, update selected action ID only
 		n.Lock()
 		defer n.Unlock()
-		go origN.SelectAndExecuteAction(n.SelectedActionID)
+		if n.SelectedActionID != "" {
+			log.Tracef("notifications: user selected action for %s: %s", n.ID, n.SelectedActionID)
+			go origN.SelectAndExecuteAction(n.SelectedActionID)
+		}
 	} else {
 		// accept new notification as is
 		notsLock.Lock()
 		nots[key] = n
 		notsLock.Unlock()
 	}
-
-	return nil
 }
 
 // Delete deletes a record from the database.

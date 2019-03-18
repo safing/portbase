@@ -53,8 +53,8 @@ func noOpAction(n *Notification) {
 
 // Get returns the notification identifed by the given id or nil if it doesn't exist.
 func Get(id string) *Notification {
-	notsLock.Lock()
-	defer notsLock.Unlock()
+	notsLock.RLock()
+	defer notsLock.RUnlock()
 	n, ok := nots[id]
 	if ok {
 		return n
@@ -62,13 +62,13 @@ func Get(id string) *Notification {
 	return nil
 }
 
-// New returns a new Notification
+// Init initializes a Notification and returns it.
 func (n *Notification) Init() *Notification {
 	n.Created = time.Now().Unix()
 	return n
 }
 
-// Save saves the notification
+// Save saves the notification and returns it.
 func (n *Notification) Save() *Notification {
 	notsLock.Lock()
 	defer notsLock.Unlock()
@@ -119,16 +119,16 @@ func (n *Notification) Save() *Notification {
 // SetActionFunction sets a trigger function to be executed when the user reacted on the notification.
 // The provided funtion will be started as its own goroutine and will have to lock everything it accesses, even the provided notification.
 func (n *Notification) SetActionFunction(fn func(*Notification)) *Notification {
-	n.Lock()
-	defer n.Unlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 	n.actionFunction = fn
 	return n
 }
 
 // MakeAck sets a default "OK" action and a no-op action function.
 func (n *Notification) MakeAck() *Notification {
-	n.Lock()
-	defer n.Unlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	n.AvailableActions = []*Action{
 		&Action{
@@ -144,8 +144,8 @@ func (n *Notification) MakeAck() *Notification {
 
 // Response waits for the user to respond to the notification and returns the selected action.
 func (n *Notification) Response() <-chan string {
-	n.Lock()
-	defer n.Unlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	if n.actionTrigger == nil {
 		n.actionTrigger = make(chan string)
@@ -190,12 +190,13 @@ func (n *Notification) SelectAndExecuteAction(id string) {
 	}
 	if n.actionTrigger != nil {
 		// satisfy all listeners
+	triggerAll:
 		for {
 			select {
 			case n.actionTrigger <- n.SelectedActionID:
 				executed = true
 			default:
-				break
+				break triggerAll
 			}
 		}
 	}
@@ -206,6 +207,13 @@ func (n *Notification) SelectAndExecuteAction(id string) {
 	}
 
 	go n.Save()
+}
+
+// AddDataSubject adds the data subject to the notification. This is the only way how a data subject should be added - it avoids locking problems.
+func (n *Notification) AddDataSubject(ds sync.Locker) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	n.DataSubject = ds
 }
 
 // Lock locks the Notification and the DataSubject, if available.
