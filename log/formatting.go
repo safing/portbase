@@ -40,14 +40,14 @@ func formatLine(line *logLine, useColor bool) string {
 
 	var fLine string
 	if line.line == 0 {
-		fLine = fmt.Sprintf("%s%s ? ▶ %s %03d%s %s", colorStart, line.time.Format("060102 15:04:05.000"), line.level.String(), counter, colorEnd, line.msg)
+		fLine = fmt.Sprintf("%s%s ? %s %s %03d%s %s", colorStart, line.time.Format("060102 15:04:05.000"), rightArrow, line.level.String(), counter, colorEnd, line.msg)
 	} else {
 		fLen := len(line.file)
 		fPartStart := fLen - 10
 		if fPartStart < 0 {
 			fPartStart = 0
 		}
-		fLine = fmt.Sprintf("%s%s %s:%03d ▶ %s %03d%s %s", colorStart, line.time.Format("060102 15:04:05.000"), line.file[fPartStart:], line.line, line.level.String(), counter, colorEnd, line.msg)
+		fLine = fmt.Sprintf("%s%s %s:%03d %s %s %03d%s %s", colorStart, line.time.Format("060102 15:04:05.000"), line.file[fPartStart:], line.line, rightArrow, line.level.String(), counter, colorEnd, line.msg)
 	}
 
 	if counter >= maxCount {

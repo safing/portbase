@@ -20,7 +20,7 @@ func writeLine(line *logLine) {
 
 func startWriter() {
 	shutdownWaitGroup.Add(1)
-	fmt.Println(fmt.Sprintf("%s%s ▶ BOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), endColor()))
+	fmt.Println(fmt.Sprintf("%s%s %s BOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), rightArrow, endColor()))
 	go writer()
 }
 
@@ -49,7 +49,7 @@ func writer() {
 				case line = <-logBuffer:
 					writeLine(line)
 				case <-time.After(10 * time.Millisecond):
-					fmt.Println(fmt.Sprintf("%s%s ◀ EOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), endColor()))
+					fmt.Println(fmt.Sprintf("%s%s %s EOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), leftArrow, endColor()))
 					return
 				}
 			}
