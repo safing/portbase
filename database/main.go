@@ -3,7 +3,7 @@ package database
 import (
 	"errors"
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"github.com/tevino/abool"
 )
@@ -28,14 +28,14 @@ func SetLocation(location string) (ok bool) {
 func Initialize() error {
 	if initialized.SetToIf(false, true) {
 
-		err := ensureDirectory(rootDir)
+		err := ensureDirectory(rootDir, 0755)
 		if err != nil {
 			return fmt.Errorf("could not create/open database directory (%s): %s", rootDir, err)
 		}
 
 		err = loadRegistry()
 		if err != nil {
-			return fmt.Errorf("could not load database registry (%s): %s", path.Join(rootDir, registryFileName), err)
+			return fmt.Errorf("could not load database registry (%s): %s", filepath.Join(rootDir, registryFileName), err)
 		}
 
 		// start registry writer

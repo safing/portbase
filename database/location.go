@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
+	"runtime"
 )
 
 const (
@@ -15,12 +16,12 @@ var (
 	rootDir string
 )
 
-func ensureDirectory(dirPath string) error {
+func ensureDirectory(dirPath string, permissions os.FileMode) error {
 	// open dir
 	dir, err := os.Open(dirPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return os.MkdirAll(dirPath, 0700)
+			return os.MkdirAll(dirPath, permissions)
 		}
 		return err
 	}
@@ -33,9 +34,14 @@ func ensureDirectory(dirPath string) error {
 	if !fileInfo.IsDir() {
 		return errors.New("path exists and is not a directory")
 	}
-	if fileInfo.Mode().Perm() != 0700 {
-		return dir.Chmod(0700)
+
+	if runtime.GOOS == "windows" {
+		// TODO
+		// acl.Chmod(dirPath, permissions)
+	} else if fileInfo.Mode().Perm() != permissions {
+		return dir.Chmod(permissions)
 	}
+
 	return nil
 }
 
@@ -46,10 +52,10 @@ func GetDatabaseRoot() string {
 
 // getLocation returns the storage location for the given name and type.
 func getLocation(name, storageType string) (string, error) {
-	location := path.Join(rootDir, databasesSubDir, name, storageType)
+	location := filepath.Join(rootDir, databasesSubDir, name, storageType)
 
 	// check location
-	err := ensureDirectory(location)
+	err := ensureDirectory(location, 0700)
 	if err != nil {
 		return "", fmt.Errorf("location (%s) invalid: %s", location, err)
 	}

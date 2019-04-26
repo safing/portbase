@@ -11,6 +11,7 @@ import (
 	"github.com/Safing/portbase/database/query"
 	"github.com/Safing/portbase/database/record"
 	"github.com/Safing/portbase/database/storage"
+	"github.com/Safing/portbase/log"
 )
 
 // Badger database made pluggable for portbase.
@@ -30,6 +31,12 @@ func NewBadger(name, location string) (storage.Interface, error) {
 	opts.ValueDir = location
 
 	db, err := badger.Open(opts)
+	if err == badger.ErrTruncateNeeded {
+		// clean up after crash
+		log.Warningf("database/storage: truncating corrupted value log of badger database %s: this may cause data loss", name)
+		opts.Truncate = true
+		db, err = badger.Open(opts)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +66,10 @@ func (b *Badger) Get(key string) (record.Record, error) {
 		return nil, err
 	}
 
-	// DO NOT check for this, as we got our own machanism for that.
-	// if item.IsDeletedOrExpired() {
-	// 	return nil, storage.ErrNotFound
-	// }
+	// return err if deleted or expired
+	if item.IsDeletedOrExpired() {
+		return nil, storage.ErrNotFound
+	}
 
 	data, err := item.ValueCopy(nil)
 	if err != nil {
