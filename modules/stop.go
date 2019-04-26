@@ -39,17 +39,18 @@ func Shutdown() error {
 
 	err := stopModules()
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		log.Errorf("modules: shutdown completed with error: %s", err)
+	} else {
+		log.Info("modules: shutdown completed")
 	}
 
-	log.Info("modules: shutdown complete")
 	log.Shutdown()
-	return nil
+	return err
 }
 
 func stopModules() error {
 	var rep *report
+	var lastErr error
 	reports := make(chan *report)
 	execCnt := 0
 	reportCnt := 0
@@ -88,7 +89,8 @@ func stopModules() error {
 		rep = <-reports
 		rep.module.inTransition.UnSet()
 		if rep.err != nil {
-			return fmt.Errorf("modules: could not stop module %s: %s", rep.module.Name, rep.err)
+			lastErr = rep.err
+			log.Warningf("modules: could not stop module %s: %s", rep.module.Name, rep.err)
 		}
 		reportCnt++
 		rep.module.Stopped.Set()
@@ -96,8 +98,7 @@ func stopModules() error {
 
 		// exit if done
 		if reportCnt == startedCnt {
-			return nil
+			return lastErr
 		}
-
 	}
 }
