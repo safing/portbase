@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+// FIXME: use https://godoc.org/github.com/shirou/gopsutil/host#PlatformInformation instead
+
 var (
 	versionRe = regexp.MustCompile(`[0-9\.]+`)
 
