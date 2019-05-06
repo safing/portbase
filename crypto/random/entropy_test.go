@@ -6,7 +6,6 @@ import (
 )
 
 func TestFeeder(t *testing.T) {
-
 	// wait for start / first round to complete
 	time.Sleep(1 * time.Millisecond)
 

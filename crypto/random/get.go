@@ -1,8 +1,10 @@
 package random
 
 import (
+	"encoding/binary"
 	"errors"
 	"io"
+	"math"
 	"time"
 
 	"github.com/Safing/portbase/config"
@@ -13,10 +15,10 @@ var (
 	Reader io.Reader
 
 	rngBytesRead int64
-	rngLastFeed = time.Now()
+	rngLastFeed  = time.Now()
 
 	reseedAfterSeconds config.IntOption
-	reseedAfterBytes config.IntOption
+	reseedAfterBytes   config.IntOption
 )
 
 // reader provides an io.Reader interface
@@ -53,13 +55,13 @@ func checkEntropy() (err error) {
 		return errors.New("RNG is not ready yet")
 	}
 	if rngBytesRead > reseedAfterBytes() ||
-	int64(time.Now().Sub(rngLastFeed).Seconds()) > reseedAfterSeconds() {
+		int64(time.Now().Sub(rngLastFeed).Seconds()) > reseedAfterSeconds() {
 		select {
 		case r := <-rngFeeder:
 			rng.Reseed(r)
 			rngBytesRead = 0
 			rngLastFeed = time.Now()
-		case <-time.After(1*time.Second):
+		case <-time.After(1 * time.Second):
 			return errors.New("failed to get new entropy")
 		}
 	}
@@ -93,4 +95,22 @@ func Bytes(n int) ([]byte, error) {
 	}
 
 	return rng.PseudoRandomData(uint(n)), nil
+}
+
+// Number returns a random number from 0 to (incl.) max.
+func Number(max uint64) (uint64, error) {
+	secureLimit := math.MaxUint64 - (math.MaxUint64 % max)
+	max++
+
+	for {
+		randomBytes, err := Bytes(8)
+		if err != nil {
+			return 0, err
+		}
+
+		candidate := binary.LittleEndian.Uint64(randomBytes)
+		if candidate < secureLimit {
+			return candidate % max, nil
+		}
+	}
 }

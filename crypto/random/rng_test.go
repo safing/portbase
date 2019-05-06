@@ -19,14 +19,14 @@ func TestRNG(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create aes cipher: %s", err)
 	}
-  rng.Reseed(key)
+	rng.Reseed(key)
 
 	config.SetConfigOption("random.rng_cipher", "serpent")
 	_, err = newCipher(key)
 	if err != nil {
 		t.Errorf("failed to create serpent cipher: %s", err)
 	}
-  rng.Reseed(key)
+	rng.Reseed(key)
 
 	b := make([]byte, 32)
 	_, err = Read(b)
