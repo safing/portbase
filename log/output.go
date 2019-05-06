@@ -9,13 +9,10 @@ import (
 	"github.com/Safing/portbase/taskmanager"
 )
 
-func writeLine(line *logLine) {
-
-	fmt.Println(formatLine(line, true))
-
+func writeLine(line *logLine, duplicates uint64) {
+	fmt.Println(formatLine(line, duplicates, true))
 	// TODO: implement file logging and setting console/file logging
 	// TODO: use https://github.com/natefinch/lumberjack
-
 }
 
 func startWriter() {
@@ -26,10 +23,16 @@ func startWriter() {
 
 func writer() {
 	var line *logLine
+	var lastLine *logLine
+	var duplicates uint64
 	startedTask := false
 	defer shutdownWaitGroup.Done()
 
 	for {
+		// reset
+		line = nil
+		lastLine = nil
+		duplicates = 0
 
 		// wait until logs need to be processed
 		select {
@@ -47,7 +50,7 @@ func writer() {
 			for {
 				select {
 				case line = <-logBuffer:
-					writeLine(line)
+					writeLine(line, duplicates)
 				case <-time.After(10 * time.Millisecond):
 					fmt.Println(fmt.Sprintf("%s%s %s EOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), leftArrow, endColor()))
 					return
@@ -60,7 +63,33 @@ func writer() {
 		for {
 			select {
 			case line = <-logBuffer:
-				writeLine(line)
+
+				// look-ahead for deduplication (best effort)
+			dedupLoop:
+				for {
+					// check if there is another line waiting
+					select {
+					case nextLine := <-logBuffer:
+						lastLine = line
+						line = nextLine
+					default:
+						break dedupLoop
+					}
+
+					// deduplication
+					if !line.Equal(lastLine) {
+						// no duplicate
+						writeLine(lastLine, duplicates)
+						duplicates = 0
+					} else {
+						// duplicate
+						duplicates++
+					}
+				}
+
+				// write actual line
+				writeLine(line, duplicates)
+				duplicates = 0
 			default:
 				if startedTask {
 					taskmanager.EndMicroTask()
@@ -68,6 +97,12 @@ func writer() {
 				}
 				break writeLoop
 			}
+		}
+
+		// back down a little
+		select {
+		case <-time.After(10 * time.Millisecond):
+		case <-shutdownSignal:
 		}
 
 	}

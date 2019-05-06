@@ -27,7 +27,7 @@ func (s severity) String() string {
 	}
 }
 
-func formatLine(line *logLine, useColor bool) string {
+func formatLine(line *logLine, duplicates uint64, useColor bool) string {
 
 	colorStart := ""
 	colorEnd := ""
@@ -40,14 +40,14 @@ func formatLine(line *logLine, useColor bool) string {
 
 	var fLine string
 	if line.line == 0 {
-		fLine = fmt.Sprintf("%s%s ? %s %s %03d%s %s", colorStart, line.time.Format("060102 15:04:05.000"), rightArrow, line.level.String(), counter, colorEnd, line.msg)
+		fLine = fmt.Sprintf("%s%s ? %s %s %03d%s%s %s", colorStart, line.time.Format("060102 15:04:05.000"), rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
 	} else {
 		fLen := len(line.file)
 		fPartStart := fLen - 10
 		if fPartStart < 0 {
 			fPartStart = 0
 		}
-		fLine = fmt.Sprintf("%s%s %s:%03d %s %s %03d%s %s", colorStart, line.time.Format("060102 15:04:05.000"), line.file[fPartStart:], line.line, rightArrow, line.level.String(), counter, colorEnd, line.msg)
+		fLine = fmt.Sprintf("%s%s %s:%03d %s %s %03d%s%s %s", colorStart, line.time.Format("060102 15:04:05.000"), line.file[fPartStart:], line.line, rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
 	}
 
 	if counter >= maxCount {
@@ -55,4 +55,11 @@ func formatLine(line *logLine, useColor bool) string {
 	}
 
 	return fLine
+}
+
+func formatDuplicates(duplicates uint64) string {
+	if duplicates == 0 {
+		return ""
+	}
+	return fmt.Sprintf(" [%dx]", duplicates+1)
 }

@@ -42,6 +42,20 @@ type logLine struct {
 	line  int
 }
 
+func (ll *logLine) Equal(ol *logLine) bool {
+	switch {
+	case ll.msg != ol.msg:
+		return false
+	case ll.file != ol.file:
+		return false
+	case ll.line != ol.line:
+		return false
+	case ll.level != ol.level:
+		return false
+	}
+	return true
+}
+
 const (
 	TraceLevel    severity = 1
 	DebugLevel    severity = 2
