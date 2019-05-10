@@ -111,7 +111,7 @@ func GetAllServiceNames() (map[int32]string, error) {
 
 	if pid != 0 {
 		// save last entry
-		collection[pid] = services
+		collection[pid] = strings.TrimSpace(services)
 	}
 
 	return collection, nil
