@@ -17,7 +17,7 @@ func TestLogging(t *testing.T) {
 
 	// skip
 	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+		t.Skip()
 	}
 
 	// set levels (static random)
@@ -50,7 +50,7 @@ func TestLogging(t *testing.T) {
 	SetLogLevel(TraceLevel)
 
 	// log invalid level
-	log(0xFF, "msg")
+	log(0xFF, "msg", nil)
 
 	// wait logs to be written
 	time.Sleep(1 * time.Millisecond)

@@ -35,16 +35,19 @@ import (
 type severity uint32
 
 type logLine struct {
-	msg   string
-	level severity
-	time  time.Time
-	file  string
-	line  int
+	msg       string
+	trace     *ContextTracer
+	level     severity
+	timestamp time.Time
+	file      string
+	line      int
 }
 
 func (ll *logLine) Equal(ol *logLine) bool {
 	switch {
 	case ll.msg != ol.msg:
+		return false
+	case ll.trace != nil || ol.trace != nil:
 		return false
 	case ll.file != ol.file:
 		return false
