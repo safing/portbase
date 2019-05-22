@@ -83,7 +83,7 @@ func GetAllServiceNames() (map[int32]string, error) {
 		if fields[0] == "svchost.exe" {
 			// save old entry
 			if pid != 0 {
-				collection[pid] = services
+				collection[pid] = strings.TrimSpace(services)
 			}
 			// reset
 			pid = 0
