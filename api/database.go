@@ -367,7 +367,10 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 					continue
 				}
 				// TODO: use upd, new and delete msgTypes
-				if r.Meta().IsDeleted() {
+				r.Lock()
+				isDeleted := r.Meta().IsDeleted()
+				r.Unlock()
+				if isDeleted {
 					api.send(opID, dbMsgTypeDel, r.Key(), nil)
 				} else {
 					api.send(opID, dbMsgTypeUpd, r.Key(), data)

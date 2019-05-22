@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	modules.Register("config", prep, start, stop, "database")
+	modules.Register("config", prep, start, nil, "database")
 }
 
 func prep() error {
@@ -19,14 +19,14 @@ func prep() error {
 func start() error {
 	configFilePath = path.Join(database.GetDatabaseRoot(), "config.json")
 
-	err := loadConfig()
+	err := registerAsDatabase()
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	return registerAsDatabase()
-}
-
-func stop() error {
+	err = loadConfig()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
 	return nil
 }

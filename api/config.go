@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	listenAddressFlag   string
-	listenAddressConfig config.StringOption
+	listenAddressFlag    string
+	listenAddressConfig  config.StringOption
+	defaultListenAddress string
 )
 
 func init() {
@@ -37,13 +38,19 @@ func registerConfig() error {
 		Description:     "Define on what IP and port the API should listen on. Be careful, changing this may become a security issue.",
 		ExpertiseLevel:  config.ExpertiseLevelExpert,
 		OptType:         config.OptTypeString,
-		DefaultValue:    "127.0.0.1:18",
+		DefaultValue:    defaultListenAddress,
 		ValidationRegex: "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,5}|\\[[:0-9A-Fa-f]+\\]:[0-9]{1,5})$",
 	})
 	if err != nil {
 		return err
 	}
-	listenAddressConfig = config.GetAsString("api/listenAddress", "127.0.0.1:18")
+	listenAddressConfig = config.GetAsString("api/listenAddress", defaultListenAddress)
 
 	return nil
+}
+
+func SetDefaultAPIListenAddress(address string) {
+	if defaultListenAddress == "" {
+		defaultListenAddress = address
+	}
 }
