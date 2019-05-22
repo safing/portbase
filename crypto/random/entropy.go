@@ -24,7 +24,7 @@ func init() {
 		DefaultValue:    256,
 		ValidationRegex: "^[0-9]{3,5}$",
 	})
-	minFeedEntropy = config.GetAsInt("random/min_feed_entropy", 256)
+	minFeedEntropy = config.Concurrent.GetAsInt("random/min_feed_entropy", 256)
 }
 
 // The Feeder is used to feed entropy to the RNG.

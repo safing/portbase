@@ -32,9 +32,9 @@ func init() {
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
 		DefaultValue:    360, // ten minutes
-		ValidationRegex: "^[0-9]{2,5}$",
+		ValidationRegex: "^[1-9][0-9]{1,5}$",
 	})
-	reseedAfterSeconds = config.GetAsInt("random/reseed_after_seconds", 360)
+	reseedAfterSeconds = config.Concurrent.GetAsInt("random/reseed_after_seconds", 360)
 
 	config.Register(&config.Option{
 		Name:            "Reseed after x bytes",
@@ -43,7 +43,7 @@ func init() {
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
 		DefaultValue:    1000000, // one megabyte
-		ValidationRegex: "^[0-9]{0,9}$",
+		ValidationRegex: "^[1-9][0-9]{2,9}$",
 	})
 	reseedAfterBytes = config.GetAsInt("random/reseed_after_bytes", 1000000)
 
