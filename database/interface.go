@@ -307,7 +307,7 @@ func (i *Interface) Subscribe(q *query.Query) (*Subscription, error) {
 		q:        q,
 		local:    i.options.Local,
 		internal: i.options.Internal,
-		Feed:     make(chan record.Record, 100),
+		Feed:     make(chan record.Record, 1000),
 	}
 	c.addSubscription(sub)
 	return sub, nil
