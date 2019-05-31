@@ -1,5 +1,0 @@
-from: https://github.com/ipfs/go-ds-leveldb
-commit: https://github.com/ipfs/go-ds-leveldb/commit/d2d7b2c585634fcf7edb0de3602d060de85616a5
-original files imported:
-  - datastore.go sha256:03994e4ddc33e4b9f13a637c95753b808eb02d97a80b8f7539ef9f0498567ce1
-  - ds_test.go sha256:3f49b4c7769e8a69ba058411f763f7425128769fab25b58650368581dc303a7c
