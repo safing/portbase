@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Safing/safing-core/utils"
+	"github.com/Safing/portbase/utils"
 )
 
 var (
