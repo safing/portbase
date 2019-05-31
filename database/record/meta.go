@@ -85,6 +85,10 @@ func (m *Meta) IsDeleted() bool {
 
 // CheckValidity checks whether the database record is valid.
 func (m *Meta) CheckValidity() (valid bool) {
+	if m == nil {
+		return false
+	}
+
 	switch {
 	case m.Deleted > 0:
 		return false
@@ -97,6 +101,10 @@ func (m *Meta) CheckValidity() (valid bool) {
 
 // CheckPermission checks whether the database record may be accessed with the following scope.
 func (m *Meta) CheckPermission(local, internal bool) (permitted bool) {
+	if m == nil {
+		return false
+	}
+
 	switch {
 	case !local && m.cronjewel:
 		return false

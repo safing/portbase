@@ -12,6 +12,8 @@ import (
 
 	q "github.com/Safing/portbase/database/query"
 	_ "github.com/Safing/portbase/database/storage/badger"
+	_ "github.com/Safing/portbase/database/storage/bbolt"
+	_ "github.com/Safing/portbase/database/storage/fstree"
 )
 
 func makeKey(dbName, key string) string {
@@ -102,7 +104,7 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatal(it.Err())
 	}
 	if cnt != 2 {
-		t.Fatal("expected two records")
+		t.Fatalf("expected two records, got %d", cnt)
 	}
 
 	err = hook.Cancel()
@@ -142,6 +144,8 @@ func TestDatabaseSystem(t *testing.T) {
 	defer os.RemoveAll(testDir) // clean up
 
 	testDatabase(t, "badger")
+	testDatabase(t, "bbolt")
+	testDatabase(t, "fstree")
 
 	err = MaintainRecordStates()
 	if err != nil {
