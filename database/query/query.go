@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Safing/portbase/database/accessor"
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/accessor"
+	"github.com/safing/portbase/database/record"
 )
 
 // Example:

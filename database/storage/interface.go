@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"github.com/Safing/portbase/database/iterator"
-	"github.com/Safing/portbase/database/query"
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/iterator"
+	"github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/record"
 )
 
 // Interface defines the database storage API.

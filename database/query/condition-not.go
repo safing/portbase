@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Safing/portbase/database/accessor"
+	"github.com/safing/portbase/database/accessor"
 )
 
 // Not negates the supplied condition.

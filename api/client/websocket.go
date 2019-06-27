@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
 
 	"github.com/gorilla/websocket"

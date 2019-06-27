@@ -5,7 +5,7 @@ import (
 
 	"github.com/tevino/abool"
 
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/record"
 )
 
 // Iterator defines the iterator structure.

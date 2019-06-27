@@ -3,7 +3,7 @@ package random
 import (
 	"testing"
 
-	"github.com/Safing/portbase/config"
+	"github.com/safing/portbase/config"
 )
 
 func init() {

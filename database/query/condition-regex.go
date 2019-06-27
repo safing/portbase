@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/Safing/portbase/database/accessor"
+	"github.com/safing/portbase/database/accessor"
 )
 
 type regexCondition struct {

@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/log"
 )
 
 func parseAndSetConfig(jsonData string) error {

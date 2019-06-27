@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Safing/portbase/database/record"
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/log"
 )
 
 // Notification types

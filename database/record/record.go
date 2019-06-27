@@ -1,7 +1,7 @@
 package record
 
 import (
-	"github.com/Safing/portbase/database/accessor"
+	"github.com/safing/portbase/database/accessor"
 )
 
 // Record provides an interface for uniformally handling database records.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Safing/portbase/database/storage"
+	"github.com/safing/portbase/database/storage"
 )
 
 var (

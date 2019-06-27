@@ -3,8 +3,8 @@ package api
 import (
 	"flag"
 
-	"github.com/Safing/portbase/config"
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/config"
+	"github.com/safing/portbase/log"
 )
 
 var (

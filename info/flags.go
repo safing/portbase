@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Safing/portbase/modules"
+	"github.com/safing/portbase/modules"
 )
 
 var (

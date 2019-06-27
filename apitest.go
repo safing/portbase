@@ -7,16 +7,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Safing/portbase/info"
-	"github.com/Safing/portbase/log"
-	"github.com/Safing/portbase/modules"
+	"github.com/safing/portbase/info"
+	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/modules"
 	// include packages here
 
-	_ "github.com/Safing/portbase/api"
-	_ "github.com/Safing/portbase/api/testclient"
-	"github.com/Safing/portbase/config"
-	_ "github.com/Safing/portbase/crypto/random"
-	_ "github.com/Safing/portbase/database/dbmodule"
+	_ "github.com/safing/portbase/api"
+	_ "github.com/safing/portbase/api/testclient"
+	"github.com/safing/portbase/config"
+	_ "github.com/safing/portbase/crypto/random"
+	_ "github.com/safing/portbase/database/dbmodule"
 )
 
 // var (

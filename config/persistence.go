@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/log"
 )
 
 var (

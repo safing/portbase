@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/record"
 )
 
 type Example struct {

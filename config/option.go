@@ -7,7 +7,7 @@ import (
 
 	"github.com/tidwall/sjson"
 
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/record"
 )
 
 // Variable Type IDs for frontend Identification. Use ExternalOptType for extended types in the frontend.

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Safing/portbase/utils"
+	"github.com/safing/portbase/utils"
 )
 
 type TestStruct struct {

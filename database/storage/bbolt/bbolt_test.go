@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Safing/portbase/database/query"
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/record"
 )
 
 type TestRecord struct {

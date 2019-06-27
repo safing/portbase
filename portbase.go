@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Safing/portbase/info"
-	"github.com/Safing/portbase/log"
-	"github.com/Safing/portbase/modules"
+	"github.com/safing/portbase/info"
+	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/modules"
 	// include packages here
 )
 

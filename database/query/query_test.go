@@ -3,8 +3,8 @@ package query
 import (
 	"testing"
 
-	"github.com/Safing/portbase/database/record"
-	"github.com/Safing/portbase/formats/dsd"
+	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/formats/dsd"
 )
 
 var (

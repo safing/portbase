@@ -3,10 +3,10 @@ package sinkhole
 import (
 	"errors"
 
-	"github.com/Safing/portbase/database/iterator"
-	"github.com/Safing/portbase/database/query"
-	"github.com/Safing/portbase/database/record"
-	"github.com/Safing/portbase/database/storage"
+	"github.com/safing/portbase/database/iterator"
+	"github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/database/storage"
 )
 
 // Sinkhole is a dummy storage.

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Safing/portbase/container"
-	"github.com/Safing/portbase/database/accessor"
-	"github.com/Safing/portbase/formats/dsd"
-	"github.com/Safing/portbase/formats/varint"
+	"github.com/safing/portbase/container"
+	"github.com/safing/portbase/database/accessor"
+	"github.com/safing/portbase/formats/dsd"
+	"github.com/safing/portbase/formats/varint"
 )
 
 // Wrapper wraps raw data and implements the Record interface.

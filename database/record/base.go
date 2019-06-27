@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Safing/portbase/container"
-	"github.com/Safing/portbase/database/accessor"
-	"github.com/Safing/portbase/formats/dsd"
+	"github.com/safing/portbase/container"
+	"github.com/safing/portbase/database/accessor"
+	"github.com/safing/portbase/formats/dsd"
 )
 
 // Base provides a quick way to comply with the Model interface.

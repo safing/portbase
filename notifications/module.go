@@ -3,7 +3,7 @@ package notifications
 import (
 	"sync"
 
-	"github.com/Safing/portbase/modules"
+	"github.com/safing/portbase/modules"
 )
 
 var (

@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/record"
 )
 
 // HookBase implements the Hook interface and provides dummy functions to reduce boilerplate.

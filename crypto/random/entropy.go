@@ -5,8 +5,8 @@ import (
 
 	"github.com/tevino/abool"
 
-	"github.com/Safing/portbase/config"
-	"github.com/Safing/portbase/container"
+	"github.com/safing/portbase/config"
+	"github.com/safing/portbase/container"
 )
 
 var (

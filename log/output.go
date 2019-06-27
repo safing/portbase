@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Safing/portbase/taskmanager"
+	"github.com/safing/portbase/taskmanager"
 )
 
 func writeLine(line *logLine, duplicates uint64) {

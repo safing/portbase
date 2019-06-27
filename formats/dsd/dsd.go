@@ -12,7 +12,7 @@ import (
 
 	// "github.com/pkg/bson"
 
-	"github.com/Safing/portbase/formats/varint"
+	"github.com/safing/portbase/formats/varint"
 )
 
 // define types

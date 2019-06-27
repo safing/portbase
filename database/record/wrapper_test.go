@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/Safing/portbase/formats/dsd"
+	"github.com/safing/portbase/formats/dsd"
 )
 
 func TestWrapper(t *testing.T) {

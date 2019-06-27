@@ -3,8 +3,8 @@ package dbmodule
 import (
 	"time"
 
-	"github.com/Safing/portbase/database"
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/database"
+	"github.com/safing/portbase/log"
 )
 
 var (

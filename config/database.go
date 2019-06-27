@@ -5,12 +5,12 @@ import (
   "sort"
   "strings"
 
-  "github.com/Safing/portbase/log"
-	"github.com/Safing/portbase/database"
-  "github.com/Safing/portbase/database/storage"
-  "github.com/Safing/portbase/database/record"
-  "github.com/Safing/portbase/database/query"
-	"github.com/Safing/portbase/database/iterator"
+  "github.com/safing/portbase/log"
+	"github.com/safing/portbase/database"
+  "github.com/safing/portbase/database/storage"
+  "github.com/safing/portbase/database/record"
+  "github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/iterator"
 )
 
 var (

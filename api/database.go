@@ -10,11 +10,11 @@ import (
 	"github.com/tevino/abool"
 	"github.com/tidwall/gjson"
 
-	"github.com/Safing/portbase/container"
-	"github.com/Safing/portbase/database"
-	"github.com/Safing/portbase/database/query"
-	"github.com/Safing/portbase/database/record"
-	"github.com/Safing/portbase/log"
+	"github.com/safing/portbase/container"
+	"github.com/safing/portbase/database"
+	"github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/log"
 )
 
 const (

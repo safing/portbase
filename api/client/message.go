@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/Safing/portbase/container"
-	"github.com/Safing/portbase/formats/dsd"
+	"github.com/safing/portbase/container"
+	"github.com/safing/portbase/formats/dsd"
 	"github.com/tevino/abool"
 )
 

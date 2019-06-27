@@ -9,8 +9,8 @@ import (
 	"github.com/aead/serpent"
 	"github.com/seehuhn/fortuna"
 
-	"github.com/Safing/portbase/config"
-	"github.com/Safing/portbase/modules"
+	"github.com/safing/portbase/config"
+	"github.com/safing/portbase/modules"
 )
 
 var (

@@ -1,10 +1,9 @@
-// Package container gives you a []byte slice on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation.
 package container
 
 import (
 	"errors"
 
-	"github.com/Safing/portbase/formats/varint"
+	"github.com/safing/portbase/formats/varint"
 )
 
 // Container is []byte sclie on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation. (Error transportation requires use of varints for data)

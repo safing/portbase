@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Safing/portbase/container"
-	"github.com/Safing/portbase/formats/dsd"
-	"github.com/Safing/portbase/formats/varint"
+	"github.com/safing/portbase/container"
+	"github.com/safing/portbase/formats/dsd"
+	"github.com/safing/portbase/formats/varint"
 	// Colfer
-	// "github.com/Safing/portbase/database/model/model"
+	// "github.com/safing/portbase/database/model/model"
 	// XDR
 	// xdr2 "github.com/davecgh/go-xdr/xdr2"
 )

@@ -1,7 +1,7 @@
 package record
 
 import (
-	"github.com/Safing/portbase/formats/dsd"
+	"github.com/safing/portbase/formats/dsd"
 )
 
 // Reimport DSD storage types

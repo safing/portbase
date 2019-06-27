@@ -3,8 +3,8 @@ package database
 import (
 	"time"
 
-	"github.com/Safing/portbase/database/query"
-	"github.com/Safing/portbase/database/record"
+	"github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/record"
 )
 
 // Maintain runs the Maintain method on all storages.

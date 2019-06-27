@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Safing/portbase/crypto/random"
+	"github.com/safing/portbase/crypto/random"
 )
 
 func noise() {

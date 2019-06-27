@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/Safing/portbase/database"
-	"github.com/Safing/portbase/modules"
+	"github.com/safing/portbase/database"
+	"github.com/safing/portbase/modules"
 )
 
 func init() {

@@ -3,7 +3,7 @@ package testclient
 import (
 	"net/http"
 
-	"github.com/Safing/portbase/api"
+	"github.com/safing/portbase/api"
 )
 
 func init() {

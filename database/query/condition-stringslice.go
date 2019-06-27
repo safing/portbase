@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Safing/portbase/database/accessor"
-	"github.com/Safing/portbase/utils"
+	"github.com/safing/portbase/database/accessor"
+	"github.com/safing/portbase/utils"
 )
 
 type stringSliceCondition struct {

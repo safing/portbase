@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/Safing/portbase/utils/osdetail"
+	"github.com/safing/portbase/utils/osdetail"
 )
 
 func main() {

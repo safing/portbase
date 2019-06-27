@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	q "github.com/Safing/portbase/database/query"
-	_ "github.com/Safing/portbase/database/storage/badger"
-	_ "github.com/Safing/portbase/database/storage/bbolt"
-	_ "github.com/Safing/portbase/database/storage/fstree"
+	q "github.com/safing/portbase/database/query"
+	_ "github.com/safing/portbase/database/storage/badger"
+	_ "github.com/safing/portbase/database/storage/bbolt"
+	_ "github.com/safing/portbase/database/storage/fstree"
 )
 
 func makeKey(dbName, key string) string {

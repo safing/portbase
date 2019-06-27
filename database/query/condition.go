@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/Safing/portbase/database/accessor"
+	"github.com/safing/portbase/database/accessor"
 )
 
 // Condition is an interface to provide a common api to all condition types.

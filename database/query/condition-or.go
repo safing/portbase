@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Safing/portbase/database/accessor"
+	"github.com/safing/portbase/database/accessor"
 )
 
 // Or combines multiple conditions with a logical _OR_ operator.
