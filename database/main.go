@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/safing/portbase/utils"
 	"github.com/tevino/abool"
 )
 
@@ -28,7 +29,7 @@ func SetLocation(location string) (ok bool) {
 func Initialize() error {
 	if initialized.SetToIf(false, true) {
 
-		err := ensureDirectory(rootDir, 0755)
+		err := utils.EnsureDirectory(rootDir, 0755)
 		if err != nil {
 			return fmt.Errorf("could not create/open database directory (%s): %s", rootDir, err)
 		}

@@ -56,7 +56,10 @@ func log(level severity, msg string, trace *ContextTracer) {
 	// check if level is enabled for file or generally
 	if fileLevelsActive.IsSet() {
 		fileOnly := strings.Split(file, "/")
-		sev, ok := fileLevels[fileOnly[len(fileOnly)-1]]
+		if len(fileOnly) < 2 {
+			return
+		}
+		sev, ok := fileLevels[fileOnly[len(fileOnly)-2]]
 		if ok {
 			if level < sev {
 				return

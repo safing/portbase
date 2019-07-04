@@ -39,3 +39,8 @@ func Serve() {
 	log.Infof("api: starting to listen on %s", address)
 	log.Errorf("api: failed to listen on %s: %s", address, http.ListenAndServe(address, mainMux))
 }
+
+// GetMuxVars wraps github.com/gorilla/mux.Vars in order to mitigate context key issues in multi-repo projects.
+func GetMuxVars(r *http.Request) map[string]string {
+	return mux.Vars(r)
+}
