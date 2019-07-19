@@ -1,5 +1,3 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package dsd
 
 // dynamic structured data
@@ -22,7 +20,7 @@ const (
 	BYTES   = 88 // X
 	JSON    = 74 // J
 	BSON    = 66 // B
-	GenCode = 71 // G (reserved)
+	GenCode = 71 // G
 )
 
 // define errors
@@ -30,6 +28,7 @@ var errNoMoreSpace = errors.New("dsd: no more space left after reading dsd type"
 var errUnknownType = errors.New("dsd: tried to unpack unknown type")
 var errNotImplemented = errors.New("dsd: this type is not yet implemented")
 
+// Load loads an dsd structured data blob into the given interface.
 func Load(data []byte, t interface{}) (interface{}, error) {
 	if len(data) < 2 {
 		return nil, errNoMoreSpace
@@ -46,6 +45,7 @@ func Load(data []byte, t interface{}) (interface{}, error) {
 	return LoadAsFormat(data[read:], format, t)
 }
 
+// LoadAsFormat loads a data blob into the interface using the specified format.
 func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error) {
 	switch format {
 	case STRING:
@@ -55,28 +55,32 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 	case JSON:
 		err := json.Unmarshal(data, t)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("dsd: failed to unpack json data: %s", data)
 		}
 		return t, nil
-		// case BSON:
-		// 	err := bson.Unmarshal(data[read:], t)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// 	return t, nil
-		// case MSGP:
-		//   err := t.UnmarshalMsg(data[read:])
-		//   if err != nil {
-		//     return nil, err
-		//   }
-		//   return t, nil
+	// case BSON:
+	// 	err := bson.Unmarshal(data[read:], t)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return t, nil
+	case GenCode:
+		genCodeStruct, ok := t.(GenCodeCompatible)
+		if !ok {
+			return nil, errors.New("dsd: gencode is not supported by the given data structure")
+		}
+		_, err := genCodeStruct.GenCodeUnmarshal(data)
+		if err != nil {
+			return nil, fmt.Errorf("dsd: failed to unpack gencode data: %s", err)
+		}
+		return t, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("dsd: tried to load unknown type %d, data: %v", format, data))
+		return nil, fmt.Errorf("dsd: tried to load unknown type %d, data: %v", format, data)
 	}
 }
 
+// Dump stores the interface as a dsd formatted data structure.
 func Dump(t interface{}, format uint8) ([]byte, error) {
-
 	if format == AUTO {
 		switch t.(type) {
 		case string:
@@ -107,18 +111,19 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 	// 	if err != nil {
 	// 		return nil, err
 	// 	}
-	// case MSGP:
-	//   data, err := t.MarshalMsg(nil)
-	//   if err != nil {
-	//     return nil, err
-	//   }
+	case GenCode:
+		genCodeStruct, ok := t.(GenCodeCompatible)
+		if !ok {
+			return nil, errors.New("dsd: gencode is not supported by the given data structure")
+		}
+		data, err = genCodeStruct.GenCodeMarshal(nil)
+		if err != nil {
+			return nil, fmt.Errorf("dsd: failed to pack gencode struct: %s", err)
+		}
 	default:
-		return nil, errors.New(fmt.Sprintf("dsd: tried to dump unknown type %d", format))
+		return nil, fmt.Errorf("dsd: tried to dump unknown type %d", format)
 	}
 
 	r := append(f, data...)
-	// log.Tracef("packing %v to %s", t, string(r))
-	// return nil, errors.New(fmt.Sprintf("dsd: dumped bytes are: %v", r))
 	return r, nil
-
 }
