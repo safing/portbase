@@ -11,5 +11,5 @@ const (
 	BYTES   = dsd.BYTES   // X
 	JSON    = dsd.JSON    // J
 	BSON    = dsd.BSON    // B
-	GenCode = dsd.GenCode // G (reserved)
+	GenCode = dsd.GenCode // G
 )

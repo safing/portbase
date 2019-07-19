@@ -37,9 +37,20 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 	offset += n
 
 	newMeta := &Meta{}
-	_, err = newMeta.GenCodeUnmarshal(metaSection)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
+	if len(metaSection) == 34 && metaSection[4] == 0 {
+		// TODO: remove in 2020
+		// backward compatibility:
+		// format would byte shift and populate metaSection[4] with value > 0 (would naturally populate >0 at 07.02.2106 07:28:15)
+		// this must be gencode without format
+		_, err = newMeta.GenCodeUnmarshal(metaSection)
+		if err != nil {
+			return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
+		}
+	} else {
+		_, err = dsd.Load(metaSection, newMeta)
+		if err != nil {
+			return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
+		}
 	}
 
 	format, n, err := varint.Unpack8(data[offset:])
@@ -86,7 +97,7 @@ func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 		return nil, nil
 	}
 
-	if format != dsd.AUTO && format != w.Format {
+	if format != AUTO && format != w.Format {
 		return nil, errors.New("could not dump model, wrapped object format mismatch")
 	}
 
@@ -109,14 +120,14 @@ func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 	c := container.New([]byte{1})
 
 	// meta
-	metaSection, err := w.meta.GenCodeMarshal(nil)
+	metaSection, err := dsd.Dump(w.meta, GenCode)
 	if err != nil {
 		return nil, err
 	}
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := w.Marshal(r, dsd.JSON)
+	dataSection, err := w.Marshal(r, JSON)
 	if err != nil {
 		return nil, err
 	}
@@ -124,16 +135,6 @@ func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 
 	return c.CompileData(), nil
 }
-
-// // Lock locks the record.
-// func (w *Wrapper) Lock() {
-// 	w.lock.Lock()
-// }
-//
-// // Unlock unlocks the record.
-// func (w *Wrapper) Unlock() {
-// 	w.lock.Unlock()
-// }
 
 // IsWrapped returns whether the record is a Wrapper.
 func (w *Wrapper) IsWrapped() bool {

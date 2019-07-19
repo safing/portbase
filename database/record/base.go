@@ -70,7 +70,7 @@ func (b *Base) SetMeta(meta *Meta) {
 	b.meta = meta
 }
 
-// Marshal marshals the object, without the database key or metadata
+// Marshal marshals the object, without the database key or metadata. It returns nil if the record is deleted.
 func (b *Base) Marshal(self Record, format uint8) ([]byte, error) {
 	if b.Meta() == nil {
 		return nil, errors.New("missing meta")
@@ -96,15 +96,15 @@ func (b *Base) MarshalRecord(self Record) ([]byte, error) {
 	// version
 	c := container.New([]byte{1})
 
-	// meta
-	metaSection, err := b.meta.GenCodeMarshal(nil)
+	// meta encoding
+	metaSection, err := dsd.Dump(b.meta, GenCode)
 	if err != nil {
 		return nil, err
 	}
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := b.Marshal(self, dsd.JSON)
+	dataSection, err := b.Marshal(self, JSON)
 	if err != nil {
 		return nil, err
 	}

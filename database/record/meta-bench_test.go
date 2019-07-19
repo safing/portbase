@@ -432,7 +432,7 @@ func BenchmarkMetaUnserializeWithCodegen(b *testing.B) {
 func BenchmarkMetaSerializeWithDSDJSON(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
-		_, err := dsd.Dump(testMeta, dsd.JSON)
+		_, err := dsd.Dump(testMeta, JSON)
 		if err != nil {
 			b.Errorf("failed to serialize with DSD/JSON: %s", err)
 			return
@@ -444,7 +444,7 @@ func BenchmarkMetaSerializeWithDSDJSON(b *testing.B) {
 func BenchmarkMetaUnserializeWithDSDJSON(b *testing.B) {
 
 	// Setup
-	encodedData, err := dsd.Dump(testMeta, dsd.JSON)
+	encodedData, err := dsd.Dump(testMeta, JSON)
 	if err != nil {
 		b.Errorf("failed to serialize with DSD/JSON: %s", err)
 		return
