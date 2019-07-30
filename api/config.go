@@ -24,7 +24,7 @@ func checkFlags() error {
 	return nil
 }
 
-func getListenAddress() string {
+func GetAPIAddress() string {
 	if listenAddressFlag != "" {
 		return listenAddressFlag
 	}
@@ -49,6 +49,7 @@ func registerConfig() error {
 	return nil
 }
 
+// SetDefaultAPIListenAddress sets the default listen address for the API.
 func SetDefaultAPIListenAddress(address string) {
 	if defaultListenAddress == "" {
 		defaultListenAddress = address
