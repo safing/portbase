@@ -81,20 +81,20 @@ func authMiddleware(next http.Handler) http.Handler {
 		// get auth decision
 		grantAccess, err := authenticator(server, r)
 		if err != nil {
-			log.Errorf("api: authenticator failed: %s", err)
-			http.Error(w, "", http.StatusInternalServerError)
+			log.Warningf("api: authenticator failed: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 		if !grantAccess {
 			log.Warningf("api: denying api access to %s", r.RemoteAddr)
-			http.Error(w, "", http.StatusForbidden)
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
 		// write new cookie
 		token, err := random.Bytes(32) // 256 bit
 		if err != nil {
-			log.Errorf("api: failed to generate random token: %s", err)
-			http.Error(w, "", http.StatusInternalServerError)
+			log.Warningf("api: failed to generate random token: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 		tokenString := base64.RawURLEncoding.EncodeToString(token)
 		http.SetCookie(w, &http.Cookie{
