@@ -43,6 +43,26 @@ type StorageInterface struct {
 	storage.InjectBase
 }
 
+func registerAsDatabase() error {
+	_, err := database.Register(&database.Database{
+		Name:        "notifications",
+		Description: "Notifications",
+		StorageType: "injected",
+		PrimaryAPI:  "",
+	})
+	if err != nil {
+		return err
+	}
+
+	controller, err := database.InjectDatabase("notifications", &StorageInterface{})
+	if err != nil {
+		return err
+	}
+
+	dbController = controller
+	return nil
+}
+
 // Get returns a database record.
 func (s *StorageInterface) Get(key string) (record.Record, error) {
 	notsLock.RLock()
@@ -78,32 +98,16 @@ func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
 
 	// send all notifications
 	for _, n := range nots {
+		if n.Meta().IsDeleted() {
+			continue
+		}
+
 		if q.MatchesKey(n.DatabaseKey()) && q.MatchesRecord(n) {
 			it.Next <- n
 		}
 	}
 
 	it.Finish(nil)
-}
-
-func registerAsDatabase() error {
-	_, err := database.Register(&database.Database{
-		Name:        "notifications",
-		Description: "Notifications",
-		StorageType: "injected",
-		PrimaryAPI:  "",
-	})
-	if err != nil {
-		return err
-	}
-
-	controller, err := database.InjectDatabase("notifications", &StorageInterface{})
-	if err != nil {
-		return err
-	}
-
-	dbController = controller
-	return nil
 }
 
 // Put stores a record in the database.
@@ -135,25 +139,54 @@ func updateNotificationFromDatabasePut(n *Notification, key string) {
 	origN, ok := nots[key]
 	notsLock.RUnlock()
 
+	// ignore if already deleted
+	if ok && origN.Meta().IsDeleted() {
+		ok = false
+	}
+
 	if ok {
 		// existing notification, update selected action ID only
 		n.Lock()
 		defer n.Unlock()
-		if n.SelectedActionID != "" {
-			log.Tracef("notifications: user selected action for %s: %s", n.ID, n.SelectedActionID)
-			go origN.SelectAndExecuteAction(n.SelectedActionID)
-		}
 	} else {
 		// accept new notification as is
-		notsLock.Lock()
-		nots[key] = n
-		notsLock.Unlock()
+		n.Save()
+		// set var for action processing
+		origN = n
+	}
+
+	// select action, if not yet already handled
+	if n.SelectedActionID != "" && n.Responded == 0 {
+		log.Tracef("notifications: user selected action for %s: %s", n.ID, n.SelectedActionID)
+		origN.SelectAndExecuteAction(n.SelectedActionID)
 	}
 }
 
 // Delete deletes a record from the database.
 func (s *StorageInterface) Delete(key string) error {
-	return ErrNoDelete
+	notsLock.Lock()
+	defer notsLock.Unlock()
+
+	// transform key
+	if strings.HasPrefix(key, "all/") {
+		key = strings.TrimPrefix(key, "all/")
+	} else {
+		return storage.ErrNotFound
+	}
+
+	// get notification
+	n, ok := nots[key]
+	if !ok {
+		return storage.ErrNotFound
+	}
+	n.Lock()
+	defer n.Unlock()
+
+	// delete
+	n.Meta().Delete()
+	delete(nots, n.ID)
+
+	return nil
 }
 
 // ReadOnly returns whether the database is read only.

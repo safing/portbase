@@ -119,6 +119,14 @@
   version = "v0.8.1"
 
 [[projects]]
+  digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:f1ee4af7c43f206d87f13644636e3710a05e499a084a32ec2cc7d8aa25cef1aa"
   name = "github.com/seehuhn/fortuna"
@@ -246,6 +254,7 @@
     "github.com/google/renameio",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
+    "github.com/satori/go.uuid",
     "github.com/seehuhn/fortuna",
     "github.com/tevino/abool",
     "github.com/tidwall/gjson",

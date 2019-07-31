@@ -7,6 +7,8 @@ import (
 
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // Notification types
@@ -20,7 +22,9 @@ const (
 type Notification struct {
 	record.Base
 
-	ID      string
+	ID   string
+	GUID string
+
 	Message string
 	// MessageTemplate string
 	// MessageData []string
@@ -62,18 +66,20 @@ func Get(id string) *Notification {
 	return nil
 }
 
-// Init initializes a Notification and returns it.
-func (n *Notification) Init() *Notification {
-	n.Created = time.Now().Unix()
-	return n
-}
-
 // Save saves the notification and returns it.
 func (n *Notification) Save() *Notification {
 	notsLock.Lock()
 	defer notsLock.Unlock()
 	n.Lock()
 	defer n.Unlock()
+
+	// initialize
+	if n.Created == 0 {
+		n.Created = time.Now().Unix()
+	}
+	if n.GUID == "" {
+		n.GUID = uuid.NewV4().String()
+	}
 
 	// check key
 	if n.DatabaseKey() == "" {
