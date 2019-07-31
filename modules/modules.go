@@ -75,7 +75,7 @@ func initDependencies() error {
 			// get dependency
 			depModule, ok := modules[depName]
 			if !ok {
-				return fmt.Errorf("modules: module %s declares dependency \"%s\", but this module has not been registered", m.Name, depName)
+				return fmt.Errorf("module %s declares dependency \"%s\", but this module has not been registered", m.Name, depName)
 			}
 
 			// link together
