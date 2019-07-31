@@ -104,7 +104,7 @@ func loadRegistry() error {
 	defer registryLock.Unlock()
 
 	// read file
-	filePath := path.Join(rootDir, registryFileName)
+	filePath := path.Join(rootStructure.Path, registryFileName)
 	data, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -139,7 +139,7 @@ func saveRegistry(lock bool) error {
 	}
 
 	// write file
-	filePath := path.Join(rootDir, registryFileName)
+	filePath := path.Join(rootStructure.Path, registryFileName)
 	return ioutil.WriteFile(filePath, data, 0600)
 }
 
