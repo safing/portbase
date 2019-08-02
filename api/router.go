@@ -51,7 +51,7 @@ func RegisterMiddleware(middleware Middleware) {
 // Serve starts serving the API endpoint.
 func Serve() {
 	// configure server
-	server.Addr = GetAPIAddress()
+	server.Addr = listenAddressConfig()
 	server.Handler = middlewareHandler
 
 	// start serving

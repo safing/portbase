@@ -17,14 +17,14 @@ func init() {
 }
 
 func prep() error {
-	err := checkFlags()
-	if err != nil {
-		return err
+	if getDefaultListenAddress() == "" {
+		return errors.New("no listen address for api available")
 	}
 	return registerConfig()
 }
 
 func start() error {
+	logFlagOverrides()
 	go Serve()
 	return nil
 }
