@@ -3,11 +3,11 @@ package log
 import "flag"
 
 var (
-	logLevelFlag      string
-	fileLogLevelsFlag string
+	logLevelFlag     string
+	pkgLogLevelsFlag string
 )
 
 func init() {
 	flag.StringVar(&logLevelFlag, "log", "info", "set log level to [trace|debug|info|warning|error|critical]")
-	flag.StringVar(&fileLogLevelsFlag, "flog", "", "set log level of files: database=trace,firewall=debug")
+	flag.StringVar(&pkgLogLevelsFlag, "plog", "", "set log level of packages: database=trace,firewall=debug")
 }
