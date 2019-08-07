@@ -2,6 +2,8 @@ package notifications
 
 import (
 	"time"
+
+	"github.com/safing/portbase/log"
 )
 
 func cleaner() {
@@ -10,31 +12,55 @@ func cleaner() {
 	case <-shutdownSignal:
 		shutdownWg.Done()
 		return
-	case <-time.After(1 * time.Minute):
+	case <-time.After(5 * time.Second):
 		cleanNotifications()
 	}
 }
 
 func cleanNotifications() {
-	threshold := time.Now().Add(-2 * time.Minute).Unix()
-	maxThreshold := time.Now().Add(-72 * time.Hour).Unix()
+	now := time.Now().Unix()
+	finishedThreshhold := time.Now().Add(-10 * time.Second).Unix()
+	executionTimelimit := time.Now().Add(-24 * time.Hour).Unix()
+	fallbackTimelimit := time.Now().Add(-72 * time.Hour).Unix()
 
 	notsLock.Lock()
 	defer notsLock.Unlock()
 
 	for _, n := range nots {
 		n.Lock()
-		if n.Expires != 0 && n.Expires < threshold ||
-			n.Executed != 0 && n.Executed < threshold ||
-			n.Created < maxThreshold {
+		switch {
+		case n.Executed != 0: // notification was fully handled
+			// wait for a short time before deleting
+			if n.Executed < finishedThreshhold {
+				go deleteNotification(n)
+			}
+		case n.Responded != 0:
+			// waiting for execution
+			if n.Responded < executionTimelimit {
+				go deleteNotification(n)
+			}
+		case n.Expires != 0:
+			// expired without response
+			if n.Expires < now {
+				go deleteNotification(n)
+			}
+		case n.Created != 0:
+			// fallback: delete after 3 days after creation
+			if n.Created < fallbackTimelimit {
+				go deleteNotification(n)
 
-			// delete
-			n.Meta().Delete()
-			delete(nots, n.ID)
-
-			// save (ie. propagate delete)
-			go n.Save()
+			}
+		default:
+			// invalid, impossible to determine cleanup timeframe, delete now
+			go deleteNotification(n)
 		}
 		n.Unlock()
+	}
+}
+
+func deleteNotification(n *Notification) {
+	err := n.Delete()
+	if err != nil {
+		log.Debugf("notifications: failed to delete %s: %s", n.ID, err)
 	}
 }

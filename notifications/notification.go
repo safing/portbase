@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
 
@@ -43,6 +44,7 @@ type Notification struct {
 	lock           sync.Mutex
 	actionFunction func(*Notification) // call function to process action
 	actionTrigger  chan string         // and/or send to a channel
+	expiredTrigger chan struct{}       // closed on expire
 }
 
 // Action describes an action that can be taken for a notification.
@@ -80,7 +82,6 @@ func (n *Notification) Save() *Notification {
 	if n.GUID == "" {
 		n.GUID = uuid.NewV4().String()
 	}
-
 	// check key
 	if n.DatabaseKey() == "" {
 		n.SetKey(fmt.Sprintf("notifications:all/%s", n.ID))
@@ -110,11 +111,12 @@ func (n *Notification) Save() *Notification {
 			Executed:         n.Executed,
 		}
 		duplicate.SetMeta(n.Meta().Duplicate())
-		duplicate.SetKey(fmt.Sprintf("%s/%s", persistentBasePath, n.ID))
+		key := fmt.Sprintf("%s/%s", persistentBasePath, n.ID)
+		duplicate.SetKey(key)
 		go func() {
 			err := dbInterface.Put(duplicate)
 			if err != nil {
-				log.Warningf("notifications: failed to persist notification %s: %s", n.Key(), err)
+				log.Warningf("notifications: failed to persist notification %s: %s", key, err)
 			}
 		}()
 	}
@@ -151,42 +153,85 @@ func (n *Notification) MakeAck() *Notification {
 // Response waits for the user to respond to the notification and returns the selected action.
 func (n *Notification) Response() <-chan string {
 	n.lock.Lock()
-	defer n.lock.Unlock()
-
 	if n.actionTrigger == nil {
 		n.actionTrigger = make(chan string)
 	}
+	n.lock.Unlock()
 
 	return n.actionTrigger
 }
 
-// Cancel (prematurely) destroys a notification.
-func (n *Notification) Cancel() {
+// Update updates/resends a notification if it was not already responded to.
+func (n *Notification) Update(expires int64) {
+	responded := true
+	n.lock.Lock()
+	if n.Responded == 0 {
+		responded = false
+		n.Expires = expires
+	}
+	n.lock.Unlock()
+
+	// save if not yet responded
+	if !responded {
+		n.Save()
+	}
+}
+
+// Delete (prematurely) cancels and deletes a notification.
+func (n *Notification) Delete() error {
 	notsLock.Lock()
 	defer notsLock.Unlock()
 	n.Lock()
 	defer n.Unlock()
 
-	// delete
+	// mark as deleted
 	n.Meta().Delete()
+
+	// delete from internal storage
 	delete(nots, n.ID)
 
-	// save (ie. propagate delete)
-	go n.Save()
+	// close expired
+	if n.expiredTrigger != nil {
+		close(n.expiredTrigger)
+		n.expiredTrigger = nil
+	}
+
+	// push update
+	dbController.PushUpdate(n)
+
+	// delete from persistent storage
+	if n.Persistent && persistentBasePath != "" {
+		key := fmt.Sprintf("%s/%s", persistentBasePath, n.ID)
+		err := dbInterface.Delete(key)
+		if err != nil && err != database.ErrNotFound {
+			return fmt.Errorf("failed to delete persisted notification %s from database: %s", key, err)
+		}
+	}
+
+	return nil
 }
 
-// SelectAndExecuteAction sets the user response and executes/triggers the action, if possible.
-func (n *Notification) SelectAndExecuteAction(id string) {
-	n.Lock()
-	defer n.Unlock()
+// Expired notifies the caller when the notification has expired.
+func (n *Notification) Expired() <-chan struct{} {
+	n.lock.Lock()
+	if n.expiredTrigger == nil {
+		n.expiredTrigger = make(chan struct{})
+	}
+	n.lock.Unlock()
 
-	// update selection
+	return n.expiredTrigger
+}
+
+// selectAndExecuteAction sets the user response and executes/triggers the action, if possible.
+func (n *Notification) selectAndExecuteAction(id string) {
+	// abort if already executed
 	if n.Executed != 0 {
-		// we already executed
 		return
 	}
-	n.SelectedActionID = id
+
+	// set response
 	n.Responded = time.Now().Unix()
+	n.SelectedActionID = id
 
 	// execute
 	executed := false
@@ -201,7 +246,7 @@ func (n *Notification) SelectAndExecuteAction(id string) {
 			select {
 			case n.actionTrigger <- n.SelectedActionID:
 				executed = true
-			default:
+			case <-time.After(100 * time.Millisecond): // mitigate race conditions
 				break triggerAll
 			}
 		}
@@ -211,8 +256,6 @@ func (n *Notification) SelectAndExecuteAction(id string) {
 	if executed {
 		n.Executed = time.Now().Unix()
 	}
-
-	go n.Save()
 }
 
 // AddDataSubject adds the data subject to the notification. This is the only way how a data subject should be added - it avoids locking problems.
