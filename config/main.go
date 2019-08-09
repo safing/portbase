@@ -22,7 +22,7 @@ func SetDataRoot(root *utils.DirStructure) {
 }
 
 func init() {
-	modules.Register("config", prep, start, nil, "core")
+	modules.Register("config", prep, start, nil, "base", "database")
 }
 
 func prep() error {

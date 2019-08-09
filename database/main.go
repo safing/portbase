@@ -23,7 +23,7 @@ var (
 	databasesStructure *utils.DirStructure
 )
 
-// Initialize initialized the database at the specified location. Supply either a path or dir structure.
+// Initialize initializes the database at the specified location. Supply either a path or dir structure.
 func Initialize(dirPath string, dirStructureRoot *utils.DirStructure) error {
 	if initialized.SetToIf(false, true) {
 

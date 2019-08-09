@@ -2,51 +2,46 @@ package dbmodule
 
 import (
 	"errors"
-	"flag"
-	"sync"
 
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/modules"
+	"github.com/safing/portbase/utils"
 )
 
 var (
-	databaseDir    string
-	shutdownSignal = make(chan struct{})
-	maintenanceWg  sync.WaitGroup
+	databasePath          string
+	databaseStructureRoot *utils.DirStructure
+
+	module *modules.Module
 )
 
-// SetDatabaseLocation sets the location of the database. Must be called before modules.Start and will be overridden by command line options. Intended for unit tests.
-func SetDatabaseLocation(location string) {
-	databaseDir = location
+func init() {
+	module = modules.Register("database", prep, start, stop, "base")
 }
 
-func init() {
-	flag.StringVar(&databaseDir, "db", "", "set database directory")
-
-	modules.Register("database", prep, start, stop)
+// SetDatabaseLocation sets the location of the database for initialization. Supply either a path or dir structure.
+func SetDatabaseLocation(dirPath string, dirStructureRoot *utils.DirStructure) {
+	databasePath = dirPath
+	databaseStructureRoot = dirStructureRoot
 }
 
 func prep() error {
-	if databaseDir == "" {
-		return errors.New("no database location specified, set with `-db=/path/to/db`")
-	}
-	ok := database.SetLocation(databaseDir)
-	if !ok {
-		return errors.New("database location already set")
+	if databasePath == "" && databaseStructureRoot == nil {
+		return errors.New("no database location specified")
 	}
 	return nil
 }
 
 func start() error {
-	err := database.Initialize()
-	if err == nil {
-		startMaintainer()
+	err := database.Initialize(databasePath, databaseStructureRoot)
+	if err != nil {
+		return err
 	}
-	return err
+
+	startMaintainer()
+	return nil
 }
 
 func stop() error {
-	close(shutdownSignal)
-	maintenanceWg.Wait()
 	return database.Shutdown()
 }

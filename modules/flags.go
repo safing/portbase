@@ -3,6 +3,7 @@ package modules
 import "flag"
 
 var (
+	// HelpFlag triggers printing flag.Usage. It's exported for custom help handling.
 	HelpFlag bool
 )
 
