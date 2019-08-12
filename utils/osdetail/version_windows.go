@@ -46,18 +46,18 @@ func WindowsNTVersion() (string, error) {
 }
 
 // IsAtLeastWindowsNTVersion returns whether the current WindowsNT version is at least the given version or newer.
-func IsAtLeastWindowsNTVersion(otherVersion string) (bool, error) {
+func IsAtLeastWindowsNTVersion(version string) (bool, error) {
 	_, err := WindowsNTVersion()
 	if err != nil {
 		return false, err
 	}
 
-	otherVersionForCmp, err := version.NewVersion(otherVersion)
+	versionForCmp, err := versionCmp.NewVersion(version)
 	if err != nil {
 		return false, err
 	}
 
-	return windowsNTVersionForCmp.GreaterThanOrEqual(otherVersionForCmp), nil
+	return windowsNTVersionForCmp.GreaterThanOrEqual(versionForCmp), nil
 }
 
 // IsAtLeastWindowsNTVersionWithDefault is like IsAtLeastWindowsNTVersion(), but keeps the Error and returns the default Value in Errorcase
