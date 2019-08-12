@@ -20,12 +20,13 @@ func EnableColorSupport() bool {
 
 	if !colorSupportChecked {
 		colorSupport = enableColorSupport()
+		colorSupportChecked = true
 	}
 	return colorSupport
 }
 
 func enableColorSupport() bool {
-	if IsWindowsVersion("10.") {
+	if IsAtLeastWindowsNTVersionWithDefault("10", false) {
 
 		// check if windows.Stdout is file
 		if windows.GetFileInformationByHandle(windows.Stdout, &windows.ByHandleFileInformation{}) == nil {

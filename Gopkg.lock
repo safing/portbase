@@ -10,6 +10,14 @@
   revision = "e2d15f34fcf99d5dbb871c820ec73f710fca9815"
 
 [[projects]]
+  digest = "1:e92f5581902c345eb4ceffdcd4a854fb8f73cf436d47d837d1ec98ef1fe0a214"
+  name = "github.com/StackExchange/wmi"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
+  version = "1.0.0"
+
+[[projects]]
   digest = "1:dbd3a713434b6f32d9459b1e6786ad58cec128470b58555cdc7b3b7314a1706f"
   name = "github.com/aead/serpent"
   packages = ["."]
@@ -57,6 +65,17 @@
   revision = "6a90982ecee230ff6cba02d5bd386acc030be9d3"
 
 [[projects]]
+  digest = "1:440028f55cb322d8cb5b9d5ebec298a00b7d74690a658fe6b1c0c0b44341bfae"
+  name = "github.com/go-ole/go-ole"
+  packages = [
+    ".",
+    "oleutil",
+  ]
+  pruneopts = "UT"
+  revision = "97b6244175ae18ea6eef668034fd6565847501c9"
+  version = "v1.2.4"
+
+[[projects]]
   digest = "1:318f1c959a8a740366fce4b1e1eb2fd914036b4af58fbd0a003349b305f118ad"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
@@ -89,6 +108,14 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:88e0b0baeb9072f0a4afbcf12dda615fc8be001d1802357538591155998da21b"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:ae08d850ba158ea3ba4a7bb90f8372608172d8920644e5a6693b940a1f4e5d01"
   name = "github.com/mmcloughlin/avo"
@@ -119,6 +146,14 @@
   version = "v0.8.1"
 
 [[projects]]
+  branch = "develop"
+  digest = "1:d88649ff4a4a0746857dd9e39915aedddce2b08e442ac131a91e573cd45bde93"
+  name = "github.com/safing/portmaster"
+  packages = ["core/structure"]
+  pruneopts = "UT"
+  revision = "0ab150ba8948cf0b5c688384f5ac1bf234647f84"
+
+[[projects]]
   digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
   name = "github.com/satori/go.uuid"
   packages = ["."]
@@ -141,6 +176,29 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "e9f377c596061894b7f9ee69aab61e62c3ccc13e"
+
+[[projects]]
+  digest = "1:7ebe52387a847d276a9b9e7b379b2e3e4d536843ad840a9c4426a0152e6b3d54"
+  name = "github.com/shirou/gopsutil"
+  packages = [
+    "cpu",
+    "host",
+    "internal/common",
+    "mem",
+    "net",
+    "process",
+  ]
+  pruneopts = "UT"
+  revision = "d80c43f9c984a48783daf22f4bd9278006ae483a"
+  version = "v2.19.7"
+
+[[projects]]
+  branch = "master"
+  digest = "1:99c6a6dab47067c9b898e8c8b13d130c6ab4ffbcc4b7cc6236c2cd0b1e344f5b"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   branch = "master"
@@ -215,7 +273,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8a3986af7a48f0991ce6168708859c56d39d2ff8b82b34d0805bbb545a9a32a6"
+  digest = "1:afce8593ac5918df05a46499b04b8c4e46a91e99566055e4a8ba829a8f389a09"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -223,7 +281,7 @@
     "windows",
   ]
   pruneopts = "UT"
-  revision = "46560c3f3c0a091352115a3d825af45663b983d8"
+  revision = "51ab0e2deafac1f46c46ad59cf0921be2f180c3d"
 
 [[projects]]
   branch = "master"
@@ -254,8 +312,11 @@
     "github.com/google/renameio",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
+    "github.com/hashicorp/go-version",
+    "github.com/safing/portmaster/core/structure",
     "github.com/satori/go.uuid",
     "github.com/seehuhn/fortuna",
+    "github.com/shirou/gopsutil/host",
     "github.com/tevino/abool",
     "github.com/tidwall/gjson",
     "github.com/tidwall/sjson",
