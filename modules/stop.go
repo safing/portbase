@@ -74,7 +74,7 @@ func stopModules() error {
 				go func() {
 					reports <- &report{
 						module: execM,
-						err:    execM.stop(),
+						err:    execM.shutdown(),
 					}
 				}()
 			}

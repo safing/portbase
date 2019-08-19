@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	modules.Register("random", prep, Start, stop)
+	modules.Register("random", prep, Start, stop, "base")
 
 	config.Register(&config.Option{
 		Name:            "RNG Cipher",

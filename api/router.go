@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 
@@ -9,35 +10,54 @@ import (
 )
 
 var (
-	router = mux.NewRouter()
+	// gorilla mux
+	mainMux = mux.NewRouter()
+
+	// middlewares
+	middlewareHandler = &mwHandler{
+		final: mainMux,
+		handlers: []Middleware{
+			RequestLogger,
+			authMiddleware,
+		},
+	}
+
+	// main server and lock
+	server      = &http.Server{}
+	handlerLock sync.RWMutex
 )
 
-// RegisterHandleFunc registers an additional handle function with the API endoint.
-func RegisterHandleFunc(path string, handleFunc func(http.ResponseWriter, *http.Request)) *mux.Route {
-	return router.HandleFunc(path, handleFunc)
+// RegisterHandler registers a handler with the API endoint.
+func RegisterHandler(path string, handler http.Handler) *mux.Route {
+	handlerLock.Lock()
+	defer handlerLock.Unlock()
+	return mainMux.Handle(path, handler)
 }
 
-// RequestLogger is a logging middleware
-func RequestLogger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Tracef("api request: %s ___ %s", r.RemoteAddr, r.RequestURI)
-		ew := NewEnrichedResponseWriter(w)
-		next.ServeHTTP(ew, r)
-		log.Infof("api request: %s %d %s", r.RemoteAddr, ew.Status, r.RequestURI)
-	})
+// RegisterHandleFunc registers a handle function with the API endoint.
+func RegisterHandleFunc(path string, handleFunc func(http.ResponseWriter, *http.Request)) *mux.Route {
+	handlerLock.Lock()
+	defer handlerLock.Unlock()
+	return mainMux.HandleFunc(path, handleFunc)
+}
+
+// RegisterMiddleware registers a middle function with the API endoint.
+func RegisterMiddleware(middleware Middleware) {
+	handlerLock.Lock()
+	defer handlerLock.Unlock()
+	middlewareHandler.handlers = append(middlewareHandler.handlers, middleware)
 }
 
 // Serve starts serving the API endpoint.
 func Serve() {
-	router.Use(RequestLogger)
+	// configure server
+	server.Addr = listenAddressConfig()
+	server.Handler = middlewareHandler
 
-	mainMux := http.NewServeMux()
-	mainMux.Handle("/", router)                              // net/http pattern matching /*
-	mainMux.HandleFunc("/api/database/v1", startDatabaseAPI) // net/http pattern matching only this exact path
-
-	address := getListenAddress()
-	log.Infof("api: starting to listen on %s", address)
-	log.Errorf("api: failed to listen on %s: %s", address, http.ListenAndServe(address, mainMux))
+	// start serving
+	log.Infof("api: starting to listen on %s", server.Addr)
+	// TODO: retry if failed
+	log.Errorf("api: failed to listen on %s: %s", server.Addr, server.ListenAndServe())
 }
 
 // GetMuxVars wraps github.com/gorilla/mux.Vars in order to mitigate context key issues in multi-repo projects.

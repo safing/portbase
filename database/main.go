@@ -9,34 +9,40 @@ import (
 	"github.com/tevino/abool"
 )
 
+const (
+	databasesSubDir = "databases"
+)
+
 var (
 	initialized = abool.NewBool(false)
 
 	shuttingDown   = abool.NewBool(false)
 	shutdownSignal = make(chan struct{})
+
+	rootStructure      *utils.DirStructure
+	databasesStructure *utils.DirStructure
 )
 
-// SetLocation sets the location of the database. This is separate from the initialization to provide the location to other modules earlier.
-func SetLocation(location string) (ok bool) {
-	if !initialized.IsSet() && rootDir == "" {
-		rootDir = location
-		return true
-	}
-	return false
-}
-
-// Initialize initialized the database
-func Initialize() error {
+// Initialize initializes the database at the specified location. Supply either a path or dir structure.
+func Initialize(dirPath string, dirStructureRoot *utils.DirStructure) error {
 	if initialized.SetToIf(false, true) {
 
-		err := utils.EnsureDirectory(rootDir, 0755)
+		if dirStructureRoot != nil {
+			rootStructure = dirStructureRoot
+		} else {
+			rootStructure = utils.NewDirStructure(dirPath, 0755)
+		}
+
+		// ensure root and databases dirs
+		databasesStructure = rootStructure.ChildDir(databasesSubDir, 0700)
+		err := databasesStructure.Ensure()
 		if err != nil {
-			return fmt.Errorf("could not create/open database directory (%s): %s", rootDir, err)
+			return fmt.Errorf("could not create/open database directory (%s): %s", rootStructure.Path, err)
 		}
 
 		err = loadRegistry()
 		if err != nil {
-			return fmt.Errorf("could not load database registry (%s): %s", filepath.Join(rootDir, registryFileName), err)
+			return fmt.Errorf("could not load database registry (%s): %s", filepath.Join(rootStructure.Path, registryFileName), err)
 		}
 
 		// start registry writer
@@ -65,4 +71,15 @@ func Shutdown() (err error) {
 		}
 	}
 	return
+}
+
+// getLocation returns the storage location for the given name and type.
+func getLocation(name, storageType string) (string, error) {
+	location := databasesStructure.ChildDir(name, 0700).ChildDir(storageType, 0700)
+	// check location
+	err := location.Ensure()
+	if err != nil {
+		return "", fmt.Errorf(`failed to create/check database dir "%s": %s`, location.Path, err)
+	}
+	return location.Path, nil
 }

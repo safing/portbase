@@ -1,5 +1,3 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package log
 
 import (
@@ -11,7 +9,7 @@ import (
 )
 
 func fastcheck(level severity) bool {
-	if fileLevelsActive.IsSet() {
+	if pkgLevelsActive.IsSet() {
 		return true
 	}
 	if uint32(level) < atomic.LoadUint32(logLevel) {
@@ -33,7 +31,7 @@ func log(level severity, msg string, trace *ContextTracer) {
 	}
 
 	// check if level is enabled
-	if !fileLevelsActive.IsSet() && uint32(level) < atomic.LoadUint32(logLevel) {
+	if !pkgLevelsActive.IsSet() && uint32(level) < atomic.LoadUint32(logLevel) {
 		return
 	}
 
@@ -54,12 +52,12 @@ func log(level severity, msg string, trace *ContextTracer) {
 	}
 
 	// check if level is enabled for file or generally
-	if fileLevelsActive.IsSet() {
+	if pkgLevelsActive.IsSet() {
 		fileOnly := strings.Split(file, "/")
 		if len(fileOnly) < 2 {
 			return
 		}
-		sev, ok := fileLevels[fileOnly[len(fileOnly)-2]]
+		sev, ok := pkgLevels[fileOnly[len(fileOnly)-2]]
 		if ok {
 			if level < sev {
 				return

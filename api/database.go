@@ -35,6 +35,10 @@ var (
 	dbAPISeperatorBytes = []byte(dbAPISeperator)
 )
 
+func init() {
+	RegisterHandleFunc("/api/database/v1", startDatabaseAPI) // net/http pattern matching only this exact path
+}
+
 // DatabaseAPI is a database API instance.
 type DatabaseAPI struct {
 	conn      *websocket.Conn

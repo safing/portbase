@@ -1,5 +1,3 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package log
 
 import (
@@ -75,9 +73,9 @@ var (
 	logLevelInt = uint32(3)
 	logLevel    = &logLevelInt
 
-	fileLevelsActive = abool.NewBool(false)
-	fileLevels       = make(map[string]severity)
-	fileLevelsLock   sync.Mutex
+	pkgLevelsActive = abool.NewBool(false)
+	pkgLevels       = make(map[string]severity)
+	pkgLevelsLock   sync.Mutex
 
 	logsWaiting     = make(chan bool, 1)
 	logsWaitingFlag = abool.NewBool(false)
@@ -92,15 +90,15 @@ var (
 	testErrors = abool.NewBool(false)
 )
 
-func SetFileLevels(levels map[string]severity) {
-	fileLevelsLock.Lock()
-	fileLevels = levels
-	fileLevelsLock.Unlock()
-	fileLevelsActive.Set()
+func SetPkgLevels(levels map[string]severity) {
+	pkgLevelsLock.Lock()
+	pkgLevels = levels
+	pkgLevelsLock.Unlock()
+	pkgLevelsActive.Set()
 }
 
-func UnSetFileLevels() {
-	fileLevelsActive.UnSet()
+func UnSetPkgLevels() {
+	pkgLevelsActive.UnSet()
 }
 
 func SetLogLevel(level severity) {
@@ -143,10 +141,10 @@ func Start() (err error) {
 	}
 
 	// get and set file loglevels
-	fileLogLevels := fileLogLevelsFlag
-	if len(fileLogLevels) > 0 {
-		newFileLevels := make(map[string]severity)
-		for _, pair := range strings.Split(fileLogLevels, ",") {
+	pkgLogLevels := pkgLogLevelsFlag
+	if len(pkgLogLevels) > 0 {
+		newPkgLevels := make(map[string]severity)
+		for _, pair := range strings.Split(pkgLogLevels, ",") {
 			splitted := strings.Split(pair, "=")
 			if len(splitted) != 2 {
 				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
@@ -159,9 +157,9 @@ func Start() (err error) {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				break
 			}
-			newFileLevels[splitted[0]] = fileLevel
+			newPkgLevels[splitted[0]] = fileLevel
 		}
-		SetFileLevels(newFileLevels)
+		SetPkgLevels(newPkgLevels)
 	}
 
 	startWriter()

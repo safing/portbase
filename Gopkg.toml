@@ -84,3 +84,15 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/shirou/gopsutil"
+  version = "2.19.6"
+
+[[constraint]]
+  name = "github.com/hashicorp/go-version"
+  version = "1.2.0"

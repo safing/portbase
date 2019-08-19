@@ -13,7 +13,7 @@ var (
 )
 
 func startMaintainer() {
-	maintenanceWg.Add(1)
+	module.AddWorkers(1)
 	go maintenanceWorker()
 }
 
@@ -37,8 +37,8 @@ func maintenanceWorker() {
 			if err != nil {
 				log.Errorf("database: thorough maintenance error: %s", err)
 			}
-		case <-shutdownSignal:
-			maintenanceWg.Done()
+		case <-module.ShuttingDown():
+			module.FinishWorker()
 			return
 		}
 	}

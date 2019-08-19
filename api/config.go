@@ -17,40 +17,41 @@ func init() {
 	flag.StringVar(&listenAddressFlag, "api-address", "", "override api listen address")
 }
 
-func checkFlags() error {
+func logFlagOverrides() {
 	if listenAddressFlag != "" {
-		log.Warning("api: api/listenAddress config is being overridden by -api-address flag")
+		log.Warning("api: api/listenAddress default config is being overridden by -api-address flag")
 	}
-	return nil
 }
 
-func getListenAddress() string {
+func getDefaultListenAddress() string {
+	// check if overridden
 	if listenAddressFlag != "" {
 		return listenAddressFlag
 	}
-	return listenAddressConfig()
+	// return internal default
+	return defaultListenAddress
 }
 
 func registerConfig() error {
 	err := config.Register(&config.Option{
 		Name:            "API Address",
 		Key:             "api/listenAddress",
-		Description:     "Define on what IP and port the API should listen on. Be careful, changing this may become a security issue.",
-		ExpertiseLevel:  config.ExpertiseLevelExpert,
+		Description:     "Define on which IP and port the API should listen on.",
+		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeString,
-		DefaultValue:    defaultListenAddress,
+		DefaultValue:    getDefaultListenAddress(),
 		ValidationRegex: "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,5}|\\[[:0-9A-Fa-f]+\\]:[0-9]{1,5})$",
+		RequiresRestart: true,
 	})
 	if err != nil {
 		return err
 	}
-	listenAddressConfig = config.GetAsString("api/listenAddress", defaultListenAddress)
+	listenAddressConfig = config.GetAsString("api/listenAddress", getDefaultListenAddress())
 
 	return nil
 }
 
+// SetDefaultAPIListenAddress sets the default listen address for the API.
 func SetDefaultAPIListenAddress(address string) {
-	if defaultListenAddress == "" {
-		defaultListenAddress = address
-	}
+	defaultListenAddress = address
 }

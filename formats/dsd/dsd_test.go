@@ -1,5 +1,3 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package dsd
 
 import (
@@ -10,6 +8,7 @@ import (
 
 //go:generate msgp
 
+// SimpleTestStruct is used for testing.
 type SimpleTestStruct struct {
 	S string
 	B byte
@@ -21,11 +20,11 @@ type ComplexTestStruct struct {
 	I16  int16
 	I32  int32
 	I64  int64
-	Ui   uint
-	Ui8  uint8
-	Ui16 uint16
-	Ui32 uint32
-	Ui64 uint64
+	UI   uint
+	UI8  uint8
+	UI16 uint16
+	UI32 uint32
+	UI64 uint64
 	S    string
 	Sp   *string
 	Sa   []string
@@ -36,6 +35,25 @@ type ComplexTestStruct struct {
 	Bap  *[]byte
 	M    map[string]string
 	Mp   *map[string]string
+}
+
+type GenCodeTestStruct struct {
+	I8   int8
+	I16  int16
+	I32  int32
+	I64  int64
+	UI8  uint8
+	UI16 uint16
+	UI32 uint32
+	UI64 uint64
+	S    string
+	Sp   *string
+	Sa   []string
+	Sap  *[]string
+	B    byte
+	Bp   *byte
+	Ba   []byte
+	Bap  *[]byte
 }
 
 func TestConversion(t *testing.T) {
@@ -113,7 +131,26 @@ func TestConversion(t *testing.T) {
 		},
 	}
 
-	// TODO: test all formats
+	genCodeSubject := GenCodeTestStruct{
+		-2,
+		-3,
+		-4,
+		-5,
+		2,
+		3,
+		4,
+		5,
+		"a",
+		&bString,
+		[]string{"c", "d", "e"},
+		&[]string{"f", "g", "h"},
+		0x01,
+		&bBytes,
+		[]byte{0x03, 0x04, 0x05},
+		&[]byte{0x05, 0x06, 0x07},
+	}
+
+	// test all formats (complex)
 	formats := []uint8{JSON}
 
 	for _, format := range formats {
@@ -163,20 +200,20 @@ func TestConversion(t *testing.T) {
 		if complexSubject.I64 != co.I64 {
 			t.Errorf("Load (complex struct): struct.I64 is not equal (%v != %v)", complexSubject.I64, co.I64)
 		}
-		if complexSubject.Ui != co.Ui {
-			t.Errorf("Load (complex struct): struct.Ui is not equal (%v != %v)", complexSubject.Ui, co.Ui)
+		if complexSubject.UI != co.UI {
+			t.Errorf("Load (complex struct): struct.UI is not equal (%v != %v)", complexSubject.UI, co.UI)
 		}
-		if complexSubject.Ui8 != co.Ui8 {
-			t.Errorf("Load (complex struct): struct.Ui8 is not equal (%v != %v)", complexSubject.Ui8, co.Ui8)
+		if complexSubject.UI8 != co.UI8 {
+			t.Errorf("Load (complex struct): struct.UI8 is not equal (%v != %v)", complexSubject.UI8, co.UI8)
 		}
-		if complexSubject.Ui16 != co.Ui16 {
-			t.Errorf("Load (complex struct): struct.Ui16 is not equal (%v != %v)", complexSubject.Ui16, co.Ui16)
+		if complexSubject.UI16 != co.UI16 {
+			t.Errorf("Load (complex struct): struct.UI16 is not equal (%v != %v)", complexSubject.UI16, co.UI16)
 		}
-		if complexSubject.Ui32 != co.Ui32 {
-			t.Errorf("Load (complex struct): struct.Ui32 is not equal (%v != %v)", complexSubject.Ui32, co.Ui32)
+		if complexSubject.UI32 != co.UI32 {
+			t.Errorf("Load (complex struct): struct.UI32 is not equal (%v != %v)", complexSubject.UI32, co.UI32)
 		}
-		if complexSubject.Ui64 != co.Ui64 {
-			t.Errorf("Load (complex struct): struct.Ui64 is not equal (%v != %v)", complexSubject.Ui64, co.Ui64)
+		if complexSubject.UI64 != co.UI64 {
+			t.Errorf("Load (complex struct): struct.UI64 is not equal (%v != %v)", complexSubject.UI64, co.UI64)
 		}
 		if complexSubject.S != co.S {
 			t.Errorf("Load (complex struct): struct.S is not equal (%v != %v)", complexSubject.S, co.S)
@@ -211,4 +248,87 @@ func TestConversion(t *testing.T) {
 
 	}
 
+	// test all formats
+	formats = []uint8{JSON, GenCode}
+
+	for _, format := range formats {
+		// simple
+		b, err := Dump(&simpleSubject, format)
+		if err != nil {
+			t.Fatalf("Dump error (simple struct): %s", err)
+		}
+
+		o, err := Load(b, &SimpleTestStruct{})
+		if err != nil {
+			t.Fatalf("Load error (simple struct): %s", err)
+		}
+
+		if !reflect.DeepEqual(&simpleSubject, o) {
+			t.Errorf("Load (simple struct): subject does not match loaded object")
+			t.Errorf("Encoded: %v", string(b))
+			t.Errorf("Compared: %v == %v", &simpleSubject, o)
+		}
+
+		// complex
+		b, err = Dump(&genCodeSubject, format)
+		if err != nil {
+			t.Fatalf("Dump error (complex struct): %s", err)
+		}
+
+		o, err = Load(b, &GenCodeTestStruct{})
+		if err != nil {
+			t.Fatalf("Load error (complex struct): %s", err)
+		}
+
+		co := o.(*GenCodeTestStruct)
+
+		if genCodeSubject.I8 != co.I8 {
+			t.Errorf("Load (complex struct): struct.I8 is not equal (%v != %v)", genCodeSubject.I8, co.I8)
+		}
+		if genCodeSubject.I16 != co.I16 {
+			t.Errorf("Load (complex struct): struct.I16 is not equal (%v != %v)", genCodeSubject.I16, co.I16)
+		}
+		if genCodeSubject.I32 != co.I32 {
+			t.Errorf("Load (complex struct): struct.I32 is not equal (%v != %v)", genCodeSubject.I32, co.I32)
+		}
+		if genCodeSubject.I64 != co.I64 {
+			t.Errorf("Load (complex struct): struct.I64 is not equal (%v != %v)", genCodeSubject.I64, co.I64)
+		}
+		if genCodeSubject.UI8 != co.UI8 {
+			t.Errorf("Load (complex struct): struct.UI8 is not equal (%v != %v)", genCodeSubject.UI8, co.UI8)
+		}
+		if genCodeSubject.UI16 != co.UI16 {
+			t.Errorf("Load (complex struct): struct.UI16 is not equal (%v != %v)", genCodeSubject.UI16, co.UI16)
+		}
+		if genCodeSubject.UI32 != co.UI32 {
+			t.Errorf("Load (complex struct): struct.UI32 is not equal (%v != %v)", genCodeSubject.UI32, co.UI32)
+		}
+		if genCodeSubject.UI64 != co.UI64 {
+			t.Errorf("Load (complex struct): struct.UI64 is not equal (%v != %v)", genCodeSubject.UI64, co.UI64)
+		}
+		if genCodeSubject.S != co.S {
+			t.Errorf("Load (complex struct): struct.S is not equal (%v != %v)", genCodeSubject.S, co.S)
+		}
+		if !reflect.DeepEqual(genCodeSubject.Sp, co.Sp) {
+			t.Errorf("Load (complex struct): struct.Sp is not equal (%v != %v)", genCodeSubject.Sp, co.Sp)
+		}
+		if !reflect.DeepEqual(genCodeSubject.Sa, co.Sa) {
+			t.Errorf("Load (complex struct): struct.Sa is not equal (%v != %v)", genCodeSubject.Sa, co.Sa)
+		}
+		if !reflect.DeepEqual(genCodeSubject.Sap, co.Sap) {
+			t.Errorf("Load (complex struct): struct.Sap is not equal (%v != %v)", genCodeSubject.Sap, co.Sap)
+		}
+		if genCodeSubject.B != co.B {
+			t.Errorf("Load (complex struct): struct.B is not equal (%v != %v)", genCodeSubject.B, co.B)
+		}
+		if !reflect.DeepEqual(genCodeSubject.Bp, co.Bp) {
+			t.Errorf("Load (complex struct): struct.Bp is not equal (%v != %v)", genCodeSubject.Bp, co.Bp)
+		}
+		if !reflect.DeepEqual(genCodeSubject.Ba, co.Ba) {
+			t.Errorf("Load (complex struct): struct.Ba is not equal (%v != %v)", genCodeSubject.Ba, co.Ba)
+		}
+		if !reflect.DeepEqual(genCodeSubject.Bap, co.Bap) {
+			t.Errorf("Load (complex struct): struct.Bap is not equal (%v != %v)", genCodeSubject.Bap, co.Bap)
+		}
+	}
 }

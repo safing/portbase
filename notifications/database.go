@@ -43,6 +43,26 @@ type StorageInterface struct {
 	storage.InjectBase
 }
 
+func registerAsDatabase() error {
+	_, err := database.Register(&database.Database{
+		Name:        "notifications",
+		Description: "Notifications",
+		StorageType: "injected",
+		PrimaryAPI:  "",
+	})
+	if err != nil {
+		return err
+	}
+
+	controller, err := database.InjectDatabase("notifications", &StorageInterface{})
+	if err != nil {
+		return err
+	}
+
+	dbController = controller
+	return nil
+}
+
 // Get returns a database record.
 func (s *StorageInterface) Get(key string) (record.Record, error) {
 	notsLock.RLock()
@@ -78,32 +98,16 @@ func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
 
 	// send all notifications
 	for _, n := range nots {
+		if n.Meta().IsDeleted() {
+			continue
+		}
+
 		if q.MatchesKey(n.DatabaseKey()) && q.MatchesRecord(n) {
 			it.Next <- n
 		}
 	}
 
 	it.Finish(nil)
-}
-
-func registerAsDatabase() error {
-	_, err := database.Register(&database.Database{
-		Name:        "notifications",
-		Description: "Notifications",
-		StorageType: "injected",
-		PrimaryAPI:  "",
-	})
-	if err != nil {
-		return err
-	}
-
-	controller, err := database.InjectDatabase("notifications", &StorageInterface{})
-	if err != nil {
-		return err
-	}
-
-	dbController = controller
-	return nil
 }
 
 // Put stores a record in the database.
@@ -124,36 +128,75 @@ func (s *StorageInterface) Put(r record.Record) error {
 	}
 
 	// continue in goroutine
-	go updateNotificationFromDatabasePut(n, key)
+	go UpdateNotification(n, key)
 
 	return nil
 }
 
-func updateNotificationFromDatabasePut(n *Notification, key string) {
+// UpdateNotification updates a notification with input from a database action. Notification will not be saved/propagated if there is no valid change.
+func UpdateNotification(n *Notification, key string) {
+	n.Lock()
+	defer n.Unlock()
+
 	// seperate goroutine in order to correctly lock notsLock
 	notsLock.RLock()
 	origN, ok := nots[key]
 	notsLock.RUnlock()
 
+	save := false
+
+	// ignore if already deleted
+	if ok && origN.Meta().IsDeleted() {
+		ok = false
+	}
+
 	if ok {
-		// existing notification, update selected action ID only
-		n.Lock()
-		defer n.Unlock()
-		if n.SelectedActionID != "" {
-			log.Tracef("notifications: user selected action for %s: %s", n.ID, n.SelectedActionID)
-			go origN.SelectAndExecuteAction(n.SelectedActionID)
-		}
+		// existing notification
+		// only update select attributes
+		origN.Lock()
+		defer origN.Unlock()
 	} else {
-		// accept new notification as is
-		notsLock.Lock()
-		nots[key] = n
-		notsLock.Unlock()
+		// new notification (from external source): old == new
+		origN = n
+		save = true
+	}
+
+	switch {
+	case n.SelectedActionID != "" && n.Responded == 0:
+		// select action, if not yet already handled
+		log.Tracef("notifications: selected action for %s: %s", n.ID, n.SelectedActionID)
+		origN.selectAndExecuteAction(n.SelectedActionID)
+		save = true
+	case origN.Executed == 0 && n.Executed != 0:
+		log.Tracef("notifications: action for %s executed externally", n.ID)
+		origN.Executed = n.Executed
+		save = true
+	}
+
+	if save {
+		// we may be locking
+		go origN.Save()
 	}
 }
 
 // Delete deletes a record from the database.
 func (s *StorageInterface) Delete(key string) error {
-	return ErrNoDelete
+	// transform key
+	if strings.HasPrefix(key, "all/") {
+		key = strings.TrimPrefix(key, "all/")
+	} else {
+		return storage.ErrNotFound
+	}
+
+	// get notification
+	notsLock.Lock()
+	n, ok := nots[key]
+	notsLock.Unlock()
+	if !ok {
+		return storage.ErrNotFound
+	}
+	// delete
+	return n.Delete()
 }
 
 // ReadOnly returns whether the database is read only.

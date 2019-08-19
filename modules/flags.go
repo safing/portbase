@@ -3,11 +3,12 @@ package modules
 import "flag"
 
 var (
-	helpFlag bool
+	// HelpFlag triggers printing flag.Usage. It's exported for custom help handling.
+	HelpFlag bool
 )
 
 func init() {
-	flag.BoolVar(&helpFlag, "help", false, "print help")
+	flag.BoolVar(&HelpFlag, "help", false, "print help")
 }
 
 func parseFlags() error {
@@ -15,7 +16,7 @@ func parseFlags() error {
 	// parse flags
 	flag.Parse()
 
-	if helpFlag {
+	if HelpFlag {
 		flag.Usage()
 		return ErrCleanExit
 	}

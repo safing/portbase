@@ -38,6 +38,7 @@ func Start() error {
 	// inter-link modules
 	err := initDependencies()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "CRITICAL ERROR: failed to initialize modules: %s\n", err)
 		return err
 	}
 

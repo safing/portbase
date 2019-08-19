@@ -1,5 +1,3 @@
-// Copyright Safing ICS Technologies GmbH. Use of this source code is governed by the AGPL license that can be found in the LICENSE file.
-
 package modules
 
 import (
@@ -204,11 +202,11 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test help flag
-	helpFlag = true
+	HelpFlag = true
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
 	}
-	helpFlag = false
+	HelpFlag = false
 
 }

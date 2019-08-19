@@ -10,6 +10,14 @@
   revision = "e2d15f34fcf99d5dbb871c820ec73f710fca9815"
 
 [[projects]]
+  digest = "1:e92f5581902c345eb4ceffdcd4a854fb8f73cf436d47d837d1ec98ef1fe0a214"
+  name = "github.com/StackExchange/wmi"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
+  version = "1.0.0"
+
+[[projects]]
   digest = "1:dbd3a713434b6f32d9459b1e6786ad58cec128470b58555cdc7b3b7314a1706f"
   name = "github.com/aead/serpent"
   packages = ["."]
@@ -34,19 +42,19 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:5f5090f05382959db941fa45acbeb7f4c5241aa8ac0f8f4393dec696e5953f53"
+  digest = "1:6be8582a4f52ba2851d8a039eb9c3a3b90334b2820563d71e97de35580da128e"
   name = "github.com/dgraph-io/badger"
   packages = [
     ".",
     "options",
-    "protos",
+    "pb",
     "skl",
     "table",
     "y",
   ]
   pruneopts = "UT"
-  revision = "99233d725dbdd26d156c61b2f42ae1671b794656"
-  version = "v1.5.4"
+  revision = "2fa005c9d4bf695277ab5214c1fbce3735b9562a"
+  version = "v1.6.0"
 
 [[projects]]
   branch = "master"
@@ -57,12 +65,31 @@
   revision = "6a90982ecee230ff6cba02d5bd386acc030be9d3"
 
 [[projects]]
-  digest = "1:318f1c959a8a740366fce4b1e1eb2fd914036b4af58fbd0a003349b305f118ad"
+  digest = "1:6f9339c912bbdda81302633ad7e99a28dfa5a639c864061f1929510a9a64aa74"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:440028f55cb322d8cb5b9d5ebec298a00b7d74690a658fe6b1c0c0b44341bfae"
+  name = "github.com/go-ole/go-ole"
+  packages = [
+    ".",
+    "oleutil",
+  ]
+  pruneopts = "UT"
+  revision = "97b6244175ae18ea6eef668034fd6565847501c9"
+  version = "v1.2.4"
+
+[[projects]]
+  digest = "1:573ca21d3669500ff845bdebee890eb7fc7f0f50c59f2132f2a0c6b03d85086a"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   pruneopts = "UT"
-  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
-  version = "v1.3.1"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   digest = "1:c3388642e07731a240e14f4bc7207df59cfcc009447c657b9de87fec072d07e3"
@@ -89,8 +116,16 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:88e0b0baeb9072f0a4afbcf12dda615fc8be001d1802357538591155998da21b"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
-  digest = "1:ae08d850ba158ea3ba4a7bb90f8372608172d8920644e5a6693b940a1f4e5d01"
+  digest = "1:7e8b852581596acce37bcb939a05d7d5ff27156045b50057e659e299c16fc1ca"
   name = "github.com/mmcloughlin/avo"
   packages = [
     "attr",
@@ -108,7 +143,7 @@
     "x86",
   ]
   pruneopts = "UT"
-  revision = "83fbad1a6b3cba8ac7711170e57953fd12cdc40a"
+  revision = "bb615f61ce85790a1667efc145c66e917cce1a39"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -117,6 +152,22 @@
   pruneopts = "UT"
   revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
   version = "v0.8.1"
+
+[[projects]]
+  branch = "develop"
+  digest = "1:d88649ff4a4a0746857dd9e39915aedddce2b08e442ac131a91e573cd45bde93"
+  name = "github.com/safing/portmaster"
+  packages = ["core/structure"]
+  pruneopts = "UT"
+  revision = "26c307b7a0db78d91b35ef9020706f106ebef8b6"
+
+[[projects]]
+  digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -135,6 +186,29 @@
   revision = "e9f377c596061894b7f9ee69aab61e62c3ccc13e"
 
 [[projects]]
+  digest = "1:7ebe52387a847d276a9b9e7b379b2e3e4d536843ad840a9c4426a0152e6b3d54"
+  name = "github.com/shirou/gopsutil"
+  packages = [
+    "cpu",
+    "host",
+    "internal/common",
+    "mem",
+    "net",
+    "process",
+  ]
+  pruneopts = "UT"
+  revision = "d80c43f9c984a48783daf22f4bd9278006ae483a"
+  version = "v2.19.7"
+
+[[projects]]
+  branch = "master"
+  digest = "1:99c6a6dab47067c9b898e8c8b13d130c6ab4ffbcc4b7cc6236c2cd0b1e344f5b"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
+
+[[projects]]
   branch = "master"
   digest = "1:93d6687fc19da8a35c7352d72117a6acd2072dfb7e9bfd65646227bf2a913b2a"
   name = "github.com/tevino/abool"
@@ -143,12 +217,12 @@
   revision = "9b9efcf221b50905aab9bbabd3daed56dc10f339"
 
 [[projects]]
-  digest = "1:7df351557a6d5c30804e7d6f7ed87f2fccb0619c08fcc84869a93f22bec96c11"
+  digest = "1:46aea6ffe39c3d95c13640c2515236ed3c5cdffc3c78c6c0ed4edec2caf7a0dc"
   name = "github.com/tidwall/gjson"
   packages = ["."]
   pruneopts = "UT"
-  revision = "eee0b6226f0d1db2675a176fdfaa8419bcad4ca8"
-  version = "v1.2.1"
+  revision = "c5e72cdf74dff23857243dd662c465b810891c21"
+  version = "v1.3.2"
 
 [[projects]]
   digest = "1:8453ddbed197809ee8ca28b06bd04e127bec9912deb4ba451fea7a1eca578328"
@@ -159,12 +233,12 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:ddfe0a54e5f9b29536a6d7b2defa376f2cb2b6e4234d676d7ff214d5b097cb50"
   name = "github.com/tidwall/pretty"
   packages = ["."]
   pruneopts = "UT"
   revision = "1166b9ac2b65e46a43d8618d30d1554f4652d49b"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:b70c951ba6fdeecfbd50dabe95aa5e1b973866ae9abbece46ad60348112214f2"
@@ -175,12 +249,12 @@
   version = "v1.0.4"
 
 [[projects]]
-  digest = "1:5f7414cf41466d4b4dd7ec52b2cd3e481e08cfd11e7e24fef730c0e483e88bb1"
+  digest = "1:f2ac2c724fc8214bb7b9dd6d4f5b7a983152051f5133320f228557182263cb94"
   name = "go.etcd.io/bbolt"
   packages = ["."]
   pruneopts = "UT"
-  revision = "63597a96ec0ad9e6d43c3fc81e809909e0237461"
-  version = "v1.3.2"
+  revision = "a0458a2b35708eef59eb5f620ceb3cd1c01a824d"
+  version = "v1.3.3"
 
 [[projects]]
   branch = "master"
@@ -192,7 +266,7 @@
     "sha3",
   ]
   pruneopts = "UT"
-  revision = "20be4c3c3ed52bfccdb2d59a412ee1a936d175a7"
+  revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
 
 [[projects]]
   branch = "master"
@@ -203,11 +277,11 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "f3200d17e092c607f615320ecaad13d87ad9a2b3"
+  revision = "74dc4d7220e7acc4e100824340f3e66577424772"
 
 [[projects]]
   branch = "master"
-  digest = "1:8a3986af7a48f0991ce6168708859c56d39d2ff8b82b34d0805bbb545a9a32a6"
+  digest = "1:6c97b4baa9cf774b42192e23632afc7dee7b899d4a3dc98057d24708ce1f60ac"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -215,11 +289,11 @@
     "windows",
   ]
   pruneopts = "UT"
-  revision = "46560c3f3c0a091352115a3d825af45663b983d8"
+  revision = "fde4db37ae7ad8191b03d30d27f258b5291ae4e3"
 
 [[projects]]
   branch = "master"
-  digest = "1:47717932fbd4293f80d296cd65254cd9c2ec9e51d8b4227b6254440cfa34da2a"
+  digest = "1:b3e64b43fe77039813b4f33100e4ef2e17960309f3c6c9ab120f5c55de747992"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -233,7 +307,7 @@
     "internal/semver",
   ]
   pruneopts = "UT"
-  revision = "75312fb06703a759656ae75b3d1c24b4aae95dfe"
+  revision = "caa95bb40b630f80d344d1f710f7e39be971d3e8"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -246,7 +320,11 @@
     "github.com/google/renameio",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
+    "github.com/hashicorp/go-version",
+    "github.com/safing/portmaster/core/structure",
+    "github.com/satori/go.uuid",
     "github.com/seehuhn/fortuna",
+    "github.com/shirou/gopsutil/host",
     "github.com/tevino/abool",
     "github.com/tidwall/gjson",
     "github.com/tidwall/sjson",

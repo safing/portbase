@@ -1,9 +1,9 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
-	"encoding/json"
 
 	"github.com/tidwall/sjson"
 
@@ -47,6 +47,7 @@ type Option struct {
 	DefaultValue    interface{}
 	ExternalOptType string
 	ValidationRegex string
+	RequiresRestart bool
 	compiledRegex   *regexp.Regexp
 }
 
