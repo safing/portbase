@@ -15,7 +15,7 @@ var (
 )
 
 func init() {
-	modules.Register("info", prep, nil, nil)
+	modules.Register("info", prep, nil, nil, "base")
 
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 }

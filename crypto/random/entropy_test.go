@@ -23,48 +23,48 @@ func TestFeeder(t *testing.T) {
 
 	// check blocking calls
 
-	waitC := make(chan struct{})
+	waitOne := make(chan struct{})
 	go func() {
 		f.SupplyEntropy([]byte{0}, 0)
-		close(waitC)
+		close(waitOne)
 	}()
 	select {
-	case <-waitC:
+	case <-waitOne:
 		t.Error("call does not block!")
 	case <-time.After(10 * time.Millisecond):
 	}
 
-	waitC = make(chan struct{})
+	waitTwo := make(chan struct{})
 	go func() {
 		f.SupplyEntropyAsInt(0, 0)
-		close(waitC)
+		close(waitTwo)
 	}()
 	select {
-	case <-waitC:
+	case <-waitTwo:
 		t.Error("call does not block!")
 	case <-time.After(10 * time.Millisecond):
 	}
 
 	// check non-blocking calls
 
-	waitC = make(chan struct{})
+	waitThree := make(chan struct{})
 	go func() {
 		f.SupplyEntropyIfNeeded([]byte{0}, 0)
-		close(waitC)
+		close(waitThree)
 	}()
 	select {
-	case <-waitC:
+	case <-waitThree:
 	case <-time.After(10 * time.Millisecond):
 		t.Error("call blocks!")
 	}
 
-	waitC = make(chan struct{})
+	waitFour := make(chan struct{})
 	go func() {
 		f.SupplyEntropyAsIntIfNeeded(0, 0)
-		close(waitC)
+		close(waitFour)
 	}()
 	select {
-	case <-waitC:
+	case <-waitFour:
 	case <-time.After(10 * time.Millisecond):
 		t.Error("call blocks!")
 	}

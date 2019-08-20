@@ -46,12 +46,17 @@ func (s *Sinkhole) Delete(key string) error {
 }
 
 // Query returns a an iterator for the supplied query.
-func (s *Sinkhole) Query(q *query.Query) (*iterator.Iterator, error) {
+func (s *Sinkhole) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	return nil, errors.New("query not implemented by sinkhole")
 }
 
 // ReadOnly returns whether the database is read only.
 func (s *Sinkhole) ReadOnly() bool {
+	return false
+}
+
+// Injected returns whether the database is injected.
+func (s *Sinkhole) Injected() bool {
 	return false
 }
 
