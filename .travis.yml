@@ -9,4 +9,4 @@ install:
   - go install github.com/golang/dep/cmd/dep
   - dep ensure
 
-script: ./test
+script: ./test --scripted
