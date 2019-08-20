@@ -26,9 +26,7 @@ func init() {
 
 // NewBadger opens/creates a badger database.
 func NewBadger(name, location string) (storage.Interface, error) {
-	opts := badger.DefaultOptions
-	opts.Dir = location
-	opts.ValueDir = location
+	opts := badger.DefaultOptions(location)
 
 	db, err := badger.Open(opts)
 	if err == badger.ErrTruncateNeeded {
