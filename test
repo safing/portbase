@@ -34,8 +34,7 @@ function run {
     fi
   else
     if [[ $output == *"build constraints exclude all Go files"* ]]; then
-      echo -e "${goUp}[ !OS  ] $*"
-      warnings=$((warnings+1))
+      echo -e "${goUp}[ !=OS ] $*"
     else
       echo -e "${goUp}[\e[01;31m FAIL \e[00m] $*" >/dev/stderr
       cat $tmpfile >/dev/stderr
