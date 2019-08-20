@@ -4,5 +4,4 @@ os:
   - linux
   - windows
 
-script:
-  - test
+script: ./test

@@ -30,7 +30,7 @@ function run {
     fi
   else
     if [[ $output == *"build constraints exclude all Go files"* ]]; then
-      echo -e "\e[1A[\e[01;33mNOTEST\e[00m] $*"
+      echo -e "\e[1A[ !OS  ] $*"
       warnings=$((warnings+1))
     else
       echo -e "\e[1A[\e[01;31m FAIL \e[00m] $*" >/dev/stderr
