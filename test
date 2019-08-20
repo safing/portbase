@@ -46,9 +46,14 @@ function run {
 baseDir="$( cd "$(dirname "$0")" && pwd )"
 cd "$baseDir"
 
+# platform info
+platformInfo=$(go env GOOS GOARCH)
+echo "running tests for ${platformInfo//$'\n'/ }"
+
 # get all packages
 packages=$(go list ./...)
 
+# run vet/test on packages
 for package in $packages; do
   run go vet $package
   run go test -cover $package

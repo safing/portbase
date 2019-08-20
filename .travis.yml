@@ -1,0 +1,8 @@
+language: go
+
+os:
+  - linux
+  - windows
+
+script:
+  - test
