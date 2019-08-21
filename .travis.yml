@@ -7,6 +7,7 @@ os:
 branches:
   only:
     - master
+    - develop
     - /^feature\/travis\/.+$/ # feature/travis/*
     - /^fix\/travis\/.+$/ # fix/travis/*
 
