@@ -216,8 +216,5 @@ func ErrorTracef(ctx context.Context, things ...interface{}) (ok bool) {
 }
 
 func fastcheckLevel(level severity) bool {
-	if uint32(level) < atomic.LoadUint32(logLevel) {
-		return false
-	}
-	return true
+	return uint32(level) >= atomic.LoadUint32(logLevel)
 }
