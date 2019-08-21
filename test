@@ -2,9 +2,13 @@
 
 warnings=0
 errors=0
+scripted=0
+goUp="\\e[1A"
 
 function run {
-  echo "[......] $*"
+  if [[ $scripted -eq 0 ]]; then
+    echo "[......] $*"
+  fi
 
   # create tmpfile
   tmpfile=$(mktemp)
@@ -16,10 +20,10 @@ function run {
   # check return code
   if [[ $rc -eq 0 ]]; then
     if [[ $output == *"[no test files]"* ]]; then
-      echo -e "\e[1A[\e[01;33mNOTEST\e[00m] $*"
+      echo -e "${goUp}[\e[01;33mNOTEST\e[00m] $*"
       warnings=$((warnings+1))
     else
-      echo -ne "\e[1A[\e[01;32m  OK  \e[00m] "
+      echo -ne "${goUp}[\e[01;32m  OK  \e[00m] "
       if [[ $2 == "test" ]]; then
         echo -n $*
         echo -n ": "
@@ -30,10 +34,9 @@ function run {
     fi
   else
     if [[ $output == *"build constraints exclude all Go files"* ]]; then
-      echo -e "\e[1A[\e[01;33mNOTEST\e[00m] $*"
-      warnings=$((warnings+1))
+      echo -e "${goUp}[ !=OS ] $*"
     else
-      echo -e "\e[1A[\e[01;31m FAIL \e[00m] $*" >/dev/stderr
+      echo -e "${goUp}[\e[01;31m FAIL \e[00m] $*" >/dev/stderr
       cat $tmpfile >/dev/stderr
       errors=$((errors+1))
     fi
@@ -46,9 +49,20 @@ function run {
 baseDir="$( cd "$(dirname "$0")" && pwd )"
 cd "$baseDir"
 
+# change output format if being run in script
+if [[ $1 == "--scripted" ]]; then
+  scripted=1
+  goUp=""
+fi
+
+# platform info
+platformInfo=$(go env GOOS GOARCH)
+echo "running tests for ${platformInfo//$'\n'/ }:"
+
 # get all packages
 packages=$(go list ./...)
 
+# run vet/test on packages
 for package in $packages; do
   run go vet $package
   run go test -cover $package
