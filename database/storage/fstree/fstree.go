@@ -17,7 +17,6 @@ import (
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
-	"github.com/google/renameio"
 )
 
 const (
@@ -112,14 +111,14 @@ func (fst *FSTree) Put(r record.Record) error {
 		return err
 	}
 
-	err = renameio.WriteFile(dstPath, data, defaultFileMode)
+	err = writeFile(dstPath, data, defaultFileMode)
 	if err != nil {
 		// create dir and try again
 		err = os.MkdirAll(filepath.Dir(dstPath), defaultDirMode)
 		if err != nil {
 			return fmt.Errorf("fstree: failed to create directory %s: %s", filepath.Dir(dstPath), err)
 		}
-		err = renameio.WriteFile(dstPath, data, defaultFileMode)
+		err = writeFile(dstPath, data, defaultFileMode)
 		if err != nil {
 			return fmt.Errorf("fstree: could not write file %s: %s", dstPath, err)
 		}
@@ -265,4 +264,22 @@ func (fst *FSTree) MaintainThorough() error {
 // Shutdown shuts down the database.
 func (fst *FSTree) Shutdown() error {
 	return nil
+}
+
+// writeFile mirrors ioutil.WriteFile, replacing an existing file with the same
+// name atomically. This is not atomic on Windows, but still an improvement.
+// TODO: Replace with github.com/google/renamio.WriteFile as soon as it is fixed on Windows.
+// This function is forked from https://github.com/google/renameio/blob/a368f9987532a68a3d676566141654a81aa8100b/writefile.go.
+func writeFile(filename string, data []byte, perm os.FileMode) error {
+	t, err := TempFile("", filename)
+	if err != nil {
+		return err
+	}
+	defer t.Cleanup()
+
+	if _, err := t.Write(data); err != nil {
+		return err
+	}
+
+	return t.CloseAtomicallyReplace()
 }
