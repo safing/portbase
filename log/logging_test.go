@@ -54,7 +54,7 @@ func TestLogging(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	// just for show
-	UnSetFileLevels()
+	UnSetPkgLevels()
 
 	// do not really shut down, we may need logging for other tests
 	// ShutdownLogging()
