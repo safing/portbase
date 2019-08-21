@@ -30,7 +30,7 @@ func WindowsNTVersion() (string, error) {
 	if !fetched {
 		_, _, windowsNTVersion, err = host.PlatformInformation()
 
-		windowsNTVersion = strings.Split(windowsNTVersion, " Build ")[0]
+		windowsNTVersion = strings.SplitN(windowsNTVersion, " ", 2)[0]
 
 		if err != nil {
 			return "", fmt.Errorf("failed to obtain Windows-Version: %s", err)
