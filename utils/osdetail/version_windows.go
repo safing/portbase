@@ -3,6 +3,7 @@ package osdetail
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/go-version"
@@ -28,6 +29,8 @@ func WindowsNTVersion() (string, error) {
 
 	if !fetched {
 		_, _, windowsNTVersion, err = host.PlatformInformation()
+
+		windowsNTVersion = strings.Split(windowsNTVersion, " Build ")[0]
 
 		if err != nil {
 			return "", fmt.Errorf("failed to obtain Windows-Version: %s", err)
