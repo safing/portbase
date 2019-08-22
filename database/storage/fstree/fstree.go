@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,11 +18,14 @@ import (
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
+
+	"github.com/google/renameio"
 )
 
 const (
 	defaultFileMode = os.FileMode(int(0644))
 	defaultDirMode  = os.FileMode(int(0755))
+	onWindows       = runtime.GOOS == "windows"
 )
 
 // FSTree database storage.
@@ -189,11 +193,11 @@ func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, 
 			}
 			// continue
 			return nil
-		} else {
-			// still in scope?
-			if !strings.HasPrefix(path, fst.basePath) {
-				return nil
-			}
+		}
+
+		// still in scope?
+		if !strings.HasPrefix(path, fst.basePath) {
+			return nil
 		}
 
 		// read file
@@ -271,11 +275,18 @@ func (fst *FSTree) Shutdown() error {
 // TODO: Replace with github.com/google/renamio.WriteFile as soon as it is fixed on Windows.
 // This function is forked from https://github.com/google/renameio/blob/a368f9987532a68a3d676566141654a81aa8100b/writefile.go.
 func writeFile(filename string, data []byte, perm os.FileMode) error {
-	t, err := TempFile("", filename)
+	t, err := renameio.TempFile("", filename)
 	if err != nil {
 		return err
 	}
 	defer t.Cleanup()
+
+	// Set permissions before writing data, in case the data is sensitive.
+	if !onWindows {
+		if err := t.Chmod(perm); err != nil {
+			return err
+		}
+	}
 
 	if _, err := t.Write(data); err != nil {
 		return err
