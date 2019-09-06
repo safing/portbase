@@ -3,9 +3,28 @@ package log
 import (
 	"fmt"
 	"time"
-
-	"github.com/safing/portbase/taskmanager"
 )
+
+var (
+	schedulingEnabled = false
+	writeTrigger      = make(chan struct{})
+)
+
+// EnableScheduling enables external scheduling of the logger. This will require to manually trigger writes via TriggerWrite whenevery logs should be written. Please note that full buffers will also trigger writing. Must be called before Start() to have an effect.
+func EnableScheduling() {
+	if !initializing.IsSet() {
+		schedulingEnabled = true
+	}
+}
+
+// TriggerWriter triggers log output writing.
+func TriggerWriter() {
+	if started.IsSet() && schedulingEnabled {
+		select {
+		case writeTrigger <- struct{}{}:
+		}
+	}
+}
 
 func writeLine(line *logLine, duplicates uint64) {
 	fmt.Println(formatLine(line, duplicates, true))
@@ -23,7 +42,6 @@ func writer() {
 	var line *logLine
 	var lastLine *logLine
 	var duplicates uint64
-	startedTask := false
 	defer shutdownWaitGroup.Done()
 
 	for {
@@ -41,8 +59,7 @@ func writer() {
 
 		// wait for timeslot to log, or when buffer is full
 		select {
-		case <-taskmanager.StartVeryLowPriorityMicroTask():
-			startedTask = true
+		case <-writeTrigger:
 		case <-forceEmptyingOfBuffer:
 		case <-shutdownSignal:
 			for {
@@ -89,10 +106,6 @@ func writer() {
 				writeLine(line, duplicates)
 				duplicates = 0
 			default:
-				if startedTask {
-					taskmanager.EndMicroTask()
-					startedTask = false
-				}
 				break writeLoop
 			}
 		}

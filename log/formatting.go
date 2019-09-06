@@ -9,7 +9,7 @@ var counter uint16
 
 const maxCount uint16 = 999
 
-func (s severity) String() string {
+func (s Severity) String() string {
 	switch s {
 	case TraceLevel:
 		return "TRAC"
@@ -51,15 +51,15 @@ func formatLine(line *logLine, duplicates uint64, useColor bool) string {
 		fLine = fmt.Sprintf("%s%s %s:%03d %s %s %03d%s%s %s", colorStart, line.timestamp.Format("060102 15:04:05.000"), line.file[fPartStart:], line.line, rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
 	}
 
-	if line.trace != nil {
+	if line.tracer != nil {
 		// append full trace time
-		if len(line.trace.actions) > 0 {
-			fLine += fmt.Sprintf(" Σ=%s", line.timestamp.Sub(line.trace.actions[0].timestamp))
+		if len(line.tracer.logs) > 0 {
+			fLine += fmt.Sprintf(" Σ=%s", line.timestamp.Sub(line.tracer.logs[0].timestamp))
 		}
 
 		// append all trace actions
 		var d time.Duration
-		for i, action := range line.trace.actions {
+		for i, action := range line.tracer.logs {
 			// set color
 			if useColor {
 				colorStart = action.level.color()
@@ -71,10 +71,10 @@ func formatLine(line *logLine, duplicates uint64, useColor bool) string {
 				fPartStart = 0
 			}
 			// format
-			if i == len(line.trace.actions)-1 { // last
+			if i == len(line.tracer.logs)-1 { // last
 				d = line.timestamp.Sub(action.timestamp)
 			} else {
-				d = line.trace.actions[i+1].timestamp.Sub(action.timestamp)
+				d = line.tracer.logs[i+1].timestamp.Sub(action.timestamp)
 			}
 			fLine += fmt.Sprintf("\n%s%19s %s:%03d %s %s%s     %s", colorStart, d, action.file[fPartStart:], action.line, rightArrow, action.level.String(), colorEnd, action.msg)
 		}
