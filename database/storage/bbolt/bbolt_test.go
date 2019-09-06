@@ -126,7 +126,7 @@ func TestBadger(t *testing.T) {
 		t.Fatal(err)
 	}
 	cnt := 0
-	for _ = range it.Next {
+	for range it.Next {
 		cnt++
 	}
 	if it.Err() != nil {
