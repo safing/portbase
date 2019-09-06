@@ -1,4 +1,4 @@
-package taskmanager
+package modules
 
 import (
 	"sync/atomic"
@@ -24,9 +24,6 @@ var (
 	tasksDoneFlag    *abool.AtomicBool
 	tasksWaiting     chan bool
 	tasksWaitingFlag *abool.AtomicBool
-
-	shutdownSignal = make(chan struct{}, 0)
-	suttingDown    = abool.NewBool(false)
 )
 
 // StartMicroTask starts a new MicroTask. It will start immediately.
@@ -51,7 +48,7 @@ func newTaskIsWaiting() {
 
 // StartMediumPriorityMicroTask starts a new MicroTask (waiting its turn) if channel receives.
 func StartMediumPriorityMicroTask() chan bool {
-	if suttingDown.IsSet() {
+	if shutdownSignalClosed.IsSet() {
 		return closedChannel
 	}
 	if tasksWaitingFlag.SetToIf(false, true) {
@@ -62,7 +59,7 @@ func StartMediumPriorityMicroTask() chan bool {
 
 // StartLowPriorityMicroTask starts a new MicroTask (waiting its turn) if channel receives.
 func StartLowPriorityMicroTask() chan bool {
-	if suttingDown.IsSet() {
+	if shutdownSignalClosed.IsSet() {
 		return closedChannel
 	}
 	if tasksWaitingFlag.SetToIf(false, true) {
@@ -73,7 +70,7 @@ func StartLowPriorityMicroTask() chan bool {
 
 // StartVeryLowPriorityMicroTask starts a new MicroTask (waiting its turn) if channel receives.
 func StartVeryLowPriorityMicroTask() chan bool {
-	if suttingDown.IsSet() {
+	if shutdownSignalClosed.IsSet() {
 		return closedChannel
 	}
 	if tasksWaitingFlag.SetToIf(false, true) {
@@ -96,7 +93,7 @@ func init() {
 	closedChannel = make(chan bool, 0)
 	close(closedChannel)
 
-	var t int32 = 0
+	var t int32
 	tasks = &t
 
 	mediumPriorityClearance = make(chan bool, 0)
@@ -116,7 +113,7 @@ func init() {
 		for {
 
 			// wait for an event to start new tasks
-			if !suttingDown.IsSet() {
+			if !shutdownSignalClosed.IsSet() {
 
 				// reset timer
 				// https://golang.org/pkg/time/#Timer.Reset

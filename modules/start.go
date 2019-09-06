@@ -79,6 +79,9 @@ func Start() error {
 		close(startCompleteSignal)
 	}
 
+	go taskQueueHandler()
+	go taskScheduleHandler()
+
 	return nil
 }
 
