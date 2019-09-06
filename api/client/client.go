@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/safing/portbase/log"
+
 	"github.com/gorilla/websocket"
 	"github.com/tevino/abool"
 )

@@ -2,8 +2,8 @@ package config
 
 import (
 	"errors"
-	"sync"
 	"fmt"
+	"sync"
 
 	"github.com/safing/portbase/log"
 )

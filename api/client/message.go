@@ -9,10 +9,12 @@ import (
 	"github.com/tevino/abool"
 )
 
+// Client errors
 var (
 	ErrMalformedMessage = errors.New("malformed message")
 )
 
+// Message is an API message.
 type Message struct {
 	OpID     string
 	Type     string
@@ -22,6 +24,7 @@ type Message struct {
 	sent     *abool.AtomicBool
 }
 
+// ParseMessage parses the given raw data and returns a Message.
 func ParseMessage(data []byte) (*Message, error) {
 	parts := bytes.SplitN(data, apiSeperatorBytes, 4)
 	if len(parts) < 2 {
@@ -68,6 +71,7 @@ func ParseMessage(data []byte) (*Message, error) {
 	return m, nil
 }
 
+// Pack serializes a message into a []byte slice.
 func (m *Message) Pack() ([]byte, error) {
 	c := container.New([]byte(m.OpID), apiSeperatorBytes, []byte(m.Type))
 
@@ -89,29 +93,4 @@ func (m *Message) Pack() ([]byte, error) {
 	}
 
 	return c.CompileData(), nil
-}
-
-func (m *Message) IsOk() bool {
-	return m.Type == MsgOk
-}
-func (m *Message) IsDone() bool {
-	return m.Type == MsgDone
-}
-func (m *Message) IsError() bool {
-	return m.Type == MsgError
-}
-func (m *Message) IsUpdate() bool {
-	return m.Type == MsgUpdate
-}
-func (m *Message) IsNew() bool {
-	return m.Type == MsgNew
-}
-func (m *Message) IsDelete() bool {
-	return m.Type == MsgDelete
-}
-func (m *Message) IsWarning() bool {
-	return m.Type == MsgWarning
-}
-func (m *Message) GetMessage() string {
-	return m.Key
 }
