@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/tevino/abool"
@@ -15,7 +16,7 @@ import (
 type Task struct {
 	name   string
 	module *Module
-	taskFn TaskFn
+	taskFn func(context.Context, *Task)
 
 	queued     bool
 	canceled   bool
@@ -33,9 +34,6 @@ type Task struct {
 	lock sync.Mutex
 }
 
-// TaskFn is the function signature for creating Tasks.
-type TaskFn func(ctx context.Context, task *Task)
-
 var (
 	taskQueue            = list.New()
 	prioritizedTaskQueue = list.New()
@@ -49,20 +47,22 @@ var (
 
 	queueIsFilled                = make(chan struct{}, 1) // kick off queue handler
 	recalculateNextScheduledTask = make(chan struct{}, 1)
+	taskTimeslot                 = make(chan struct{})
 )
 
 const (
+	maxTimeslotWait   = 30 * time.Second
+	minRepeatDuration = 1 * time.Minute
 	maxExecutionWait  = 1 * time.Minute
-	defaultMaxDelay   = 5 * time.Minute
-	minRepeatDuration = 1 * time.Second
+	defaultMaxDelay   = 1 * time.Minute
 )
 
 // NewTask creates a new task with a descriptive name (non-unique), a optional deadline, and the task function to be executed. You must call one of Queue, Prioritize, StartASAP, Schedule or Repeat in order to have the Task executed.
-func (m *Module) NewTask(name string, taskFn TaskFn) *Task {
+func (m *Module) NewTask(name string, fn func(context.Context, *Task)) *Task {
 	return &Task{
 		name:     name,
 		module:   m,
-		taskFn:   taskFn,
+		taskFn:   fn,
 		maxDelay: defaultMaxDelay,
 	}
 }
@@ -168,7 +168,7 @@ func (t *Task) Schedule(executeAt time.Time) *Task {
 	return t
 }
 
-// Repeat sets the task to be executed in endless repeat at the specified interval. First execution will be after interval. Minimum repeat interval is one second.
+// Repeat sets the task to be executed in endless repeat at the specified interval. First execution will be after interval. Minimum repeat interval is one minute.
 func (t *Task) Repeat(interval time.Duration) *Task {
 	// check minimum interval duration
 	if interval < minRepeatDuration {
@@ -194,6 +194,12 @@ func (t *Task) Cancel() {
 }
 
 func (t *Task) runWithLocking() {
+	// wait for good timeslot regarding microtasks
+	select {
+	case <-taskTimeslot:
+	case <-time.After(maxTimeslotWait):
+	}
+
 	t.lock.Lock()
 
 	// check state, return if already executing or inactive
@@ -240,8 +246,6 @@ func (t *Task) runWithLocking() {
 		t.lock.Unlock()
 	}
 
-	// add to module workers
-	t.module.AddWorkers(1)
 	// add to queue workgroup
 	queueWg.Add(1)
 
@@ -257,15 +261,23 @@ func (t *Task) runWithLocking() {
 }
 
 func (t *Task) executeWithLocking(ctx context.Context, cancelFunc func()) {
+	// start for module
+	// hint: only queueWg global var is important for scheduling, others can be set here
+	atomic.AddInt32(t.module.taskCnt, 1)
+	t.module.waitGroup.Add(1)
+
 	defer func() {
-		// log result if error
+		// recover from panic
 		panicVal := recover()
 		if panicVal != nil {
-			log.Errorf("%s: task %s panicked: %s", t.module.Name, t.name, panicVal)
+			me := t.module.NewPanicError(t.name, "task", panicVal)
+			me.Report()
+			log.Errorf("%s: task %s panicked: %s\n%s", t.module.Name, t.name, panicVal, me.StackTrace)
 		}
 
-		// mark task as completed
-		t.module.FinishWorker()
+		// finish for module
+		atomic.AddInt32(t.module.taskCnt, -1)
+		t.module.waitGroup.Done()
 
 		// reset
 		t.lock.Lock()
@@ -282,6 +294,8 @@ func (t *Task) executeWithLocking(ctx context.Context, cancelFunc func()) {
 		// notify that we finished
 		cancelFunc()
 	}()
+
+	// run
 	t.taskFn(ctx, t)
 }
 
@@ -335,7 +349,7 @@ func waitUntilNextScheduledTask() <-chan time.Time {
 	defer scheduleLock.Unlock()
 
 	if taskSchedule.Len() > 0 {
-		return time.After(taskSchedule.Front().Value.(*Task).executeAt.Sub(time.Now()))
+		return time.After(time.Until(taskSchedule.Front().Value.(*Task).executeAt))
 	}
 	return waitForever
 }
@@ -346,6 +360,7 @@ var (
 )
 
 func taskQueueHandler() {
+	// only ever start once
 	if !taskQueueHandlerStarted.SetToIf(false, true) {
 		return
 	}
@@ -396,6 +411,7 @@ func taskQueueHandler() {
 }
 
 func taskScheduleHandler() {
+	// only ever start once
 	if !taskScheduleHandlerStarted.SetToIf(false, true) {
 		return
 	}

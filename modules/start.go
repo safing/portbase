@@ -3,6 +3,7 @@ package modules
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
@@ -12,13 +13,6 @@ var (
 	startComplete       = abool.NewBool(false)
 	startCompleteSignal = make(chan struct{})
 )
-
-// markStartComplete marks the startup as completed.
-func markStartComplete() {
-	if startComplete.SetToIf(false, true) {
-		close(startCompleteSignal)
-	}
-}
 
 // StartCompleted returns whether starting has completed.
 func StartCompleted() bool {
@@ -34,6 +28,10 @@ func WaitForStartCompletion() <-chan struct{} {
 func Start() error {
 	modulesLock.Lock()
 	defer modulesLock.Unlock()
+
+	// start microtask scheduler
+	go microTaskScheduler()
+	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0) * 2)
 
 	// inter-link modules
 	err := initDependencies()

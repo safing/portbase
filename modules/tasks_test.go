@@ -8,8 +8,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/tevino/abool"
 )
 
 func init() {
@@ -19,8 +17,15 @@ func init() {
 	go func() {
 		<-time.After(10 * time.Second)
 		fmt.Fprintln(os.Stderr, "taking too long")
-		pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+		_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 2)
 		os.Exit(1)
+	}()
+
+	// always trigger task timeslot for testing
+	go func() {
+		for {
+			taskTimeslot <- struct{}{}
+		}
 	}()
 }
 
@@ -30,18 +35,7 @@ func init() {
 var qtWg sync.WaitGroup
 var qtOutputChannel chan string
 var qtSleepDuration time.Duration
-var qtWorkerCnt int32
-var qtModule = &Module{
-	Name:         "task test module",
-	Prepped:      abool.NewBool(false),
-	Started:      abool.NewBool(false),
-	Stopped:      abool.NewBool(false),
-	inTransition: abool.NewBool(false),
-	Ctx:          context.Background(),
-	shutdownFlag: abool.NewBool(false),
-	workerGroup:  sync.WaitGroup{},
-	workerCnt:    &qtWorkerCnt,
-}
+var qtModule = initNewModule("task test module", nil, nil, nil)
 
 // functions
 func queuedTaskTester(s string) {
@@ -64,7 +58,7 @@ func prioritizedTaskTester(s string) {
 func TestQueuedTask(t *testing.T) {
 	// skip
 	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+		t.Skip("skipping test in short mode, as it is not fully deterministic")
 	}
 
 	// init
@@ -127,14 +121,14 @@ func TestScheduledTaskWaiting(t *testing.T) {
 
 	// skip
 	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+		t.Skip("skipping test in short mode, as it is not fully deterministic")
 	}
 
 	// init
 	expectedOutput := "0123456789"
 	stSleepDuration = 10 * time.Millisecond
 	stOutputChannel = make(chan string, 100)
-	stWaitCh = make(chan bool, 0)
+	stWaitCh = make(chan bool)
 
 	stWg.Add(10)
 
