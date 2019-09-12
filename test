@@ -5,6 +5,7 @@ errors=0
 scripted=0
 goUp="\\e[1A"
 all=0
+fullTestFlags="-short"
 install=0
 
 function help {
@@ -99,6 +100,7 @@ while true; do
     ;;
   "all")
     all=1
+    fullTestFlags=""
     shift 1
     ;;
   *)
@@ -157,7 +159,7 @@ if [[ "$1" == "" ]]; then
 else
   # single package testing
   packages=$(go list)/$1
-  if [[ ! -d "$packages" ]]; then
+  if [[ ! -d "$GOPATH/src/$packages" ]]; then
     echo "go package $packages does not exist"
     help
     exit 1
@@ -174,7 +176,7 @@ for package in $packages; do
   checkformat $package
   run golint -set_exit_status -min_confidence 1.0 $package
   run go vet $package
-  run go test -cover $package
+  run go test -cover $fullTestFlags $package
   if [[ $all -eq 1 ]]; then
     run golangci-lint run $GOPATH/src/$package
   fi
