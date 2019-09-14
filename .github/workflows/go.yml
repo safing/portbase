@@ -1,11 +1,13 @@
-name: Go Testing
+name: Go
 on:
+  push:
+    branches:
+    - feature/actions/*
+    - fix/actions/*
   pull_request:
     branches:
     - master
     - develop
-    - feature/actions/*
-    - fix/actions/*
 jobs:
 
   test:
@@ -25,8 +27,9 @@ jobs:
 
     - name: Get dependencies
       run: |
+        mkdir -p $GOBIN
         curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
         dep ensure
 
-    - name: Test
+    - name: Run tests
       run: ./test --scripted
