@@ -1,0 +1,32 @@
+name: Go Testing
+on:
+  pull_request:
+    branches:
+    - master
+    - develop
+    - feature/actions/*
+    - fix/actions/*
+jobs:
+
+  test:
+    name: Testing ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+
+    - name: Set up Go 1.12
+      uses: actions/setup-go@v1
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Get dependencies
+      run: |
+        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+        dep ensure
+
+    - name: Test
+      run: ./test --scripted
