@@ -21,7 +21,7 @@ type Badger struct {
 }
 
 func init() {
-	storage.Register("badger", NewBadger)
+	_ = storage.Register("badger", NewBadger)
 }
 
 // NewBadger opens/creates a badger database.
@@ -190,7 +190,7 @@ func (b *Badger) Injected() bool {
 
 // Maintain runs a light maintenance operation on the database.
 func (b *Badger) Maintain() error {
-	b.db.RunValueLogGC(0.7)
+	_ = b.db.RunValueLogGC(0.7)
 	return nil
 }
 

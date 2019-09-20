@@ -1,3 +1,4 @@
+//nolint:unparam,maligned
 package badger
 
 import (
@@ -13,7 +14,7 @@ import (
 
 type TestRecord struct {
 	record.Base
-	lock sync.Mutex
+	sync.Mutex
 	S    string
 	I    int
 	I8   int8
@@ -28,12 +29,6 @@ type TestRecord struct {
 	F32  float32
 	F64  float64
 	B    bool
-}
-
-func (tr *TestRecord) Lock() {
-}
-
-func (tr *TestRecord) Unlock() {
 }
 
 func TestBadger(t *testing.T) {

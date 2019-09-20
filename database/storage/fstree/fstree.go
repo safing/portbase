@@ -35,7 +35,7 @@ type FSTree struct {
 }
 
 func init() {
-	storage.Register("fstree", NewFSTree)
+	_ = storage.Register("fstree", NewFSTree)
 }
 
 // NewFSTree returns a (new) FSTree database.
@@ -160,15 +160,14 @@ func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 	}
 	fileInfo, err := os.Stat(walkPrefix)
 	var walkRoot string
-	if err == nil {
-		if fileInfo.IsDir() {
-			walkRoot = walkPrefix
-		} else {
-			walkRoot = filepath.Dir(walkPrefix)
-		}
-	} else if os.IsNotExist(err) {
+	switch {
+	case err == nil && fileInfo.IsDir():
+		walkRoot = walkPrefix
+	case err == nil:
 		walkRoot = filepath.Dir(walkPrefix)
-	} else {
+	case os.IsNotExist(err):
+		walkRoot = filepath.Dir(walkPrefix)
+	default: // err != nil
 		return nil, fmt.Errorf("fstree: could not stat query root %s: %s", walkPrefix, err)
 	}
 
@@ -279,7 +278,7 @@ func writeFile(filename string, data []byte, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer t.Cleanup()
+	defer t.Cleanup() //nolint:errcheck
 
 	// Set permissions before writing data, in case the data is sensitive.
 	if !onWindows {
