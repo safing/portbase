@@ -191,7 +191,7 @@ func (api *DatabaseAPI) writer() {
 		select {
 		// prioritize direct writes
 		case data = <-api.sendQueue:
-			if data == nil || len(data) == 0 {
+			if len(data) == 0 {
 				api.shutdown()
 				return
 			}
@@ -242,8 +242,9 @@ func (api *DatabaseAPI) handleGet(opID []byte, key string) {
 	r, err := api.db.Get(key)
 	if err == nil {
 		data, err = r.Marshal(r, record.JSON)
-	} else {
-		api.send(opID, dbMsgTypeError, err.Error(), nil)
+	}
+	if err == nil {
+		api.send(opID, dbMsgTypeError, err.Error(), nil) //nolint:nilness // FIXME: possibly false positive (golangci-lint govet/nilness)
 		return
 	}
 	api.send(opID, dbMsgTypeOk, r.Key(), data)
@@ -357,7 +358,7 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 		select {
 		case <-api.shutdownSignal:
 			// cancel sub and return
-			sub.Cancel()
+			_ = sub.Cancel()
 			return
 		case r := <-sub.Feed:
 			// process sub feed
@@ -373,17 +374,19 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 				// TODO: use upd, new and delete msgTypes
 				r.Lock()
 				isDeleted := r.Meta().IsDeleted()
+				new := r.Meta().Created == r.Meta().Modified
 				r.Unlock()
-				if isDeleted {
+				switch {
+				case isDeleted:
 					api.send(opID, dbMsgTypeDel, r.Key(), nil)
-				} else {
+				case new:
+					api.send(opID, dbMsgTypeNew, r.Key(), data)
+				default:
 					api.send(opID, dbMsgTypeUpd, r.Key(), data)
 				}
-			} else {
+			} else if sub.Err != nil {
 				// sub feed ended
-				if sub.Err != nil {
-					api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
-				}
+				api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
 			}
 		}
 	}
@@ -489,10 +492,7 @@ func (api *DatabaseAPI) handleInsert(opID []byte, key string, data []byte) {
 			return false
 		}
 		insertError = acc.Set(key.String(), value.Value())
-		if insertError != nil {
-			return false
-		}
-		return true
+		return insertError == nil
 	})
 
 	if insertError != nil {
