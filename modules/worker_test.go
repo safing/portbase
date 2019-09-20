@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -14,7 +15,7 @@ var (
 
 func TestWorker(t *testing.T) {
 	// test basic functionality
-	err := wModule.StartWorker("test worker", false, func(ctx context.Context) error {
+	err := wModule.RunWorker("test worker", func(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
@@ -22,7 +23,7 @@ func TestWorker(t *testing.T) {
 	}
 
 	// test returning an error
-	err = wModule.StartWorker("test worker", false, func(ctx context.Context) error {
+	err = wModule.RunWorker("test worker", func(ctx context.Context) error {
 		return errTest
 	})
 	if err != errTest {
@@ -30,25 +31,26 @@ func TestWorker(t *testing.T) {
 	}
 
 	// test service functionality
-	serviceBackoffDuration = 2 * time.Millisecond // speed up backoff
 	failCnt := 0
-	err = wModule.StartWorker("test worker", true, func(ctx context.Context) error {
+	var sWTestGroup sync.WaitGroup
+	sWTestGroup.Add(1)
+	wModule.StartServiceWorker("test service-worker", 2*time.Millisecond, func(ctx context.Context) error {
 		failCnt++
 		t.Logf("service-worker test run #%d", failCnt)
 		if failCnt >= 3 {
+			sWTestGroup.Done()
 			return nil
 		}
 		return errTest
 	})
-	if err == errTest {
-		t.Errorf("service-worker failed with unexpected error: %s", err)
-	}
+	// wait for service-worker to complete test
+	sWTestGroup.Wait()
 	if failCnt != 3 {
 		t.Errorf("service-worker failed to restart")
 	}
 
 	// test panic recovery
-	err = wModule.StartWorker("test worker", false, func(ctx context.Context) error {
+	err = wModule.RunWorker("test worker", func(ctx context.Context) error {
 		var a []byte
 		_ = a[0] //nolint // we want to runtime panic!
 		return nil
