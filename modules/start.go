@@ -57,6 +57,7 @@ func Start() error {
 	}
 
 	// start logging
+	log.EnableScheduling()
 	err = log.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "CRITICAL ERROR: failed to start logging: %s\n", err)

@@ -20,6 +20,8 @@ var (
 
 	mediumPriorityClearance = make(chan struct{})
 	lowPriorityClearance    = make(chan struct{})
+
+	triggerLogWriting = log.TriggerWriterChannel()
 )
 
 const (
@@ -137,6 +139,8 @@ microTaskManageLoop:
 			default:
 				select {
 				case taskTimeslot <- struct{}{}:
+					continue microTaskManageLoop
+				case triggerLogWriting <- struct{}{}:
 					continue microTaskManageLoop
 				case mediumPriorityClearance <- struct{}{}:
 				case lowPriorityClearance <- struct{}{}:
