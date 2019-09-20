@@ -1,3 +1,4 @@
+//nolint:goconst,errcheck
 package config
 
 import "testing"
