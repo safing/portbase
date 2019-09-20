@@ -148,10 +148,10 @@ func registryWriter() {
 		select {
 		case <-time.After(1 * time.Hour):
 			if writeRegistrySoon.SetToIf(true, false) {
-				saveRegistry(true)
+				_ = saveRegistry(true)
 			}
 		case <-shutdownSignal:
-			saveRegistry(true)
+			_ = saveRegistry(true)
 			return
 		}
 	}

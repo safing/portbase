@@ -30,12 +30,12 @@ type Controller struct {
 }
 
 // newController creates a new controller for a storage.
-func newController(storageInt storage.Interface) (*Controller, error) {
+func newController(storageInt storage.Interface) *Controller {
 	return &Controller{
 		storage:     storageInt,
 		migrating:   abool.NewBool(false),
 		hibernating: abool.NewBool(false),
-	}, nil
+	}
 }
 
 // ReadOnly returns whether the storage is read only.
@@ -221,7 +221,7 @@ func (c *Controller) MaintainThorough() error {
 
 // Shutdown shuts down the storage.
 func (c *Controller) Shutdown() error {
-	// aquire full locks
+	// acquire full locks
 	c.readLock.Lock()
 	defer c.readLock.Unlock()
 	c.writeLock.Lock()

@@ -80,7 +80,7 @@ func (i *Interface) checkCache(key string) (record.Record, bool) {
 
 func (i *Interface) updateCache(r record.Record) {
 	if i.cache != nil {
-		i.cache.Set(r.Key(), r)
+		_ = i.cache.Set(r.Key(), r)
 	}
 }
 

@@ -124,7 +124,7 @@ func TestDatabaseSystem(t *testing.T) {
 	go func() {
 		time.Sleep(10 * time.Second)
 		fmt.Println("===== TAKING TOO LONG - PRINTING STACK TRACES =====")
-		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		os.Exit(1)
 	}()
 
