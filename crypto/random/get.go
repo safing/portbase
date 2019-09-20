@@ -25,28 +25,6 @@ var (
 type reader struct{}
 
 func init() {
-	config.Register(&config.Option{
-		Name:            "Reseed after x seconds",
-		Key:             "random/reseed_after_seconds",
-		Description:     "Number of seconds until reseed",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
-		OptType:         config.OptTypeInt,
-		DefaultValue:    360, // ten minutes
-		ValidationRegex: "^[1-9][0-9]{1,5}$",
-	})
-	reseedAfterSeconds = config.Concurrent.GetAsInt("random/reseed_after_seconds", 360)
-
-	config.Register(&config.Option{
-		Name:            "Reseed after x bytes",
-		Key:             "random/reseed_after_bytes",
-		Description:     "Number of fetched bytes until reseed",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
-		OptType:         config.OptTypeInt,
-		DefaultValue:    1000000, // one megabyte
-		ValidationRegex: "^[1-9][0-9]{2,9}$",
-	})
-	reseedAfterBytes = config.GetAsInt("random/reseed_after_bytes", 1000000)
-
 	Reader = reader{}
 }
 
@@ -55,7 +33,7 @@ func checkEntropy() (err error) {
 		return errors.New("RNG is not ready yet")
 	}
 	if rngBytesRead > reseedAfterBytes() ||
-		int64(time.Now().Sub(rngLastFeed).Seconds()) > reseedAfterSeconds() {
+		int64(time.Since(rngLastFeed).Seconds()) > reseedAfterSeconds() {
 		select {
 		case r := <-rngFeeder:
 			rng.Reseed(r)
