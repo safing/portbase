@@ -11,17 +11,12 @@ import (
 func log(level Severity, msg string, tracer *ContextTracer) {
 
 	if !started.IsSet() {
-		// a bit resouce intense, but keeps logs before logging started.
+		// a bit resource intense, but keeps logs before logging started.
 		// FIXME: create option to disable logging
 		go func() {
 			<-startedSignal
 			log(level, msg, tracer)
 		}()
-		return
-	}
-
-	// check if level is enabled
-	if !pkgLevelsActive.IsSet() && uint32(level) < atomic.LoadUint32(logLevel) {
 		return
 	}
 
@@ -43,20 +38,27 @@ func log(level Severity, msg string, tracer *ContextTracer) {
 
 	// check if level is enabled for file or generally
 	if pkgLevelsActive.IsSet() {
-		fileOnly := strings.Split(file, "/")
-		if len(fileOnly) < 2 {
+		pathSegments := strings.Split(file, "/")
+		if len(pathSegments) < 2 {
+			// file too short for package levels
 			return
 		}
-		sev, ok := pkgLevels[fileOnly[len(fileOnly)-2]]
+		pkgLevelsLock.Lock()
+		severity, ok := pkgLevels[pathSegments[len(pathSegments)-2]]
+		pkgLevelsLock.Unlock()
 		if ok {
-			if level < sev {
+			if level < severity {
 				return
 			}
 		} else {
+			// no package level set, check against global level
 			if uint32(level) < atomic.LoadUint32(logLevel) {
 				return
 			}
 		}
+	} else if uint32(level) < atomic.LoadUint32(logLevel) {
+		// no package levels set, check against global level
+		return
 	}
 
 	// create log object
@@ -73,13 +75,13 @@ func log(level Severity, msg string, tracer *ContextTracer) {
 	select {
 	case logBuffer <- log:
 	default:
-		forceEmptyingOfBuffer <- true
+		forceEmptyingOfBuffer <- struct{}{}
 		logBuffer <- log
 	}
 
 	// wake up writer if necessary
 	if logsWaitingFlag.SetToIf(false, true) {
-		logsWaiting <- true
+		logsWaiting <- struct{}{}
 	}
 
 }
@@ -108,14 +110,14 @@ func Tracef(format string, things ...interface{}) {
 	}
 }
 
-// Debug is used to log minor errors or unexpected events. These occurences are usually not worth mentioning in itself, but they might hint at a bigger problem.
+// Debug is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func Debug(msg string) {
 	if fastcheck(DebugLevel) {
 		log(DebugLevel, msg, nil)
 	}
 }
 
-// Debugf is used to log minor errors or unexpected events. These occurences are usually not worth mentioning in itself, but they might hint at a bigger problem.
+// Debugf is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func Debugf(format string, things ...interface{}) {
 	if fastcheck(DebugLevel) {
 		log(DebugLevel, fmt.Sprintf(format, things...), nil)

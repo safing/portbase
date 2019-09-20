@@ -7,7 +7,10 @@ import (
 
 var counter uint16
 
-const maxCount uint16 = 999
+const (
+	maxCount   uint16 = 999
+	timeFormat string = "060102 15:04:05.000"
+)
 
 func (s Severity) String() string {
 	switch s {
@@ -41,14 +44,14 @@ func formatLine(line *logLine, duplicates uint64, useColor bool) string {
 
 	var fLine string
 	if line.line == 0 {
-		fLine = fmt.Sprintf("%s%s ? %s %s %03d%s%s %s", colorStart, line.timestamp.Format("060102 15:04:05.000"), rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
+		fLine = fmt.Sprintf("%s%s ? %s %s %03d%s%s %s", colorStart, line.timestamp.Format(timeFormat), rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
 	} else {
 		fLen := len(line.file)
 		fPartStart := fLen - 10
 		if fPartStart < 0 {
 			fPartStart = 0
 		}
-		fLine = fmt.Sprintf("%s%s %s:%03d %s %s %03d%s%s %s", colorStart, line.timestamp.Format("060102 15:04:05.000"), line.file[fPartStart:], line.line, rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
+		fLine = fmt.Sprintf("%s%s %s:%03d %s %s %03d%s%s %s", colorStart, line.timestamp.Format(timeFormat), line.file[fPartStart:], line.line, rightArrow, line.level.String(), counter, formatDuplicates(duplicates), colorEnd, line.msg)
 	}
 
 	if line.tracer != nil {

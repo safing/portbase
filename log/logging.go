@@ -70,7 +70,7 @@ const (
 
 var (
 	logBuffer             chan *logLine
-	forceEmptyingOfBuffer chan bool
+	forceEmptyingOfBuffer chan struct{}
 
 	logLevelInt = uint32(3)
 	logLevel    = &logLevelInt
@@ -79,17 +79,15 @@ var (
 	pkgLevels       = make(map[string]Severity)
 	pkgLevelsLock   sync.Mutex
 
-	logsWaiting     = make(chan bool, 1)
+	logsWaiting     = make(chan struct{}, 1)
 	logsWaitingFlag = abool.NewBool(false)
 
-	shutdownSignal    = make(chan struct{}, 0)
+	shutdownSignal    = make(chan struct{})
 	shutdownWaitGroup sync.WaitGroup
 
 	initializing  = abool.NewBool(false)
 	started       = abool.NewBool(false)
-	startedSignal = make(chan struct{}, 0)
-
-	testErrors = abool.NewBool(false)
+	startedSignal = make(chan struct{})
 )
 
 // SetPkgLevels sets individual log levels for packages.
@@ -136,8 +134,8 @@ func Start() (err error) {
 		return nil
 	}
 
-	logBuffer = make(chan *logLine, 8192)
-	forceEmptyingOfBuffer = make(chan bool, 4)
+	logBuffer = make(chan *logLine, 1024)
+	forceEmptyingOfBuffer = make(chan struct{}, 16)
 
 	initialLogLevel := ParseLevel(logLevelFlag)
 	if initialLogLevel > 0 {
@@ -169,6 +167,9 @@ func Start() (err error) {
 		SetPkgLevels(newPkgLevels)
 	}
 
+	if !schedulingEnabled {
+		close(writeTrigger)
+	}
 	startWriter()
 
 	started.Set()

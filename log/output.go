@@ -22,8 +22,14 @@ func TriggerWriter() {
 	if started.IsSet() && schedulingEnabled {
 		select {
 		case writeTrigger <- struct{}{}:
+		default:
 		}
 	}
+}
+
+// TriggerWriterChannel returns the channel to trigger log writing. Returned channel will close if EnableScheduling() is not called correctly.
+func TriggerWriterChannel() chan struct{} {
+	return writeTrigger
 }
 
 func writeLine(line *logLine, duplicates uint64) {
@@ -34,7 +40,7 @@ func writeLine(line *logLine, duplicates uint64) {
 
 func startWriter() {
 	shutdownWaitGroup.Add(1)
-	fmt.Println(fmt.Sprintf("%s%s %s BOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), rightArrow, endColor()))
+	fmt.Println(fmt.Sprintf("%s%s %s BOF%s", InfoLevel.color(), time.Now().Format(timeFormat), rightArrow, endColor()))
 	go writer()
 }
 
@@ -47,7 +53,7 @@ func writer() {
 	for {
 		// reset
 		line = nil
-		lastLine = nil
+		lastLine = nil //nolint:ineffassign // only ineffectual in first loop
 		duplicates = 0
 
 		// wait until logs need to be processed
@@ -55,6 +61,8 @@ func writer() {
 		case <-logsWaiting:
 			logsWaitingFlag.UnSet()
 		case <-shutdownSignal:
+			finalizeWriting()
+			return
 		}
 
 		// wait for timeslot to log, or when buffer is full
@@ -62,15 +70,8 @@ func writer() {
 		case <-writeTrigger:
 		case <-forceEmptyingOfBuffer:
 		case <-shutdownSignal:
-			for {
-				select {
-				case line = <-logBuffer:
-					writeLine(line, duplicates)
-				case <-time.After(10 * time.Millisecond):
-					fmt.Println(fmt.Sprintf("%s%s %s EOF%s", InfoLevel.color(), time.Now().Format("060102 15:04:05.000"), leftArrow, endColor()))
-					return
-				}
-			}
+			finalizeWriting()
+			return
 		}
 
 		// write all the logs!
@@ -94,12 +95,11 @@ func writer() {
 					// deduplication
 					if !line.Equal(lastLine) {
 						// no duplicate
-						writeLine(lastLine, duplicates)
-						duplicates = 0
-					} else {
-						// duplicate
-						duplicates++
+						break dedupLoop
 					}
+
+					// duplicate
+					duplicates++
 				}
 
 				// write actual line
@@ -114,7 +114,21 @@ func writer() {
 		select {
 		case <-time.After(10 * time.Millisecond):
 		case <-shutdownSignal:
+			finalizeWriting()
+			return
 		}
 
+	}
+}
+
+func finalizeWriting() {
+	for {
+		select {
+		case line := <-logBuffer:
+			writeLine(line, 0)
+		case <-time.After(10 * time.Millisecond):
+			fmt.Println(fmt.Sprintf("%s%s %s EOF%s", InfoLevel.color(), time.Now().Format(timeFormat), leftArrow, endColor()))
+			return
+		}
 	}
 }
