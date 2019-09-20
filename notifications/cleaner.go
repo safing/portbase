@@ -1,19 +1,21 @@
 package notifications
 
 import (
+	"context"
 	"time"
 
 	"github.com/safing/portbase/log"
 )
 
-func cleaner() {
-	shutdownWg.Add(1)
-	select {
-	case <-shutdownSignal:
-		shutdownWg.Done()
-		return
-	case <-time.After(5 * time.Second):
-		cleanNotifications()
+//nolint:unparam // must conform to interface
+func cleaner(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(5 * time.Second):
+			cleanNotifications()
+		}
 	}
 }
 

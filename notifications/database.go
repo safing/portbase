@@ -138,7 +138,7 @@ func UpdateNotification(n *Notification, key string) {
 	n.Lock()
 	defer n.Unlock()
 
-	// seperate goroutine in order to correctly lock notsLock
+	// separate goroutine in order to correctly lock notsLock
 	notsLock.RLock()
 	origN, ok := nots[key]
 	notsLock.RUnlock()

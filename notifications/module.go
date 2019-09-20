@@ -1,14 +1,13 @@
 package notifications
 
 import (
-	"sync"
+	"time"
 
 	"github.com/safing/portbase/modules"
 )
 
 var (
-	shutdownSignal = make(chan struct{})
-	shutdownWg     sync.WaitGroup
+	module *modules.Module
 )
 
 func init() {
@@ -21,12 +20,6 @@ func start() error {
 		return err
 	}
 
-	go cleaner()
-	return nil
-}
-
-func stop() error {
-	close(shutdownSignal)
-	shutdownWg.Wait()
+	go module.StartServiceWorker("cleaner", 1*time.Second, cleaner)
 	return nil
 }

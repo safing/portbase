@@ -32,14 +32,14 @@ type Notification struct {
 	DataSubject sync.Locker
 	Type        uint8
 
-	AvailableActions []*Action
-	SelectedActionID string
-
 	Persistent bool  // this notification persists until it is handled and survives restarts
 	Created    int64 // creation timestamp, notification "starts"
 	Expires    int64 // expiry timestamp, notification is expected to be canceled at this time and may be cleaned up afterwards
 	Responded  int64 // response timestamp, notification "ends"
 	Executed   int64 // execution timestamp, notification will be deleted soon
+
+	AvailableActions []*Action
+	SelectedActionID string
 
 	lock           sync.Mutex
 	actionFunction func(*Notification) // call function to process action
@@ -54,7 +54,6 @@ type Action struct {
 }
 
 func noOpAction(n *Notification) {
-	return
 }
 
 // Get returns the notification identifed by the given id or nil if it doesn't exist.
@@ -125,7 +124,7 @@ func (n *Notification) Save() *Notification {
 }
 
 // SetActionFunction sets a trigger function to be executed when the user reacted on the notification.
-// The provided funtion will be started as its own goroutine and will have to lock everything it accesses, even the provided notification.
+// The provided function will be started as its own goroutine and will have to lock everything it accesses, even the provided notification.
 func (n *Notification) SetActionFunction(fn func(*Notification)) *Notification {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -139,7 +138,7 @@ func (n *Notification) MakeAck() *Notification {
 	defer n.lock.Unlock()
 
 	n.AvailableActions = []*Action{
-		&Action{
+		{
 			ID:   "ack",
 			Text: "OK",
 		},
