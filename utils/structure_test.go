@@ -59,7 +59,7 @@ func ExampleDirStructure() {
 		fmt.Println(err)
 	}
 
-	filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err == nil {
 			dir := strings.TrimPrefix(path, basePath)
 			if dir == "" {
