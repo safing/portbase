@@ -29,7 +29,7 @@ func main() {
 
 	// Shutdown
 	// catch interrupt for clean shutdown
-	signalCh := make(chan os.Signal)
+	signalCh := make(chan os.Signal, 3)
 	signal.Notify(
 		signalCh,
 		os.Interrupt,
@@ -42,7 +42,7 @@ func main() {
 	case <-signalCh:
 		fmt.Println(" <INTERRUPT>")
 		log.Warning("main: program was interrupted, shutting down.")
-		modules.Shutdown()
+		_ = modules.Shutdown()
 	case <-modules.ShuttingDown():
 	}
 
