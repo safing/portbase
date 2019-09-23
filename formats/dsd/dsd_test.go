@@ -1,3 +1,4 @@
+//nolint:maligned,unparam,gocyclo
 package dsd
 
 import (
@@ -97,8 +98,7 @@ func TestConversion(t *testing.T) {
 	}
 
 	bString := "b"
-	var bBytes byte
-	bBytes = 0x02
+	var bBytes byte = 0x02
 
 	complexSubject := ComplexTestStruct{
 		-1,

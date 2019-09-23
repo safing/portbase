@@ -101,6 +101,7 @@ func authMiddleware(next http.Handler) http.Handler {
 			Name:     cookieName,
 			Value:    tokenString,
 			HttpOnly: true,
+			MaxAge:   int(cookieTTL.Seconds()),
 		})
 
 		// serve

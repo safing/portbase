@@ -39,16 +39,19 @@ func getTypeName(t uint8) string {
 
 // Option describes a configuration option.
 type Option struct {
-	Name            string
-	Key             string // category/sub/key
-	Description     string
+	Name        string
+	Key         string // in path format: category/sub/key
+	Description string
+
 	ExpertiseLevel  uint8
 	OptType         uint8
+	RequiresRestart bool
 	DefaultValue    interface{}
+
 	ExternalOptType string
 	ValidationRegex string
-	RequiresRestart bool
-	compiledRegex   *regexp.Regexp
+
+	compiledRegex *regexp.Regexp
 }
 
 // Export expors an option to a Record.

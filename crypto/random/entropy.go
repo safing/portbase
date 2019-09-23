@@ -10,22 +10,9 @@ import (
 )
 
 var (
-	rngFeeder      = make(chan []byte, 0)
+	rngFeeder      = make(chan []byte)
 	minFeedEntropy config.IntOption
 )
-
-func init() {
-	config.Register(&config.Option{
-		Name:            "Minimum Feed Entropy",
-		Key:             "random/min_feed_entropy",
-		Description:     "The minimum amount of entropy before a entropy source is feed to the RNG, in bits.",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
-		OptType:         config.OptTypeInt,
-		DefaultValue:    256,
-		ValidationRegex: "^[0-9]{3,5}$",
-	})
-	minFeedEntropy = config.Concurrent.GetAsInt("random/min_feed_entropy", 256)
-}
 
 // The Feeder is used to feed entropy to the RNG.
 type Feeder struct {
@@ -43,7 +30,7 @@ type entropyData struct {
 // NewFeeder returns a new entropy Feeder.
 func NewFeeder() *Feeder {
 	new := &Feeder{
-		input:        make(chan *entropyData, 0),
+		input:        make(chan *entropyData),
 		needsEntropy: abool.NewBool(true),
 		buffer:       container.New(),
 	}

@@ -15,7 +15,7 @@ type Sinkhole struct {
 }
 
 func init() {
-	storage.Register("sinkhole", NewSinkhole)
+	_ = storage.Register("sinkhole", NewSinkhole)
 }
 
 // NewSinkhole creates a dummy database.

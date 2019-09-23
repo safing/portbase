@@ -1,17 +1,20 @@
 package log
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
 
-// test waiting
-func TestLogging(t *testing.T) {
-
+func init() {
 	err := Start()
 	if err != nil {
-		t.Errorf("start failed: %s", err)
+		panic(fmt.Sprintf("start failed: %s", err))
 	}
+}
+
+// test waiting
+func TestLogging(t *testing.T) {
 
 	// skip
 	if testing.Short() {

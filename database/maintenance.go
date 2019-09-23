@@ -69,11 +69,17 @@ func MaintainRecordStates() error {
 		}
 
 		for _, r := range toDelete {
-			c.storage.Delete(r.DatabaseKey())
+			err := c.storage.Delete(r.DatabaseKey())
+			if err != nil {
+				return err
+			}
 		}
 		for _, r := range toExpire {
 			r.Meta().Delete()
-			return c.Put(r)
+			err := c.Put(r)
+			if err != nil {
+				return err
+			}
 		}
 
 	}

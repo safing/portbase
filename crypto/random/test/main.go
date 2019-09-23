@@ -55,7 +55,10 @@ func main() {
 	switch os.Args[1] {
 	case "fortuna":
 
-		random.Start()
+		err := random.Start()
+		if err != nil {
+			panic(err)
+		}
 
 		for {
 			b, err := random.Bytes(64)

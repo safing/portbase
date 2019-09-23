@@ -1,3 +1,4 @@
+//nolint:nakedret,unconvert
 package dsd
 
 import (

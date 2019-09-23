@@ -99,12 +99,12 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 		}
 	}
 
-	go s.processQuery(q, it, opts)
+	go s.processQuery(it, opts)
 
 	return it, nil
 }
 
-func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator, opts []*Option) {
+func (s *StorageInterface) processQuery(it *iterator.Iterator, opts []*Option) {
 
 	sort.Sort(sortableOptions(opts))
 

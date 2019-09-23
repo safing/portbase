@@ -38,7 +38,7 @@ func (c *andCond) check() (err error) {
 }
 
 func (c *andCond) string() string {
-	var all []string
+	all := make([]string, 0, len(c.conditions))
 	for _, cond := range c.conditions {
 		all = append(all, cond.string())
 	}

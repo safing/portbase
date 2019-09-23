@@ -82,7 +82,7 @@ func MapToJSON(mapData map[string]interface{}) ([]byte, error) {
 	for key, value := range mapData {
 		new[key] = value
 	}
-	
+
 	expand(new)
 	return json.MarshalIndent(new, "", "  ")
 }

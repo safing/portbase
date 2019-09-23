@@ -26,7 +26,7 @@ type BBolt struct {
 }
 
 func init() {
-	storage.Register("bbolt", NewBBolt)
+	_ = storage.Register("bbolt", NewBBolt)
 }
 
 // NewBBolt opens/creates a bbolt database.

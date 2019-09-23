@@ -8,7 +8,7 @@ import (
 
 const isWindows = runtime.GOOS == "windows"
 
-// EnsureDirectory ensures that the given directoy exists and that is has the given permissions set.
+// EnsureDirectory ensures that the given directory exists and that is has the given permissions set.
 // If path is a file, it is deleted and a directory created.
 // If a directory is created, also all missing directories up to the required one are created with the given permissions.
 func EnsureDirectory(path string, perm os.FileMode) error {

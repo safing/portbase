@@ -96,10 +96,7 @@ func (q *Query) IsChecked() bool {
 
 // MatchesKey checks whether the query matches the supplied database key (key without database prefix).
 func (q *Query) MatchesKey(dbKey string) bool {
-	if !strings.HasPrefix(dbKey, q.dbKeyPrefix) {
-		return false
-	}
-	return true
+	return strings.HasPrefix(dbKey, q.dbKeyPrefix)
 }
 
 // MatchesRecord checks whether the query matches the supplied database record (value only).

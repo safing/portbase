@@ -9,12 +9,6 @@ import (
 var (
 	validityFlag     = abool.NewBool(true)
 	validityFlagLock sync.RWMutex
-
-	tableLock sync.RWMutex
-
-	stringTable map[string]string
-	intTable    map[string]int
-	boolTable   map[string]bool
 )
 
 type (

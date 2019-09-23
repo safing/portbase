@@ -12,20 +12,22 @@ func TestContextTracer(t *testing.T) {
 		t.Skip()
 	}
 
-	ctx := AddTracer(context.Background())
+	ctx, tracer := AddTracer(context.Background())
+	_ = Tracer(ctx)
 
-	Tracer(ctx).Trace("api: request received, checking security")
+	tracer.Trace("api: request received, checking security")
 	time.Sleep(1 * time.Millisecond)
-	Tracer(ctx).Trace("login: logging in user")
+	tracer.Trace("login: logging in user")
 	time.Sleep(1 * time.Millisecond)
-	Tracer(ctx).Trace("database: fetching requested resources")
+	tracer.Trace("database: fetching requested resources")
 	time.Sleep(10 * time.Millisecond)
-	Tracer(ctx).Warning("database: partial failure")
+	tracer.Warning("database: partial failure")
 	time.Sleep(10 * time.Microsecond)
-	Tracer(ctx).Trace("renderer: rendering output")
+	tracer.Trace("renderer: rendering output")
 	time.Sleep(1 * time.Millisecond)
-	Tracer(ctx).Trace("api: returning request")
+	tracer.Trace("api: returning request")
 
-	DebugTrace(ctx, "api: completed request")
+	tracer.Trace("api: completed request")
+	tracer.Submit()
 	time.Sleep(100 * time.Millisecond)
 }

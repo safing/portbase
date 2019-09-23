@@ -1,3 +1,4 @@
+//nolint:maligned,unparam
 package accessor
 
 import (

@@ -4,42 +4,73 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// Key for context value
+// ContextTracerKey is the key used for the context key/value storage.
 type ContextTracerKey struct{}
 
+// ContextTracer is attached to a context in order bind logs to a context.
 type ContextTracer struct {
 	sync.Mutex
-	actions []*Action
-}
-
-type Action struct {
-	timestamp time.Time
-	level     severity
-	msg       string
-	file      string
-	line      int
+	logs []*logLine
 }
 
 var (
-	key       = ContextTracerKey{}
-	nilTracer *ContextTracer
+	key = ContextTracerKey{}
 )
 
-func AddTracer(ctx context.Context) context.Context {
-	if ctx != nil && fastcheckLevel(TraceLevel) {
+// AddTracer adds a ContextTracer to the returned Context. Will return a nil ContextTracer if logging level is not set to trace. Will return a nil ContextTracer if one already exists. Will return a nil ContextTracer in case of an error. Will return a nil context if nil.
+func AddTracer(ctx context.Context) (context.Context, *ContextTracer) {
+	if ctx != nil && fastcheck(TraceLevel) {
+		// check pkg levels
+		if pkgLevelsActive.IsSet() {
+			// get file
+			_, file, _, ok := runtime.Caller(1)
+			if !ok {
+				// cannot get file, ignore
+				return ctx, nil
+			}
+
+			pathSegments := strings.Split(file, "/")
+			if len(pathSegments) < 2 {
+				// file too short for package levels
+				return ctx, nil
+			}
+			pkgLevelsLock.Lock()
+			severity, ok := pkgLevels[pathSegments[len(pathSegments)-2]]
+			pkgLevelsLock.Unlock()
+			if ok {
+				// check against package level
+				if TraceLevel < severity {
+					return ctx, nil
+				}
+			} else {
+				// no package level set, check against global level
+				if uint32(TraceLevel) < atomic.LoadUint32(logLevel) {
+					return ctx, nil
+				}
+			}
+		} else if uint32(TraceLevel) < atomic.LoadUint32(logLevel) {
+			// no package levels set, check against global level
+			return ctx, nil
+		}
+
+		// check for existing tracer
 		_, ok := ctx.Value(key).(*ContextTracer)
 		if !ok {
-			return context.WithValue(ctx, key, &ContextTracer{})
+			// add and return new tracer
+			tracer := &ContextTracer{}
+			return context.WithValue(ctx, key, tracer), tracer
 		}
 	}
-	return ctx
+	return ctx, nil
 }
 
+// Tracer returns the ContextTracer previously added to the given Context.
 func Tracer(ctx context.Context) *ContextTracer {
 	if ctx != nil {
 		tracer, ok := ctx.Value(key).(*ContextTracer)
@@ -47,10 +78,59 @@ func Tracer(ctx context.Context) *ContextTracer {
 			return tracer
 		}
 	}
-	return nilTracer
+	return nil
 }
 
-func (ct *ContextTracer) logTrace(level severity, msg string) {
+// Submit collected logs on the context for further processing/outputting. Does nothing if called on a nil ContextTracer.
+func (tracer *ContextTracer) Submit() {
+	if tracer != nil {
+		return
+	}
+
+	if !started.IsSet() {
+		// a bit resource intense, but keeps logs before logging started.
+		// FIXME: create option to disable logging
+		go func() {
+			<-startedSignal
+			tracer.Submit()
+		}()
+		return
+	}
+
+	if len(tracer.logs) == 0 {
+		return
+	}
+
+	// extract last line as main line
+	mainLine := tracer.logs[len(tracer.logs)-1]
+	tracer.logs = tracer.logs[:len(tracer.logs)-1]
+
+	// create log object
+	log := &logLine{
+		msg:       mainLine.msg,
+		tracer:    tracer,
+		level:     mainLine.level,
+		timestamp: mainLine.timestamp,
+		file:      mainLine.file,
+		line:      mainLine.line,
+	}
+
+	// send log to processing
+	select {
+	case logBuffer <- log:
+	default:
+		forceEmptyingOfBuffer <- struct{}{}
+		logBuffer <- log
+	}
+
+	// wake up writer if necessary
+	if logsWaitingFlag.SetToIf(false, true) {
+		logsWaiting <- struct{}{}
+	}
+
+}
+
+func (tracer *ContextTracer) log(level Severity, msg string) {
 	// get file and line
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
@@ -64,9 +144,9 @@ func (ct *ContextTracer) logTrace(level severity, msg string) {
 		}
 	}
 
-	ct.Lock()
-	defer ct.Unlock()
-	ct.actions = append(ct.actions, &Action{
+	tracer.Lock()
+	defer tracer.Unlock()
+	tracer.logs = append(tracer.logs, &logLine{
 		timestamp: time.Now(),
 		level:     level,
 		msg:       msg,
@@ -75,146 +155,122 @@ func (ct *ContextTracer) logTrace(level severity, msg string) {
 	})
 }
 
-func (ct *ContextTracer) Tracef(things ...interface{}) (ok bool) {
-	if ct != nil {
-		if fastcheckLevel(TraceLevel) {
-			ct.logTrace(TraceLevel, fmt.Sprintf(things[0].(string), things[1:]...))
-		}
-		return true
+// Trace is used to log tiny steps. Log traces to context if you can!
+func (tracer *ContextTracer) Trace(msg string) {
+	switch {
+	case tracer != nil:
+		tracer.log(TraceLevel, msg)
+	case fastcheck(TraceLevel):
+		log(TraceLevel, msg, nil)
 	}
-	return false
 }
 
-func (ct *ContextTracer) Trace(msg string) (ok bool) {
-	if ct != nil {
-		if fastcheckLevel(TraceLevel) {
-			ct.logTrace(TraceLevel, msg)
-		}
-		return true
+// Tracef is used to log tiny steps. Log traces to context if you can!
+func (tracer *ContextTracer) Tracef(format string, things ...interface{}) {
+	switch {
+	case tracer != nil:
+		tracer.log(TraceLevel, fmt.Sprintf(format, things...))
+	case fastcheck(TraceLevel):
+		log(TraceLevel, fmt.Sprintf(format, things...), nil)
 	}
-	return false
 }
 
-func (ct *ContextTracer) Warningf(things ...interface{}) (ok bool) {
-	if ct != nil {
-		if fastcheckLevel(TraceLevel) {
-			ct.logTrace(WarningLevel, fmt.Sprintf(things[0].(string), things[1:]...))
-		}
-		return true
+// Debug is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
+func (tracer *ContextTracer) Debug(msg string) {
+	switch {
+	case tracer != nil:
+		tracer.log(DebugLevel, msg)
+	case fastcheck(DebugLevel):
+		log(DebugLevel, msg, nil)
 	}
-	return false
 }
 
-func (ct *ContextTracer) Warning(msg string) (ok bool) {
-	if ct != nil {
-		if fastcheckLevel(TraceLevel) {
-			ct.logTrace(WarningLevel, msg)
-		}
-		return true
+// Debugf is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
+func (tracer *ContextTracer) Debugf(format string, things ...interface{}) {
+	switch {
+	case tracer != nil:
+		tracer.log(DebugLevel, fmt.Sprintf(format, things...))
+	case fastcheck(DebugLevel):
+		log(DebugLevel, fmt.Sprintf(format, things...), nil)
 	}
-	return false
 }
 
-func (ct *ContextTracer) Errorf(things ...interface{}) (ok bool) {
-	if ct != nil {
-		if fastcheckLevel(TraceLevel) {
-			ct.logTrace(ErrorLevel, fmt.Sprintf(things[0].(string), things[1:]...))
-		}
-		return true
+// Info is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
+func (tracer *ContextTracer) Info(msg string) {
+	switch {
+	case tracer != nil:
+		tracer.log(InfoLevel, msg)
+	case fastcheck(InfoLevel):
+		log(InfoLevel, msg, nil)
 	}
-	return false
 }
 
-func (ct *ContextTracer) Error(msg string) (ok bool) {
-	if ct != nil {
-		if fastcheckLevel(TraceLevel) {
-			ct.logTrace(ErrorLevel, msg)
-		}
-		return true
+// Infof is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
+func (tracer *ContextTracer) Infof(format string, things ...interface{}) {
+	switch {
+	case tracer != nil:
+		tracer.log(InfoLevel, fmt.Sprintf(format, things...))
+	case fastcheck(InfoLevel):
+		log(InfoLevel, fmt.Sprintf(format, things...), nil)
 	}
-	return false
 }
 
-func DebugTrace(ctx context.Context, msg string) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(DebugLevel, msg, tracer)
-		return true
+// Warning is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
+func (tracer *ContextTracer) Warning(msg string) {
+	switch {
+	case tracer != nil:
+		tracer.log(WarningLevel, msg)
+	case fastcheck(WarningLevel):
+		log(WarningLevel, msg, nil)
 	}
-	log(DebugLevel, msg, nil)
-	return false
 }
 
-func DebugTracef(ctx context.Context, things ...interface{}) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(DebugLevel, fmt.Sprintf(things[0].(string), things[1:]...), tracer)
-		return true
+// Warningf is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
+func (tracer *ContextTracer) Warningf(format string, things ...interface{}) {
+	switch {
+	case tracer != nil:
+		tracer.log(WarningLevel, fmt.Sprintf(format, things...))
+	case fastcheck(WarningLevel):
+		log(WarningLevel, fmt.Sprintf(format, things...), nil)
 	}
-	log(DebugLevel, fmt.Sprintf(things[0].(string), things[1:]...), nil)
-	return false
 }
 
-func InfoTrace(ctx context.Context, msg string) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(InfoLevel, msg, tracer)
-		return true
+// Error is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational. Maybe User/Admin should be informed.
+func (tracer *ContextTracer) Error(msg string) {
+	switch {
+	case tracer != nil:
+		tracer.log(ErrorLevel, msg)
+	case fastcheck(ErrorLevel):
+		log(ErrorLevel, msg, nil)
 	}
-	log(InfoLevel, msg, nil)
-	return false
 }
 
-func InfoTracef(ctx context.Context, things ...interface{}) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(InfoLevel, fmt.Sprintf(things[0].(string), things[1:]...), tracer)
-		return true
+// Errorf is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational.
+func (tracer *ContextTracer) Errorf(format string, things ...interface{}) {
+	switch {
+	case tracer != nil:
+		tracer.log(ErrorLevel, fmt.Sprintf(format, things...))
+	case fastcheck(ErrorLevel):
+		log(ErrorLevel, fmt.Sprintf(format, things...), nil)
 	}
-	log(InfoLevel, fmt.Sprintf(things[0].(string), things[1:]...), nil)
-	return false
 }
 
-func WarningTrace(ctx context.Context, msg string) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(WarningLevel, msg, tracer)
-		return true
+// Critical is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
+func (tracer *ContextTracer) Critical(msg string) {
+	switch {
+	case tracer != nil:
+		tracer.log(CriticalLevel, msg)
+	case fastcheck(CriticalLevel):
+		log(CriticalLevel, msg, nil)
 	}
-	log(WarningLevel, msg, nil)
-	return false
 }
 
-func WarningTracef(ctx context.Context, things ...interface{}) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(WarningLevel, fmt.Sprintf(things[0].(string), things[1:]...), tracer)
-		return true
+// Criticalf is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
+func (tracer *ContextTracer) Criticalf(format string, things ...interface{}) {
+	switch {
+	case tracer != nil:
+		tracer.log(CriticalLevel, fmt.Sprintf(format, things...))
+	case fastcheck(CriticalLevel):
+		log(CriticalLevel, fmt.Sprintf(format, things...), nil)
 	}
-	log(WarningLevel, fmt.Sprintf(things[0].(string), things[1:]...), nil)
-	return false
-}
-
-func ErrorTrace(ctx context.Context, msg string) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(ErrorLevel, msg, tracer)
-		return true
-	}
-	log(ErrorLevel, msg, nil)
-	return false
-}
-
-func ErrorTracef(ctx context.Context, things ...interface{}) (ok bool) {
-	tracer, ok := ctx.Value(key).(*ContextTracer)
-	if ok && fastcheckLevel(TraceLevel) {
-		log(ErrorLevel, fmt.Sprintf(things[0].(string), things[1:]...), tracer)
-		return true
-	}
-	log(ErrorLevel, fmt.Sprintf(things[0].(string), things[1:]...), nil)
-	return false
-}
-
-func fastcheckLevel(level severity) bool {
-	return uint32(level) >= atomic.LoadUint32(logLevel)
 }
