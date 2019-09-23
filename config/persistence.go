@@ -14,30 +14,54 @@ var (
 )
 
 func loadConfig() error {
+	// check if persistence is configured
+	if configFilePath == "" {
+		return nil
+	}
+
+	// read config file
 	data, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		return err
 	}
 
-	m, err := JSONToMap(data)
+	// convert to map
+	newValues, err := JSONToMap(data)
 	if err != nil {
 		return err
 	}
 
-	return setConfig(m)
+	// apply
+	return setConfig(newValues)
 }
 
-func saveConfig() (err error) {
-	data, err := MapToJSON(userConfig)
-	if err == nil {
-		err = ioutil.WriteFile(configFilePath, data, 0600)
+func saveConfig() error {
+	// check if persistence is configured
+	if configFilePath == "" {
+		return nil
 	}
 
+	// extract values
+	activeValues := make(map[string]interface{})
+	optionsLock.RLock()
+	for key, option := range options {
+		option.Lock()
+		if option.activeValue != nil {
+			activeValues[key] = option.activeValue
+		}
+		option.Unlock()
+	}
+	optionsLock.RUnlock()
+
+	// convert to JSON
+	data, err := MapToJSON(activeValues)
 	if err != nil {
 		log.Errorf("config: failed to save config: %s", err)
+		return err
 	}
 
-	return err
+	// write file
+	return ioutil.WriteFile(configFilePath, data, 0600)
 }
 
 // JSONToMap parses and flattens a hierarchical json object.
@@ -73,18 +97,10 @@ func flatten(rootMap, subMap map[string]interface{}, subKey string) {
 	}
 }
 
-// MapToJSON expands a flattened map and returns it as json.
-func MapToJSON(mapData map[string]interface{}) ([]byte, error) {
-	configLock.RLock()
-	defer configLock.RUnlock()
-
-	new := make(map[string]interface{})
-	for key, value := range mapData {
-		new[key] = value
-	}
-
-	expand(new)
-	return json.MarshalIndent(new, "", "  ")
+// MapToJSON expands a flattened map and returns it as json. The map is altered in the process.
+func MapToJSON(values map[string]interface{}) ([]byte, error) {
+	expand(values)
+	return json.MarshalIndent(values, "", "  ")
 }
 
 // expand expands a flattened map.
