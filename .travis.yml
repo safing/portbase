@@ -11,15 +11,6 @@ branches:
     - /^feature\/travis\/.+$/ # feature/travis/*
     - /^fix\/travis\/.+$/ # fix/travis/*
 
-git:
-  clone: false
-
-before_install:
-  - git config --global core.autocrlf false # disable to get LF line endings on windows
-  - mkdir -p $GOPATH/src/github.com/$TRAVIS_REPO_SLUG && cd $GOPATH/src/github.com/$TRAVIS_REPO_SLUG # create and move to repo dir
-  - git clone --depth=50 https://github.com/$TRAVIS_REPO_SLUG.git . # custom clone to disable core.autocrlf config
-  - git checkout -qf $TRAVIS_COMMIT # checkout commit to test
-
 install:
   - go get -d -u github.com/golang/dep
   - go install github.com/golang/dep/cmd/dep
