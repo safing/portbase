@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sync"
 
 	"github.com/tidwall/sjson"
 
 	"github.com/safing/portbase/database/record"
 )
 
-// Variable Type IDs for frontend Identification. Use ExternalOptType for extended types in the frontend.
+// Various attribute options. Use ExternalOptType for extended types in the frontend.
 const (
 	OptTypeString      uint8 = 1
 	OptTypeStringArray uint8 = 2
@@ -20,6 +21,10 @@ const (
 	ExpertiseLevelUser      uint8 = 1
 	ExpertiseLevelExpert    uint8 = 2
 	ExpertiseLevelDeveloper uint8 = 3
+
+	ReleaseLevelStable       = "stable"
+	ReleaseLevelBeta         = "beta"
+	ReleaseLevelExperimental = "experimental"
 )
 
 func getTypeName(t uint8) string {
@@ -39,48 +44,52 @@ func getTypeName(t uint8) string {
 
 // Option describes a configuration option.
 type Option struct {
+	sync.Mutex
+
 	Name        string
 	Key         string // in path format: category/sub/key
 	Description string
 
-	ExpertiseLevel  uint8
-	OptType         uint8
+	ReleaseLevel   string
+	ExpertiseLevel uint8
+	OptType        uint8
+
 	RequiresRestart bool
 	DefaultValue    interface{}
 
 	ExternalOptType string
 	ValidationRegex string
 
-	compiledRegex *regexp.Regexp
+	activeValue        interface{} // runtime value (loaded from config file or set by user)
+	activeDefaultValue interface{} // runtime default value (may be set internally)
+	compiledRegex      *regexp.Regexp
 }
 
 // Export expors an option to a Record.
-func (opt *Option) Export() (record.Record, error) {
-	data, err := json.Marshal(opt)
+func (option *Option) Export() (record.Record, error) {
+	option.Lock()
+	defer option.Unlock()
+
+	data, err := json.Marshal(option)
 	if err != nil {
 		return nil, err
 	}
 
-	configLock.RLock()
-	defer configLock.RUnlock()
-
-	userValue, ok := userConfig[opt.Key]
-	if ok {
-		data, err = sjson.SetBytes(data, "Value", userValue)
+	if option.activeValue != nil {
+		data, err = sjson.SetBytes(data, "Value", option.activeValue)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	defaultValue, ok := defaultConfig[opt.Key]
-	if ok {
-		data, err = sjson.SetBytes(data, "DefaultValue", defaultValue)
+	if option.activeDefaultValue != nil {
+		data, err = sjson.SetBytes(data, "DefaultValue", option.activeDefaultValue)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	r, err := record.NewWrapper(fmt.Sprintf("config:%s", opt.Key), nil, record.JSON, data)
+	r, err := record.NewWrapper(fmt.Sprintf("config:%s", option.Key), nil, record.JSON, data)
 	if err != nil {
 		return nil, err
 	}

@@ -5,12 +5,15 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
+	// reset
+	options = make(map[string]*Option)
 
 	if err := Register(&Option{
 		Name:            "name",
 		Key:             "key",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeString,
 		DefaultValue:    "default",
 		ValidationRegex: "^(banana|water)$",
@@ -22,7 +25,8 @@ func TestRegistry(t *testing.T) {
 		Name:            "name",
 		Key:             "key",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         0,
 		DefaultValue:    "default",
 		ValidationRegex: "^[A-Z][a-z]+$",
@@ -34,7 +38,8 @@ func TestRegistry(t *testing.T) {
 		Name:            "name",
 		Key:             "key",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeString,
 		DefaultValue:    "default",
 		ValidationRegex: "[",

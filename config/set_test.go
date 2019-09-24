@@ -4,6 +4,8 @@ package config
 import "testing"
 
 func TestLayersGetters(t *testing.T) {
+	// reset
+	options = make(map[string]*Option)
 
 	mapData, err := JSONToMap([]byte(`
 		{
@@ -79,12 +81,15 @@ func TestLayersGetters(t *testing.T) {
 }
 
 func TestLayersSetters(t *testing.T) {
+	// reset
+	options = make(map[string]*Option)
 
 	Register(&Option{
 		Name:            "name",
 		Key:             "monkey",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeString,
 		DefaultValue:    "banana",
 		ValidationRegex: "^(banana|water)$",
@@ -93,7 +98,8 @@ func TestLayersSetters(t *testing.T) {
 		Name:            "name",
 		Key:             "zebras/zebra",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeStringArray,
 		DefaultValue:    []string{"black", "white"},
 		ValidationRegex: "^[a-z]+$",
@@ -102,7 +108,8 @@ func TestLayersSetters(t *testing.T) {
 		Name:            "name",
 		Key:             "elephant",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeInt,
 		DefaultValue:    2,
 		ValidationRegex: "",
@@ -111,7 +118,8 @@ func TestLayersSetters(t *testing.T) {
 		Name:            "name",
 		Key:             "hot",
 		Description:     "description",
-		ExpertiseLevel:  1,
+		ReleaseLevel:    ReleaseLevelStable,
+		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeBool,
 		DefaultValue:    true,
 		ValidationRegex: "",
@@ -180,8 +188,8 @@ func TestLayersSetters(t *testing.T) {
 	if err := SetDefaultConfigOption("elephant", nil); err != nil {
 		t.Error(err)
 	}
-	if err := SetDefaultConfigOption("invalid_delete", nil); err != nil {
-		t.Error(err)
+	if err := SetDefaultConfigOption("invalid_delete", nil); err == nil {
+		t.Error("should fail")
 	}
 
 }

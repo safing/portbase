@@ -21,8 +21,9 @@ func Register(option *Option) error {
 	if option.Name == "" ||
 		option.Key == "" ||
 		option.Description == "" ||
+		option.OptType == 0 ||
 		option.ExpertiseLevel == 0 ||
-		option.OptType == 0 {
+		option.ReleaseLevel == "" {
 		return ErrIncompleteCall
 	}
 
