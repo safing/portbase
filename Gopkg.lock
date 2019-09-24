@@ -258,18 +258,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:84327234b97774e54e58c5ce6a7a82b242b38bd2ff0a4c3358891c1f19df54db"
-  name = "golang.org/x/crypto"
-  packages = [
-    "blake2b",
-    "blake2s",
-    "sha3",
-  ]
-  pruneopts = "UT"
-  revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
-
-[[projects]]
-  branch = "master"
   digest = "1:e0efd295a10a5703f556a97b7f90f9b3a02ee5080b26ee5374d100a6131aea68"
   name = "golang.org/x/net"
   packages = [
@@ -281,10 +269,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6c97b4baa9cf774b42192e23632afc7dee7b899d4a3dc98057d24708ce1f60ac"
+  digest = "1:d52ccbb025caf0a2166e0204ed934567b8d0dfdd23a09d947f1f040708888a0a"
   name = "golang.org/x/sys"
   packages = [
-    "cpu",
     "unix",
     "windows",
   ]
@@ -329,9 +316,6 @@
     "github.com/tidwall/gjson",
     "github.com/tidwall/sjson",
     "go.etcd.io/bbolt",
-    "golang.org/x/crypto/blake2b",
-    "golang.org/x/crypto/blake2s",
-    "golang.org/x/crypto/sha3",
     "golang.org/x/sys/windows",
   ]
   solver-name = "gps-cdcl"
