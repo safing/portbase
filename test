@@ -174,13 +174,15 @@ echo "running tests for ${platformInfo//$'\n'/ }:"
 
 # run vet/test on packages
 for package in $packages; do
+  echo ""
+  echo $package
   checkformat $package
   run golint -set_exit_status -min_confidence 1.0 $package
   run go vet $package
-  run go test -cover $fullTestFlags $package
   if [[ $all -eq 1 ]]; then
     run golangci-lint run $GOPATH/src/$package
   fi
+  run go test -cover $fullTestFlags $package
 done
 
 echo ""

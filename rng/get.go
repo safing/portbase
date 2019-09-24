@@ -1,4 +1,4 @@
-package random
+package rng
 
 import (
 	"encoding/binary"
