@@ -31,8 +31,9 @@ func prep() error {
 		Name:            "RNG Cipher",
 		Key:             "random/rng_cipher",
 		Description:     "Cipher to use for the Fortuna RNG. Requires restart to take effect.",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeString,
+		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
+		ReleaseLevel:    config.ReleaseLevelExperimental,
 		ExternalOptType: "string list",
 		DefaultValue:    "aes",
 		ValidationRegex: "^(aes|serpent)$",
@@ -46,8 +47,9 @@ func prep() error {
 		Name:            "Minimum Feed Entropy",
 		Key:             "random/min_feed_entropy",
 		Description:     "The minimum amount of entropy before a entropy source is feed to the RNG, in bits.",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
+		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
+		ReleaseLevel:    config.ReleaseLevelExperimental,
 		DefaultValue:    256,
 		ValidationRegex: "^[0-9]{3,5}$",
 	})
@@ -60,8 +62,9 @@ func prep() error {
 		Name:            "Reseed after x seconds",
 		Key:             "random/reseed_after_seconds",
 		Description:     "Number of seconds until reseed",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
+		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
+		ReleaseLevel:    config.ReleaseLevelExperimental,
 		DefaultValue:    360, // ten minutes
 		ValidationRegex: "^[1-9][0-9]{1,5}$",
 	})
@@ -74,8 +77,9 @@ func prep() error {
 		Name:            "Reseed after x bytes",
 		Key:             "random/reseed_after_bytes",
 		Description:     "Number of fetched bytes until reseed",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeInt,
+		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
+		ReleaseLevel:    config.ReleaseLevelExperimental,
 		DefaultValue:    1000000, // one megabyte
 		ValidationRegex: "^[1-9][0-9]{2,9}$",
 	})

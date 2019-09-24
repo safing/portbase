@@ -37,8 +37,9 @@ func registerConfig() error {
 		Name:            "API Address",
 		Key:             "api/listenAddress",
 		Description:     "Define on which IP and port the API should listen on.",
-		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		OptType:         config.OptTypeString,
+		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
+		ReleaseLevel:    config.ReleaseLevelStable,
 		DefaultValue:    getDefaultListenAddress(),
 		ValidationRegex: "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,5}|\\[[:0-9A-Fa-f]+\\]:[0-9]{1,5})$",
 		RequiresRestart: true,
@@ -53,5 +54,6 @@ func registerConfig() error {
 
 // SetDefaultAPIListenAddress sets the default listen address for the API.
 func SetDefaultAPIListenAddress(address string) {
+
 	defaultListenAddress = address
 }
