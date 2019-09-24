@@ -48,10 +48,26 @@ func (c *Container) AppendNumber(n uint64) {
 	c.compartments = append(c.compartments, varint.Pack64(n))
 }
 
+// AppendInt appends an int (varint encoded).
+func (c *Container) AppendInt(n int) {
+	c.compartments = append(c.compartments, varint.Pack64(uint64(n)))
+}
+
 // AppendAsBlock appends the length of the data and the data itself. Data will NOT be copied.
 func (c *Container) AppendAsBlock(data []byte) {
 	c.AppendNumber(uint64(len(data)))
 	c.Append(data)
+}
+
+// AppendContainer appends another Container. Data will NOT be copied.
+func (c *Container) AppendContainer(data *Container) {
+	c.compartments = append(c.compartments, data.compartments...)
+}
+
+// AppendContainerAsBlock appends another Container (length and data). Data will NOT be copied.
+func (c *Container) AppendContainerAsBlock(data *Container) {
+	c.AppendNumber(uint64(data.Length()))
+	c.compartments = append(c.compartments, data.compartments...)
 }
 
 // Length returns the full length of all bytes held by the container.
@@ -90,6 +106,16 @@ func (c *Container) Get(n int) ([]byte, error) {
 	}
 	c.skip(len(buf))
 	return buf, nil
+}
+
+// GetAsContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS consumed.
+func (c *Container) GetAsContainer(n int) (*Container, error) {
+	new := c.gatherAsContainer(n)
+	if new == nil {
+		return nil, errors.New("container: not enough data to return")
+	}
+	c.skip(n)
+	return new, nil
 }
 
 // GetMax returns as much as possible, but the given amount of bytes at maximum. Data MAY be copied and IS consumed.
@@ -173,10 +199,7 @@ func (c *Container) CheckError() {
 
 // HasError returns wether or not the container is holding an error.
 func (c *Container) HasError() bool {
-	if c.err != nil {
-		return true
-	}
-	return false
+	return c.err != nil
 }
 
 // Error returns the error.
@@ -217,6 +240,23 @@ func (c *Container) gather(n int) []byte {
 	return slice[:n]
 }
 
+func (c *Container) gatherAsContainer(n int) (new *Container) {
+	new = &Container{}
+	for i := c.offset; i < len(c.compartments); i++ {
+		if n >= len(c.compartments[i]) {
+			new.compartments = append(new.compartments, c.compartments[i])
+			n -= len(c.compartments[i])
+		} else {
+			new.compartments = append(new.compartments, c.compartments[i][:n])
+			n = 0
+		}
+	}
+	if n > 0 {
+		return nil
+	}
+	return new
+}
+
 func (c *Container) skip(n int) {
 	for i := c.offset; i < len(c.compartments); i++ {
 		if len(c.compartments[i]) <= n {
@@ -236,13 +276,22 @@ func (c *Container) skip(n int) {
 	c.checkOffset()
 }
 
-// GetNextBlock returns the next block of data defined by a varint (note: data will MAY be copied and IS consumed).
+// GetNextBlock returns the next block of data defined by a varint. Data MAY be copied and IS consumed.
 func (c *Container) GetNextBlock() ([]byte, error) {
 	blockSize, err := c.GetNextN64()
 	if err != nil {
 		return nil, err
 	}
 	return c.Get(int(blockSize))
+}
+
+// GetNextBlockAsContainer returns the next block of data as a Container defined by a varint. Data will NOT be copied and IS consumed.
+func (c *Container) GetNextBlockAsContainer() (*Container, error) {
+	blockSize, err := c.GetNextN64()
+	if err != nil {
+		return nil, err
+	}
+	return c.GetAsContainer(int(blockSize))
 }
 
 // GetNextN8 parses and returns a varint of type uint8.
