@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/safing/portbase/crypto/random"
+	"github.com/safing/portbase/rng"
 )
 
 func noise() {
@@ -55,13 +55,13 @@ func main() {
 	switch os.Args[1] {
 	case "fortuna":
 
-		err := random.Start()
+		err := rng.Start()
 		if err != nil {
 			panic(err)
 		}
 
 		for {
-			b, err := random.Bytes(64)
+			b, err := rng.Bytes(64)
 			if err != nil {
 				panic(err)
 			}
