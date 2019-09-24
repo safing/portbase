@@ -16,7 +16,7 @@ const (
 	// colorWhite   = "\033[37m"
 )
 
-func (s severity) color() string {
+func (s Severity) color() string {
 	switch s {
 	case DebugLevel:
 		return colorCyan

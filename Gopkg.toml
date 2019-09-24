@@ -75,10 +75,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "golang.org/x/crypto"
-
-[[constraint]]
-  branch = "master"
   name = "golang.org/x/sys"
 
 [prune]

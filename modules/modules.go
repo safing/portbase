@@ -39,34 +39,17 @@ type Module struct {
 	Ctx          context.Context
 	cancelCtx    func()
 	shutdownFlag *abool.AtomicBool
-	workerGroup  sync.WaitGroup
+
+	// workers/tasks
 	workerCnt    *int32
+	taskCnt      *int32
+	microTaskCnt *int32
+	waitGroup    sync.WaitGroup
 
 	// dependency mgmt
 	depNames   []string
 	depModules []*Module
 	depReverse []*Module
-}
-
-// AddWorkers adds workers to the worker waitgroup. This is a failsafe wrapper for sync.Waitgroup.
-func (m *Module) AddWorkers(n uint) {
-	if !m.ShutdownInProgress() {
-		if atomic.AddInt32(m.workerCnt, int32(n)) > 0 {
-			// only add to workgroup if cnt is positive (try to compensate wrong usage)
-			m.workerGroup.Add(int(n))
-		}
-	}
-}
-
-// FinishWorker removes a worker from the worker waitgroup. This is a failsafe wrapper for sync.Waitgroup.
-func (m *Module) FinishWorker() {
-	// check worker cnt
-	if atomic.AddInt32(m.workerCnt, -1) < 0 {
-		log.Warningf("modules: %s module tried to finish more workers than added, this may lead to undefined behavior when shutting down", m.Name)
-		return
-	}
-	// also mark worker done in workgroup
-	m.workerGroup.Done()
 }
 
 // ShutdownInProgress returns whether the module has started shutting down. In most cases, you should use ShuttingDown instead.
@@ -87,13 +70,19 @@ func (m *Module) shutdown() error {
 	// wait for workers
 	done := make(chan struct{})
 	go func() {
-		m.workerGroup.Wait()
+		m.waitGroup.Wait()
 		close(done)
 	}()
 	select {
 	case <-done:
 	case <-time.After(3 * time.Second):
-		return errors.New("timed out while waiting for module workers to finish")
+		log.Warningf(
+			"%s: timed out while waiting for workers/tasks to finish: workers=%d tasks=%d microtasks=%d, continuing shutdown...",
+			m.Name,
+			atomic.LoadInt32(m.workerCnt),
+			atomic.LoadInt32(m.taskCnt),
+			atomic.LoadInt32(m.microTaskCnt),
+		)
 	}
 
 	// call shutdown function
@@ -106,8 +95,19 @@ func dummyAction() error {
 
 // Register registers a new module. The control functions `prep`, `start` and `stop` are technically optional. `stop` is called _after_ all added module workers finished.
 func Register(name string, prep, start, stop func() error, dependencies ...string) *Module {
+	newModule := initNewModule(name, prep, start, stop, dependencies...)
+
+	modulesLock.Lock()
+	defer modulesLock.Unlock()
+	modules[name] = newModule
+	return newModule
+}
+
+func initNewModule(name string, prep, start, stop func() error, dependencies ...string) *Module {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	var workerCnt int32
+	var taskCnt int32
+	var microTaskCnt int32
 
 	newModule := &Module{
 		Name:         name,
@@ -118,8 +118,10 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 		Ctx:          ctx,
 		cancelCtx:    cancelCtx,
 		shutdownFlag: abool.NewBool(false),
-		workerGroup:  sync.WaitGroup{},
+		waitGroup:    sync.WaitGroup{},
 		workerCnt:    &workerCnt,
+		taskCnt:      &taskCnt,
+		microTaskCnt: &microTaskCnt,
 		prep:         prep,
 		start:        start,
 		stop:         stop,
@@ -137,9 +139,6 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 		newModule.stop = dummyAction
 	}
 
-	modulesLock.Lock()
-	defer modulesLock.Unlock()
-	modules[name] = newModule
 	return newModule
 }
 

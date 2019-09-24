@@ -30,6 +30,7 @@ func prep() error {
 	if dataRoot == nil {
 		return errors.New("data root is not set")
 	}
+
 	return nil
 }
 

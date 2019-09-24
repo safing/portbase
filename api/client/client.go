@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/safing/portbase/log"
-	"github.com/gorilla/websocket"
+
 	"github.com/tevino/abool"
 )
 
@@ -35,7 +35,6 @@ type Client struct {
 	operations map[string]*Operation
 	nextOpID   uint64
 
-	wsConn    *websocket.Conn
 	lastError string
 }
 
@@ -72,12 +71,12 @@ func (c *Client) Connect() error {
 func (c *Client) StayConnected() {
 	log.Infof("client: connecting to Portmaster at %s", c.server)
 
-	c.Connect()
+	_ = c.Connect()
 	for {
 		select {
 		case <-time.After(backOffTimer):
 			log.Infof("client: reconnecting...")
-			c.Connect()
+			_ = c.Connect()
 		case <-c.shutdownSignal:
 			return
 		}

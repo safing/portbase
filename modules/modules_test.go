@@ -14,28 +14,28 @@ var (
 	shutdownOrder string
 )
 
-func testPrep(name string) func() error {
+func testPrep(t *testing.T, name string) func() error {
 	return func() error {
-		// fmt.Printf("prep %s\n", name)
+		t.Logf("prep %s\n", name)
 		return nil
 	}
 }
 
-func testStart(name string) func() error {
+func testStart(t *testing.T, name string) func() error {
 	return func() error {
 		orderLock.Lock()
 		defer orderLock.Unlock()
-		// fmt.Printf("start %s\n", name)
+		t.Logf("start %s\n", name)
 		startOrder = fmt.Sprintf("%s>%s", startOrder, name)
 		return nil
 	}
 }
 
-func testStop(name string) func() error {
+func testStop(t *testing.T, name string) func() error {
 	return func() error {
 		orderLock.Lock()
 		defer orderLock.Unlock()
-		// fmt.Printf("stop %s\n", name)
+		t.Logf("stop %s\n", name)
 		shutdownOrder = fmt.Sprintf("%s>%s", shutdownOrder, name)
 		return nil
 	}
@@ -49,12 +49,19 @@ func testCleanExit() error {
 	return ErrCleanExit
 }
 
-func TestOrdering(t *testing.T) {
+func TestModules(t *testing.T) {
+	t.Parallel() // Not really, just a workaround for running these tests last.
 
-	Register("database", testPrep("database"), testStart("database"), testStop("database"))
-	Register("stats", testPrep("stats"), testStart("stats"), testStop("stats"), "database")
-	Register("service", testPrep("service"), testStart("service"), testStop("service"), "database")
-	Register("analytics", testPrep("analytics"), testStart("analytics"), testStop("analytics"), "stats", "database")
+	t.Run("TestModuleOrder", testModuleOrder)
+	t.Run("TestModuleErrors", testModuleErrors)
+}
+
+func testModuleOrder(t *testing.T) {
+
+	Register("database", testPrep(t, "database"), testStart(t, "database"), testStop(t, "database"))
+	Register("stats", testPrep(t, "stats"), testStart(t, "stats"), testStop(t, "stats"), "database")
+	Register("service", testPrep(t, "service"), testStart(t, "service"), testStop(t, "service"), "database")
+	Register("analytics", testPrep(t, "analytics"), testStart(t, "analytics"), testStop(t, "analytics"), "stats", "database")
 
 	err := Start()
 	if err != nil {
@@ -105,19 +112,7 @@ func printAndRemoveModules() {
 	modules = make(map[string]*Module)
 }
 
-func resetModules() {
-	for _, module := range modules {
-		module.Prepped.UnSet()
-		module.Started.UnSet()
-		module.Stopped.UnSet()
-		module.inTransition.UnSet()
-
-		module.depModules = make([]*Module, 0)
-		module.depModules = make([]*Module, 0)
-	}
-}
-
-func TestErrors(t *testing.T) {
+func testModuleErrors(t *testing.T) {
 
 	// reset modules
 	modules = make(map[string]*Module)
@@ -125,7 +120,7 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test prep error
-	Register("prepfail", testFail, testStart("prepfail"), testStop("prepfail"))
+	Register("prepfail", testFail, testStart(t, "prepfail"), testStop(t, "prepfail"))
 	err := Start()
 	if err == nil {
 		t.Error("should fail")
@@ -137,7 +132,7 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test prep clean exit
-	Register("prepcleanexit", testCleanExit, testStart("prepcleanexit"), testStop("prepcleanexit"))
+	Register("prepcleanexit", testCleanExit, testStart(t, "prepcleanexit"), testStop(t, "prepcleanexit"))
 	err = Start()
 	if err != ErrCleanExit {
 		t.Error("should fail with clean exit")
@@ -149,7 +144,7 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test invalid dependency
-	Register("database", nil, testStart("database"), testStop("database"), "invalid")
+	Register("database", nil, testStart(t, "database"), testStop(t, "database"), "invalid")
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
@@ -161,8 +156,8 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test dependency loop
-	Register("database", nil, testStart("database"), testStop("database"), "helper")
-	Register("helper", nil, testStart("helper"), testStop("helper"), "database")
+	Register("database", nil, testStart(t, "database"), testStop(t, "database"), "helper")
+	Register("helper", nil, testStart(t, "helper"), testStop(t, "helper"), "database")
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
@@ -174,7 +169,7 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test failing module start
-	Register("startfail", nil, testFail, testStop("startfail"))
+	Register("startfail", nil, testFail, testStop(t, "startfail"))
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
@@ -186,7 +181,7 @@ func TestErrors(t *testing.T) {
 	startCompleteSignal = make(chan struct{})
 
 	// test failing module stop
-	Register("stopfail", nil, testStart("stopfail"), testFail)
+	Register("stopfail", nil, testStart(t, "stopfail"), testFail)
 	err = Start()
 	if err != nil {
 		t.Error("should not fail")

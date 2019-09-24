@@ -30,12 +30,13 @@ import (
   - logging is configured by main module and is supplied access to configuration and taskmanager
 */
 
-type severity uint32
+// Severity describes a log level.
+type Severity uint32
 
 type logLine struct {
 	msg       string
-	trace     *ContextTracer
-	level     severity
+	tracer    *ContextTracer
+	level     Severity
 	timestamp time.Time
 	file      string
 	line      int
@@ -45,7 +46,7 @@ func (ll *logLine) Equal(ol *logLine) bool {
 	switch {
 	case ll.msg != ol.msg:
 		return false
-	case ll.trace != nil || ol.trace != nil:
+	case ll.tracer != nil || ol.tracer != nil:
 		return false
 	case ll.file != ol.file:
 		return false
@@ -57,55 +58,58 @@ func (ll *logLine) Equal(ol *logLine) bool {
 	return true
 }
 
+// Log Levels
 const (
-	TraceLevel    severity = 1
-	DebugLevel    severity = 2
-	InfoLevel     severity = 3
-	WarningLevel  severity = 4
-	ErrorLevel    severity = 5
-	CriticalLevel severity = 6
+	TraceLevel    Severity = 1
+	DebugLevel    Severity = 2
+	InfoLevel     Severity = 3
+	WarningLevel  Severity = 4
+	ErrorLevel    Severity = 5
+	CriticalLevel Severity = 6
 )
 
 var (
 	logBuffer             chan *logLine
-	forceEmptyingOfBuffer chan bool
+	forceEmptyingOfBuffer chan struct{}
 
 	logLevelInt = uint32(3)
 	logLevel    = &logLevelInt
 
 	pkgLevelsActive = abool.NewBool(false)
-	pkgLevels       = make(map[string]severity)
+	pkgLevels       = make(map[string]Severity)
 	pkgLevelsLock   sync.Mutex
 
-	logsWaiting     = make(chan bool, 1)
+	logsWaiting     = make(chan struct{}, 1)
 	logsWaitingFlag = abool.NewBool(false)
 
-	shutdownSignal    = make(chan struct{}, 0)
+	shutdownSignal    = make(chan struct{})
 	shutdownWaitGroup sync.WaitGroup
 
 	initializing  = abool.NewBool(false)
 	started       = abool.NewBool(false)
-	startedSignal = make(chan struct{}, 0)
-
-	testErrors = abool.NewBool(false)
+	startedSignal = make(chan struct{})
 )
 
-func SetPkgLevels(levels map[string]severity) {
+// SetPkgLevels sets individual log levels for packages.
+func SetPkgLevels(levels map[string]Severity) {
 	pkgLevelsLock.Lock()
 	pkgLevels = levels
 	pkgLevelsLock.Unlock()
 	pkgLevelsActive.Set()
 }
 
+// UnSetPkgLevels removes all individual log levels for packages.
 func UnSetPkgLevels() {
 	pkgLevelsActive.UnSet()
 }
 
-func SetLogLevel(level severity) {
+// SetLogLevel sets a new log level.
+func SetLogLevel(level Severity) {
 	atomic.StoreUint32(logLevel, uint32(level))
 }
 
-func ParseLevel(level string) severity {
+// ParseLevel returns the level severity of a log level name.
+func ParseLevel(level string) Severity {
 	switch strings.ToLower(level) {
 	case "trace":
 		return 1
@@ -123,14 +127,15 @@ func ParseLevel(level string) severity {
 	return 0
 }
 
+// Start starts the logging system. Must be called in order to see logs.
 func Start() (err error) {
 
 	if !initializing.SetToIf(false, true) {
 		return nil
 	}
 
-	logBuffer = make(chan *logLine, 8192)
-	forceEmptyingOfBuffer = make(chan bool, 4)
+	logBuffer = make(chan *logLine, 1024)
+	forceEmptyingOfBuffer = make(chan struct{}, 16)
 
 	initialLogLevel := ParseLevel(logLevelFlag)
 	if initialLogLevel > 0 {
@@ -143,7 +148,7 @@ func Start() (err error) {
 	// get and set file loglevels
 	pkgLogLevels := pkgLogLevelsFlag
 	if len(pkgLogLevels) > 0 {
-		newPkgLevels := make(map[string]severity)
+		newPkgLevels := make(map[string]Severity)
 		for _, pair := range strings.Split(pkgLogLevels, ",") {
 			splitted := strings.Split(pair, "=")
 			if len(splitted) != 2 {
@@ -162,6 +167,9 @@ func Start() (err error) {
 		SetPkgLevels(newPkgLevels)
 	}
 
+	if !schedulingEnabled {
+		close(writeTrigger)
+	}
 	startWriter()
 
 	started.Set()
@@ -170,7 +178,7 @@ func Start() (err error) {
 	return err
 }
 
-// Shutdown writes remaining log lines and then stops the logger.
+// Shutdown writes remaining log lines and then stops the log system.
 func Shutdown() {
 	close(shutdownSignal)
 	shutdownWaitGroup.Wait()

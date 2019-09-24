@@ -4,15 +4,13 @@ Portbase helps you quickly take off with your project. It gives you all the basi
 Here is what is included:
 
 - `log`: really fast and beautiful logging
-- `modules`: a multi stage, dependency aware boot process for your software
+- `modules`: a multi stage, dependency aware boot process for your software, also manages tasks
 - `config`: simple, live updating and extremely fast configuration storage
 - `info`: easily tag your builds with versions, commit hashes, and so on
-- `taskmanager`: run your more important goroutines first
 - `formats`: some handy data encoding libs
-- `crypto/hash`: easy self-identifying hashes
-- `crypto/random`: a feedable CSPRNG for great randomness
+- `rng`: a feedable CSPRNG for great randomness
 - `database`: intelligent and syncable database with hooks and easy integration with structs, uses buckets with different backends
-- `api`: a RESTful and GraphQL hybrid interface to the database
+- `api`: a websocket interface to the database, can be extended with custom http handlers
 
 Before you continue, a word about this project. It was created to hold the base code for both Portmaster and Gate17. This is also what it will be developed for. If you have a great idea on how to improve portbase, please, by all means, raise an issue and tell us about it, but please also don't be surprised or offended if we ask you to create your own fork to do what you need. Portbase isn't for everyone, it's quite specific to our needs, but we decided to make it easily available to others.
 
@@ -34,22 +32,24 @@ Registering only requires a name/key and the `prep()`, `start()` and `stop()` fu
 
 This is how modules are booted:
 
-- `init()` available: ~~flags~~, ~~logging~~, ~~dependencies~~
+- `init()` available: ~~flags~~, ~~config~~, ~~logging~~, ~~dependencies~~
   - register flags (with the stdlib `flag` library)
-  - register config variables
   - register module
-- `module.prep()` available: flags, ~~logging~~, ~~dependencies~~
+- `module.prep()` available: flags, ~~config~~, ~~logging~~, ~~dependencies~~
   - react to flags
+  - register config variables
   - if an error occurs, return it
   - return ErrCleanExit for a clean, successful exit. (eg. you only printed a version)
-- `module.start()` available: flags, logging, dependencies
-  - start actual work (ie. goroutines)
+- `module.start()` available: flags, config, logging, dependencies
+  - start tasks and workers
   - do not log errors while starting, but return them
-- `module.stop()` available: flags, logging, dependencies
+- `module.stop()` available: flags, config, logging, dependencies
   - stop all work (ie. goroutines)
   - do not log errors while stopping, but return them
 
-## config
+You can start tasks and workers from your module that are then integrated into the module system and will allow for insights and better control of them in the future.
+
+## config <small>requires `log`</small>
 
 The config package stores the configuration in json strings. This may sound a bit weird, but it's very practical.
 
@@ -59,13 +59,13 @@ When using config variables, you get a function that checks if your config varia
 
     // This is how you would get a string config variable function.
     myVar := GetAsString("my_config_var", "default")
-    // You then use myVar() directly every time, except you must guarantee the same value between two calls
+    // You then use myVar() directly every time, except when you must guarantee the same value between two calls
     if myVar() != "default" {
       log.Infof("my_config_var is set to %s", myVar())
     }
     // no error handling needed! :)
 
-WARNING: While these config variable functions are _extremely_ fast, they are _NOT_ thread/goroutine safe!
+WARNING: While these config variable functions are _extremely_ fast, they are _NOT_ thread/goroutine safe! (Use the `Concurrent` wrapper for that!)
 
 ## info
 
@@ -73,9 +73,9 @@ Info provides a easy way to store your version and build information within the 
 
 The `build` script extracts information from the host and the git repo and then calls `go build` with some additional arguments.
 
-## taskmanager
+## formats/varint
 
-The taskmanager lets prioritize goroutines in order to optimize efficiency of your program. The idea is to hold back non time-critical goroutines for periods where no important goroutines are running.
+This is just a convenience wrapper around `encoding/binary`, because we use varints a lot.
 
 ## formats/dsd <small>requires `formats/varint`</small>
 
@@ -86,27 +86,20 @@ DSD stands for dynamically structured data. In short, this a generic packer that
 
 This makes it easier / more efficient to store different data types in a k/v data storage.
 
-## formats/varint
+## rng <small>requires `log`, `config`</small>
 
-This is just a convenience wrapper around `encoding/binary`, because we use varints a lot.
-
-## crypto/hash
-_introduction to be written_
-
-## crypto/random
-
-This packege provides a CSPRNG based on the [Fortuna](https://en.wikipedia.org/wiki/Fortuna_(PRNG) CSPRNG, devised by Bruce Schneier and Niels Ferguson. Implemented by Jochen Voss, published [on Github](https://github.com/seehuhn/fortuna).
+This package provides a CSPRNG based on the [Fortuna](https://en.wikipedia.org/wiki/Fortuna_(PRNG)) CSPRNG, devised by Bruce Schneier and Niels Ferguson. Implemented by Jochen Voss, published [on Github](https://github.com/seehuhn/fortuna).
 
 Only the Generator is used from the `fortuna` package. The feeding system implemented here is configurable and is focused with efficiency in mind.
 
 While you can feed the RNG yourself, it has two feeders by default:
-- It starts with a seed from `crypt/rand` and periodically reseeds from there
-- A really simple tickfeeder which pools the least significant bit of `time.Now().UnixNano()` every time it _ticks_ and feeds to the RNG when it reaches the needed entropy.
+- It starts with a seed from `crypto/rand` and periodically reseeds from there
+- A really simple tickfeeder which extracts entropy from the internal go scheduler using goroutines and is meant to be used under load.
 
-## database
+## database <small>requires `log`</small>
 _introduction to be written_
 
-## api <small>requires `database`</small>
+## api <small>requires `log`, `database`, `config`</small>
 _introduction to be written_
 
 ## The main program

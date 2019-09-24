@@ -28,7 +28,7 @@ func newIntCondition(key string, operator uint8, value interface{}) *intConditio
 	case int32:
 		parsedValue = int64(v)
 	case int64:
-		parsedValue = int64(v)
+		parsedValue = v
 	case uint:
 		parsedValue = int64(v)
 	case uint8:

@@ -1,17 +1,20 @@
 package log
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
 
-// test waiting
-func TestLogging(t *testing.T) {
-
+func init() {
 	err := Start()
 	if err != nil {
-		t.Errorf("start failed: %s", err)
+		panic(fmt.Sprintf("start failed: %s", err))
 	}
+}
+
+// test waiting
+func TestLogging(t *testing.T) {
 
 	// skip
 	if testing.Short() {
@@ -54,7 +57,7 @@ func TestLogging(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	// just for show
-	UnSetFileLevels()
+	UnSetPkgLevels()
 
 	// do not really shut down, we may need logging for other tests
 	// ShutdownLogging()

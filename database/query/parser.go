@@ -205,7 +205,7 @@ func parseAndOr(getSnippet func() (*snippet, error), remainingSnippets func() in
 	for {
 		if !expectingMore && rootCondition && remainingSnippets() == 0 {
 			// advance snippetsPos by one, as it will be set back by 1
-			getSnippet()
+			getSnippet() //nolint:errcheck
 			if len(conditions) == 1 {
 				return conditions[0], nil
 			}
@@ -330,7 +330,7 @@ func parseCondition(firstSnippet *snippet, getSnippet func() (*snippet, error)) 
 }
 
 var (
-	escapeReplacer = regexp.MustCompile("\\\\([^\\\\])")
+	escapeReplacer = regexp.MustCompile(`\\([^\\])`)
 )
 
 // prepToken removes surrounding parenthesis and escape characters.

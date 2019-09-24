@@ -28,7 +28,7 @@ func init() {
 	colorsSupported = osdetail.EnableColorSupport()
 }
 
-func (s severity) color() string {
+func (s Severity) color() string {
 	if colorsSupported {
 		switch s {
 		case DebugLevel:

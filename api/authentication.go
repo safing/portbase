@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/safing/portbase/crypto/random"
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/rng"
 )
 
 var (
@@ -91,7 +91,7 @@ func authMiddleware(next http.Handler) http.Handler {
 		}
 
 		// write new cookie
-		token, err := random.Bytes(32) // 256 bit
+		token, err := rng.Bytes(32) // 256 bit
 		if err != nil {
 			log.Warningf("api: failed to generate random token: %s", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -101,6 +101,7 @@ func authMiddleware(next http.Handler) http.Handler {
 			Name:     cookieName,
 			Value:    tokenString,
 			HttpOnly: true,
+			MaxAge:   int(cookieTTL.Seconds()),
 		})
 
 		// serve

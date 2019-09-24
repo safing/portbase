@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,12 +18,14 @@ import (
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
+
 	"github.com/google/renameio"
 )
 
 const (
 	defaultFileMode = os.FileMode(int(0644))
 	defaultDirMode  = os.FileMode(int(0755))
+	onWindows       = runtime.GOOS == "windows"
 )
 
 // FSTree database storage.
@@ -32,7 +35,7 @@ type FSTree struct {
 }
 
 func init() {
-	storage.Register("fstree", NewFSTree)
+	_ = storage.Register("fstree", NewFSTree)
 }
 
 // NewFSTree returns a (new) FSTree database.
@@ -112,14 +115,14 @@ func (fst *FSTree) Put(r record.Record) error {
 		return err
 	}
 
-	err = renameio.WriteFile(dstPath, data, defaultFileMode)
+	err = writeFile(dstPath, data, defaultFileMode)
 	if err != nil {
 		// create dir and try again
 		err = os.MkdirAll(filepath.Dir(dstPath), defaultDirMode)
 		if err != nil {
 			return fmt.Errorf("fstree: failed to create directory %s: %s", filepath.Dir(dstPath), err)
 		}
-		err = renameio.WriteFile(dstPath, data, defaultFileMode)
+		err = writeFile(dstPath, data, defaultFileMode)
 		if err != nil {
 			return fmt.Errorf("fstree: could not write file %s: %s", dstPath, err)
 		}
@@ -157,15 +160,14 @@ func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 	}
 	fileInfo, err := os.Stat(walkPrefix)
 	var walkRoot string
-	if err == nil {
-		if fileInfo.IsDir() {
-			walkRoot = walkPrefix
-		} else {
-			walkRoot = filepath.Dir(walkPrefix)
-		}
-	} else if os.IsNotExist(err) {
+	switch {
+	case err == nil && fileInfo.IsDir():
+		walkRoot = walkPrefix
+	case err == nil:
 		walkRoot = filepath.Dir(walkPrefix)
-	} else {
+	case os.IsNotExist(err):
+		walkRoot = filepath.Dir(walkPrefix)
+	default: // err != nil
 		return nil, fmt.Errorf("fstree: could not stat query root %s: %s", walkPrefix, err)
 	}
 
@@ -190,11 +192,11 @@ func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, 
 			}
 			// continue
 			return nil
-		} else {
-			// still in scope?
-			if !strings.HasPrefix(path, fst.basePath) {
-				return nil
-			}
+		}
+
+		// still in scope?
+		if !strings.HasPrefix(path, fst.basePath) {
+			return nil
 		}
 
 		// read file
@@ -265,4 +267,29 @@ func (fst *FSTree) MaintainThorough() error {
 // Shutdown shuts down the database.
 func (fst *FSTree) Shutdown() error {
 	return nil
+}
+
+// writeFile mirrors ioutil.WriteFile, replacing an existing file with the same
+// name atomically. This is not atomic on Windows, but still an improvement.
+// TODO: Replace with github.com/google/renamio.WriteFile as soon as it is fixed on Windows.
+// This function is forked from https://github.com/google/renameio/blob/a368f9987532a68a3d676566141654a81aa8100b/writefile.go.
+func writeFile(filename string, data []byte, perm os.FileMode) error {
+	t, err := renameio.TempFile("", filename)
+	if err != nil {
+		return err
+	}
+	defer t.Cleanup() //nolint:errcheck
+
+	// Set permissions before writing data, in case the data is sensitive.
+	if !onWindows {
+		if err := t.Chmod(perm); err != nil {
+			return err
+		}
+	}
+
+	if _, err := t.Write(data); err != nil {
+		return err
+	}
+
+	return t.CloseAtomicallyReplace()
 }

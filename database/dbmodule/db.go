@@ -38,7 +38,7 @@ func start() error {
 		return err
 	}
 
-	startMaintainer()
+	registerMaintenanceTasks()
 	return nil
 }
 

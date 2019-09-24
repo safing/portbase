@@ -173,10 +173,7 @@ func (c *Container) CheckError() {
 
 // HasError returns wether or not the container is holding an error.
 func (c *Container) HasError() bool {
-	if c.err != nil {
-		return true
-	}
-	return false
+	return c.err != nil
 }
 
 // Error returns the error.

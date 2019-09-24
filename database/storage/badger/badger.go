@@ -21,14 +21,12 @@ type Badger struct {
 }
 
 func init() {
-	storage.Register("badger", NewBadger)
+	_ = storage.Register("badger", NewBadger)
 }
 
 // NewBadger opens/creates a badger database.
 func NewBadger(name, location string) (storage.Interface, error) {
-	opts := badger.DefaultOptions
-	opts.Dir = location
-	opts.ValueDir = location
+	opts := badger.DefaultOptions(location)
 
 	db, err := badger.Open(opts)
 	if err == badger.ErrTruncateNeeded {
@@ -192,7 +190,7 @@ func (b *Badger) Injected() bool {
 
 // Maintain runs a light maintenance operation on the database.
 func (b *Badger) Maintain() error {
-	b.db.RunValueLogGC(0.7)
+	_ = b.db.RunValueLogGC(0.7)
 	return nil
 }
 

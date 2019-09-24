@@ -160,10 +160,7 @@ func (sa *StructAccessor) GetBool(key string) (value bool, ok bool) {
 // Exists returns the whether the given key exists.
 func (sa *StructAccessor) Exists(key string) bool {
 	field := sa.object.FieldByName(key)
-	if field.IsValid() {
-		return true
-	}
-	return false
+	return field.IsValid()
 }
 
 // Type returns the accessor type as a string.

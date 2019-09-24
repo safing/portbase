@@ -25,7 +25,6 @@ const (
 
 // define errors
 var errNoMoreSpace = errors.New("dsd: no more space left after reading dsd type")
-var errUnknownType = errors.New("dsd: tried to unpack unknown type")
 var errNotImplemented = errors.New("dsd: this type is not yet implemented")
 
 // Load loads an dsd structured data blob into the given interface.
@@ -58,7 +57,8 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 			return nil, fmt.Errorf("dsd: failed to unpack json data: %s", data)
 		}
 		return t, nil
-	// case BSON:
+	case BSON:
+		return nil, errNotImplemented
 	// 	err := bson.Unmarshal(data[read:], t)
 	// 	if err != nil {
 	// 		return nil, err
@@ -92,7 +92,7 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 		}
 	}
 
-	f := varint.Pack8(uint8(format))
+	f := varint.Pack8(format)
 	var data []byte
 	var err error
 	switch format {
@@ -106,7 +106,8 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-	// case BSON:
+	case BSON:
+		return nil, errNotImplemented
 	// 	data, err = bson.Marshal(t)
 	// 	if err != nil {
 	// 		return nil, err

@@ -97,7 +97,7 @@ func testDatabase(t *testing.T, storageType string) {
 	}
 
 	cnt := 0
-	for _ = range it.Next {
+	for range it.Next {
 		cnt++
 	}
 	if it.Err() != nil {
@@ -124,7 +124,7 @@ func TestDatabaseSystem(t *testing.T) {
 	go func() {
 		time.Sleep(10 * time.Second)
 		fmt.Println("===== TAKING TOO LONG - PRINTING STACK TRACES =====")
-		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		os.Exit(1)
 	}()
 
@@ -133,11 +133,7 @@ func TestDatabaseSystem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ok := SetLocation(testDir)
-	if !ok {
-		t.Fatal("database location already set")
-	}
-	err = Initialize()
+	err = Initialize(testDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

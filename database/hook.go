@@ -23,7 +23,7 @@ type RegisteredHook struct {
 	h Hook
 }
 
-// RegisterHook registeres a hook for records matching the given query in the database.
+// RegisterHook registers a hook for records matching the given query in the database.
 func RegisterHook(q *query.Query, hook Hook) (*RegisteredHook, error) {
 	_, err := q.Check()
 	if err != nil {
