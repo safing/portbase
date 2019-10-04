@@ -36,8 +36,9 @@ func Changed() <-chan struct{} {
 }
 
 func signalChanges() {
-	// refetch and save release level
+	// refetch and save release level and expertise level
 	updateReleaseLevel()
+	updateExpertiseLevel()
 
 	// reset validity flag
 	validityFlagLock.Lock()
