@@ -7,13 +7,17 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
+var (
+	module *modules.Module
+)
+
 // API Errors
 var (
 	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set")
 )
 
 func init() {
-	modules.Register("api", prep, start, stop, "base", "database", "config")
+	module = modules.Register("api", prep, start, stop, "base", "database", "config")
 }
 
 func prep() error {
