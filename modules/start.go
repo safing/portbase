@@ -106,7 +106,7 @@ func prepareModules() error {
 				go func() {
 					reports <- &report{
 						module: execM,
-						err:    execM.prep(),
+						err:    execM.runModuleCtrlFn("prep module", execM.prep),
 					}
 				}()
 			}
@@ -154,7 +154,7 @@ func startModules() error {
 				go func() {
 					reports <- &report{
 						module: execM,
-						err:    execM.start(),
+						err:    execM.runModuleCtrlFn("start module", execM.start),
 					}
 				}()
 			}
