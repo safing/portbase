@@ -67,14 +67,32 @@ func (m *Module) shutdown() error {
 	m.shutdownFlag.Set()
 	m.cancelCtx()
 
+	// start shutdown function
+	m.waitGroup.Add(1)
+	stopFnError := make(chan error)
+	go func() {
+		stopFnError <- m.runModuleCtrlFn("stop module", m.stop)
+		m.waitGroup.Done()
+	}()
+
 	// wait for workers
 	done := make(chan struct{})
 	go func() {
 		m.waitGroup.Wait()
 		close(done)
 	}()
+
+	// wait for results
 	select {
+	case err := <-stopFnError:
+		return err
 	case <-done:
+		select {
+		case err := <-stopFnError:
+			return err
+		default:
+			return nil
+		}
 	case <-time.After(3 * time.Second):
 		log.Warningf(
 			"%s: timed out while waiting for workers/tasks to finish: workers=%d tasks=%d microtasks=%d, continuing shutdown...",
@@ -84,9 +102,7 @@ func (m *Module) shutdown() error {
 			atomic.LoadInt32(m.microTaskCnt),
 		)
 	}
-
-	// call shutdown function
-	return m.stop()
+	return nil
 }
 
 func dummyAction() error {

@@ -160,21 +160,21 @@ func TestReleaseLevel(t *testing.T) {
 
 	// test option level stable
 	subsystemOption.ReleaseLevel = ReleaseLevelStable
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelStable)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameStable)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !testSubsystem() {
 		t.Error("should be active")
 	}
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelBeta)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameBeta)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !testSubsystem() {
 		t.Error("should be active")
 	}
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelExperimental)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameExperimental)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,21 +184,21 @@ func TestReleaseLevel(t *testing.T) {
 
 	// test option level beta
 	subsystemOption.ReleaseLevel = ReleaseLevelBeta
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelStable)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameStable)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if testSubsystem() {
-		t.Errorf("should be inactive: opt=%s system=%s", subsystemOption.ReleaseLevel, releaseLevel)
+		t.Errorf("should be inactive: opt=%d system=%d", subsystemOption.ReleaseLevel, getReleaseLevel())
 	}
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelBeta)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameBeta)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !testSubsystem() {
 		t.Error("should be active")
 	}
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelExperimental)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameExperimental)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,21 +208,21 @@ func TestReleaseLevel(t *testing.T) {
 
 	// test option level experimental
 	subsystemOption.ReleaseLevel = ReleaseLevelExperimental
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelStable)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameStable)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if testSubsystem() {
 		t.Error("should be inactive")
 	}
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelBeta)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameBeta)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if testSubsystem() {
 		t.Error("should be inactive")
 	}
-	err = SetConfigOption(releaseLevelKey, ReleaseLevelExperimental)
+	err = SetConfigOption(releaseLevelKey, ReleaseLevelNameExperimental)
 	if err != nil {
 		t.Fatal(err)
 	}

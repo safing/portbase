@@ -3,6 +3,7 @@ package modules
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -59,6 +60,10 @@ const (
 
 // NewTask creates a new task with a descriptive name (non-unique), a optional deadline, and the task function to be executed. You must call one of Queue, Prioritize, StartASAP, Schedule or Repeat in order to have the Task executed.
 func (m *Module) NewTask(name string, fn func(context.Context, *Task)) *Task {
+	if m == nil {
+		log.Errorf(`modules: cannot create task "%s" with nil module`, name)
+	}
+
 	return &Task{
 		name:     name,
 		module:   m,
@@ -68,6 +73,10 @@ func (m *Module) NewTask(name string, fn func(context.Context, *Task)) *Task {
 }
 
 func (t *Task) isActive() bool {
+	if t.module == nil {
+		return false
+	}
+
 	return !t.canceled && !t.module.ShutdownInProgress()
 }
 
@@ -178,6 +187,7 @@ func (t *Task) Repeat(interval time.Duration) *Task {
 	t.lock.Lock()
 	t.repeat = interval
 	t.executeAt = time.Now().Add(t.repeat)
+	t.addToSchedule()
 	t.lock.Unlock()
 
 	return t
@@ -194,6 +204,10 @@ func (t *Task) Cancel() {
 }
 
 func (t *Task) runWithLocking() {
+	if t.module == nil {
+		return
+	}
+
 	// wait for good timeslot regarding microtasks
 	select {
 	case <-taskTimeslot:
@@ -308,6 +322,7 @@ func (t *Task) getExecuteAtWithLocking() time.Time {
 func (t *Task) addToSchedule() {
 	scheduleLock.Lock()
 	defer scheduleLock.Unlock()
+	// defer printTaskList(taskSchedule) // for debugging
 
 	// notify scheduler
 	defer func() {
@@ -436,6 +451,26 @@ func taskScheduleHandler() {
 				// place in front of prioritized queue
 				t.StartASAP()
 			}
+		}
+	}
+}
+
+func printTaskList(*list.List) { //nolint:unused,deadcode // for debugging, NOT production use
+	fmt.Println("Modules Task List:")
+	for e := taskSchedule.Front(); e != nil; e = e.Next() {
+		t, ok := e.Value.(*Task)
+		if ok {
+			fmt.Printf(
+				"%s:%s qu=%v ca=%v exec=%v at=%s rep=%s delay=%s\n",
+				t.module.Name,
+				t.name,
+				t.queued,
+				t.canceled,
+				t.executing,
+				t.executeAt,
+				t.repeat,
+				t.maxDelay,
+			)
 		}
 	}
 }

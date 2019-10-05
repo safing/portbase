@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"sync"
@@ -10,21 +9,21 @@ import (
 var (
 	optionsLock sync.RWMutex
 	options     = make(map[string]*Option)
-
-	// ErrIncompleteCall is return when RegisterOption is called with empty mandatory values.
-	ErrIncompleteCall = errors.New("could not register config option: all fields, except for the validationRegex are mandatory")
 )
 
 // Register registers a new configuration option.
 func Register(option *Option) error {
-
-	if option.Name == "" ||
-		option.Key == "" ||
-		option.Description == "" ||
-		option.OptType == 0 ||
-		option.ExpertiseLevel == 0 ||
-		option.ReleaseLevel == "" {
-		return ErrIncompleteCall
+	if option.Name == "" {
+		return fmt.Errorf("failed to register option: please set option.Name")
+	}
+	if option.Key == "" {
+		return fmt.Errorf("failed to register option: please set option.Key")
+	}
+	if option.Description == "" {
+		return fmt.Errorf("failed to register option: please set option.Description")
+	}
+	if option.OptType == 0 {
+		return fmt.Errorf("failed to register option: please set option.OptType")
 	}
 
 	if option.ValidationRegex != "" {
@@ -37,7 +36,6 @@ func Register(option *Option) error {
 
 	optionsLock.Lock()
 	defer optionsLock.Unlock()
-
 	options[option.Key] = option
 
 	return nil

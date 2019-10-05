@@ -47,12 +47,22 @@ func SetMaxConcurrentMicroTasks(n int) {
 
 // StartMicroTask starts a new MicroTask with high priority. It will start immediately. The given function will be executed and panics caught. The supplied name should be a constant - the variable should never change as it won't be copied.
 func (m *Module) StartMicroTask(name *string, fn func(context.Context) error) error {
+	if m == nil {
+		log.Errorf(`modules: cannot start microtask "%s" with nil module`, *name)
+		return errNoModule
+	}
+
 	atomic.AddInt32(microTasks, 1)
 	return m.runMicroTask(name, fn)
 }
 
 // StartMediumPriorityMicroTask starts a new MicroTask with medium priority. It will wait until given a go (max 3 seconds). The given function will be executed and panics caught. The supplied name should be a constant - the variable should never change as it won't be copied.
 func (m *Module) StartMediumPriorityMicroTask(name *string, fn func(context.Context) error) error {
+	if m == nil {
+		log.Errorf(`modules: cannot start microtask "%s" with nil module`, *name)
+		return errNoModule
+	}
+
 	// check if we can go immediately
 	select {
 	case <-mediumPriorityClearance:
@@ -68,6 +78,11 @@ func (m *Module) StartMediumPriorityMicroTask(name *string, fn func(context.Cont
 
 // StartLowPriorityMicroTask starts a new MicroTask with low priority. It will wait until given a go (max 15 seconds). The given function will be executed and panics caught. The supplied name should be a constant - the variable should never change as it won't be copied.
 func (m *Module) StartLowPriorityMicroTask(name *string, fn func(context.Context) error) error {
+	if m == nil {
+		log.Errorf(`modules: cannot start microtask "%s" with nil module`, *name)
+		return errNoModule
+	}
+
 	// check if we can go immediately
 	select {
 	case <-lowPriorityClearance:

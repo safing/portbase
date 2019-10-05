@@ -17,14 +17,6 @@ const (
 	OptTypeStringArray uint8 = 2
 	OptTypeInt         uint8 = 3
 	OptTypeBool        uint8 = 4
-
-	ExpertiseLevelUser      uint8 = 1
-	ExpertiseLevelExpert    uint8 = 2
-	ExpertiseLevelDeveloper uint8 = 3
-
-	ReleaseLevelStable       = "stable"
-	ReleaseLevelBeta         = "beta"
-	ReleaseLevelExperimental = "experimental"
 )
 
 func getTypeName(t uint8) string {
@@ -50,9 +42,9 @@ type Option struct {
 	Key         string // in path format: category/sub/key
 	Description string
 
-	ReleaseLevel   string
-	ExpertiseLevel uint8
 	OptType        uint8
+	ExpertiseLevel uint8
+	ReleaseLevel   uint8
 
 	RequiresRestart bool
 	DefaultValue    interface{}
