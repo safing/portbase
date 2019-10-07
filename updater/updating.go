@@ -65,7 +65,6 @@ func (reg *ResourceRegistry) downloadIndex(name string, stableRelease, betaRelea
 
 // DownloadUpdates checks if updates are available and downloads updates of used components.
 func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
-
 	// create list of downloads
 	var toUpdate []*ResourceVersion
 	reg.RLock()
@@ -83,7 +82,6 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 					toUpdate = append(toUpdate, rv)
 				}
 			}
-
 		}
 
 		res.Unlock()

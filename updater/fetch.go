@@ -30,6 +30,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 
 	// check destination dir
 	dirPath := filepath.Dir(rv.storagePath())
+
 	err = reg.storageDir.EnsureAbsPath(dirPath)
 	if err != nil {
 		return fmt.Errorf("could not create updates folder: %s", dirPath)
@@ -65,7 +66,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	}
 	// set permissions
 	if !onWindows {
-		// FIXME: only set executable files to 0755, set other to 0644
+		// TODO: only set executable files to 0755, set other to 0644
 		err = os.Chmod(rv.storagePath(), 0755)
 		if err != nil {
 			log.Warningf("%s: failed to set permissions on downloaded file %s: %s", reg.Name, rv.storagePath(), err)

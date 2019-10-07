@@ -154,6 +154,7 @@ func (res *Resource) GetFile() *File {
 	}
 }
 
+//nolint:gocognit // function already kept as simlpe as possible
 func (res *Resource) selectVersion() {
 	sort.Sort(res)
 
@@ -170,7 +171,8 @@ func (res *Resource) selectVersion() {
 	}()
 
 	if len(res.Versions) == 0 {
-		res.SelectedVersion = nil // TODO: find a better way
+		// TODO: find better way to deal with an empty version slice (which should not happen)
+		res.SelectedVersion = nil
 		return
 	}
 
