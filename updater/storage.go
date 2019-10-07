@@ -1,0 +1,159 @@
+package updater
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils"
+)
+
+// ScanStorage scans root within the storage dir and adds found resources to the registry. If an error occurred, it is logged and the last error is returned. Everything that was found despite errors is added to the registry anyway. Leave root empty to scan the full storage dir.
+func (reg *ResourceRegistry) ScanStorage(root string) error {
+	var lastError error
+
+	// prep root
+	if root == "" {
+		root = reg.storageDir.Path
+	} else {
+		var err error
+		root, err = filepath.Abs(root)
+		if err != nil {
+			return err
+		}
+		if !strings.HasPrefix(root, reg.storageDir.Path) {
+			return errors.New("supplied scan root path not within storage")
+		}
+	}
+
+	// walk fs
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			lastError = fmt.Errorf("%s: could not read %s: %s", reg.Name, path, err)
+			log.Warning(lastError.Error())
+			return nil
+		}
+
+		// get relative path to storage
+		relativePath, err := filepath.Rel(reg.storageDir.Path, path)
+		if err != nil {
+			lastError = fmt.Errorf("%s: could not get relative path of %s: %s", reg.Name, path, err)
+			log.Warning(lastError.Error())
+			return nil
+		}
+		// ignore files in tmp dir
+		if strings.HasPrefix(relativePath, reg.tmpDir.Path) {
+			return nil
+		}
+
+		// convert to identifier and version
+		relativePath = filepath.ToSlash(relativePath)
+		identifier, version, ok := GetIdentifierAndVersion(relativePath)
+		if !ok {
+			// file does not conform to format
+			return nil
+		}
+
+		// save
+		err = reg.AddResource(identifier, version, true, false, false)
+		if err != nil {
+			lastError = fmt.Errorf("%s: could not get add resource %s v%s: %s", reg.Name, identifier, version, err)
+			log.Warning(lastError.Error())
+		}
+		return nil
+	})
+
+	return lastError
+}
+
+// LoadIndexes loads the current release indexes from disk and will fetch a new version if not available and online.
+func (reg *ResourceRegistry) LoadIndexes() error {
+	err := reg.loadIndexFile("stable.json", true, false)
+	if err != nil {
+		err = reg.downloadIndex("stable.json", true, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = reg.loadIndexFile("beta.json", false, true)
+	if err != nil {
+		err = reg.downloadIndex("beta.json", false, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (reg *ResourceRegistry) loadIndexFile(name string, stableRelease, betaRelease bool) error {
+	data, err := ioutil.ReadFile(filepath.Join(reg.storageDir.Path, name))
+	if err != nil {
+		return err
+	}
+
+	releases := make(map[string]string)
+	err = json.Unmarshal(data, &releases)
+	if err != nil {
+		return err
+	}
+
+	if len(releases) == 0 {
+		return fmt.Errorf("%s is empty", name)
+	}
+
+	err = reg.AddResources(releases, false, stableRelease, betaRelease)
+	if err != nil {
+		log.Warningf("%s: failed to add resource: %s", reg.Name, err)
+	}
+	return nil
+}
+
+// CreateSymlinks creates a directory structure with unversions symlinks to the given updates list.
+func (reg *ResourceRegistry) CreateSymlinks(symlinkRoot *utils.DirStructure) error {
+	err := os.RemoveAll(symlinkRoot.Path)
+	if err != nil {
+		return fmt.Errorf("failed to wipe symlink root: %s", err)
+	}
+
+	err = symlinkRoot.Ensure()
+	if err != nil {
+		return fmt.Errorf("failed to create symlink root: %s", err)
+	}
+
+	reg.RLock()
+	defer reg.RUnlock()
+
+	for _, res := range reg.resources {
+		if res.SelectedVersion == nil {
+			return fmt.Errorf("no selected version available for %s", res.Identifier)
+		}
+
+		targetPath := res.SelectedVersion.storagePath()
+		linkPath := filepath.Join(symlinkRoot.Path, filepath.FromSlash(res.Identifier))
+		linkPathDir := filepath.Dir(linkPath)
+
+		err = symlinkRoot.EnsureAbsPath(linkPathDir)
+		if err != nil {
+			return fmt.Errorf("failed to create dir for link: %s", err)
+		}
+
+		relativeTargetPath, err := filepath.Rel(linkPathDir, targetPath)
+		if err != nil {
+			return fmt.Errorf("failed to get relative target path: %s", err)
+		}
+
+		err = os.Symlink(relativeTargetPath, linkPath)
+		if err != nil {
+			return fmt.Errorf("failed to link %s: %s", res.Identifier, err)
+		}
+	}
+
+	return nil
+}
