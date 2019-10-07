@@ -1,4 +1,6 @@
 # Portbase
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsafing%2Fportbase.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsafing%2Fportbase?ref=badge_shield)
+
 
 Portbase helps you quickly take off with your project. It gives you all the basic needs you would have for a service (_not_ tool!).
 Here is what is included:
@@ -153,3 +155,7 @@ If you build everything with modules, your main program should be similar to thi
     	}
 
     }
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsafing%2Fportbase.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsafing%2Fportbase?ref=badge_large)
