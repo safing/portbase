@@ -7,3 +7,5 @@ linters:
     - funlen
     - whitespace
     - wsl
+    - godox
+
