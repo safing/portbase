@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -101,7 +102,27 @@ func (m *Module) runWorker(name string, fn func(context.Context) error) (err err
 	return
 }
 
-func (m *Module) runModuleCtrlFn(name string, fn func() error) (err error) {
+func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn func() error) error {
+
+	stopFnError := make(chan error)
+	go func() {
+		stopFnError <- m.runCtrlFn(name, fn)
+	}()
+
+	// wait for results
+	select {
+	case err := <-stopFnError:
+		return err
+	case <-time.After(timeout):
+		return fmt.Errorf("timed out (%s)", timeout)
+	}
+}
+
+func (m *Module) runCtrlFn(name string, fn func() error) (err error) {
+	if fn == nil {
+		return
+	}
+
 	defer func() {
 		// recover from panic
 		panicVal := recover()
