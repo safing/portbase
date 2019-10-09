@@ -70,7 +70,7 @@ const (
 
 var (
 	logBuffer             chan *logLine
-	forceEmptyingOfBuffer chan struct{}
+	forceEmptyingOfBuffer = make(chan struct{})
 
 	logLevelInt = uint32(3)
 	logLevel    = &logLevelInt
@@ -79,7 +79,7 @@ var (
 	pkgLevels       = make(map[string]Severity)
 	pkgLevelsLock   sync.Mutex
 
-	logsWaiting     = make(chan struct{}, 1)
+	logsWaiting     = make(chan struct{}, 4)
 	logsWaitingFlag = abool.NewBool(false)
 
 	shutdownSignal    = make(chan struct{})
@@ -135,7 +135,6 @@ func Start() (err error) {
 	}
 
 	logBuffer = make(chan *logLine, 1024)
-	forceEmptyingOfBuffer = make(chan struct{}, 16)
 
 	initialLogLevel := ParseLevel(logLevelFlag)
 	if initialLogLevel > 0 {

@@ -75,15 +75,21 @@ func log(level Severity, msg string, tracer *ContextTracer) {
 	select {
 	case logBuffer <- log:
 	default:
-		forceEmptyingOfBuffer <- struct{}{}
-		logBuffer <- log
+	forceEmptyingLoop:
+		// force empty buffer until we can send to it
+		for {
+			select {
+			case forceEmptyingOfBuffer <- struct{}{}:
+			case logBuffer <- log:
+				break forceEmptyingLoop
+			}
+		}
 	}
 
 	// wake up writer if necessary
 	if logsWaitingFlag.SetToIf(false, true) {
 		logsWaiting <- struct{}{}
 	}
-
 }
 
 func fastcheck(level Severity) bool {

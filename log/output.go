@@ -45,31 +45,32 @@ func startWriter() {
 }
 
 func writer() {
-	var line *logLine
-	var lastLine *logLine
+	var currentLine *logLine
+	var nextLine *logLine
 	var duplicates uint64
 	defer shutdownWaitGroup.Done()
 
 	for {
 		// reset
-		line = nil
-		lastLine = nil //nolint:ineffassign // only ineffectual in first loop
+		currentLine = nil
+		nextLine = nil
 		duplicates = 0
 
 		// wait until logs need to be processed
 		select {
-		case <-logsWaiting:
+		case <-logsWaiting: // normal process
 			logsWaitingFlag.UnSet()
-		case <-shutdownSignal:
+		case <-forceEmptyingOfBuffer: // log buffer is full!
+		case <-shutdownSignal: // shutting down
 			finalizeWriting()
 			return
 		}
 
-		// wait for timeslot to log, or when buffer is full
+		// wait for timeslot to log
 		select {
-		case <-writeTrigger:
-		case <-forceEmptyingOfBuffer:
-		case <-shutdownSignal:
+		case <-writeTrigger: // normal process
+		case <-forceEmptyingOfBuffer: // log buffer is full!
+		case <-shutdownSignal: // shutting down
 			finalizeWriting()
 			return
 		}
@@ -78,37 +79,38 @@ func writer() {
 	writeLoop:
 		for {
 			select {
-			case line = <-logBuffer:
-
-				// look-ahead for deduplication (best effort)
-			dedupLoop:
-				for {
-					// check if there is another line waiting
-					select {
-					case nextLine := <-logBuffer:
-						lastLine = line
-						line = nextLine
-					default:
-						break dedupLoop
-					}
-
-					// deduplication
-					if !line.Equal(lastLine) {
-						// no duplicate
-						break dedupLoop
-					}
-
-					// duplicate
-					duplicates++
+			case nextLine = <-logBuffer:
+				// first line we process, just assign to currentLine
+				if currentLine == nil {
+					currentLine = nextLine
+					continue writeLoop
 				}
 
-				// write actual line
-				writeLine(line, duplicates)
+				// we now have currentLine and nextLine
+
+				// if currentLine and nextLine are equal, do not print, just increase counter and continue
+				if nextLine.Equal(currentLine) {
+					duplicates++
+					continue writeLoop
+				}
+
+				// if currentLine and line are _not_ equal, output currentLine
+				writeLine(currentLine, duplicates)
+				// reset duplicate counter
 				duplicates = 0
+				// set new currentLine
+				currentLine = nextLine
 			default:
 				break writeLoop
 			}
 		}
+
+		// write final line
+		writeLine(currentLine, duplicates)
+		// reset state
+		currentLine = nil //nolint:ineffassign
+		nextLine = nil
+		duplicates = 0 //nolint:ineffassign
 
 		// back down a little
 		select {
