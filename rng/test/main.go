@@ -38,6 +38,7 @@ func noise() {
 
 }
 
+//nolint:gocognit
 func main() {
 	// generates 1MB and writes to stdout
 

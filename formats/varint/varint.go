@@ -1,7 +1,9 @@
 package varint
 
-import "errors"
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 // Pack8 packs a uint8 into a VarInt.
 func Pack8(n uint8) []byte {
