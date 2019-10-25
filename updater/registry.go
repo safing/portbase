@@ -120,13 +120,6 @@ func (reg *ResourceRegistry) AddResources(versions map[string]string, available,
 
 // SelectVersions selects new resource versions depending on the current registry state.
 func (reg *ResourceRegistry) SelectVersions() {
-	// only notify of changes after we are finished
-	reg.notifyHooksEnabled.UnSet()
-	defer func() {
-		reg.notifyHooksEnabled.Set()
-		reg.notifyOfChanges()
-	}()
-
 	reg.RLock()
 	defer reg.RUnlock()
 

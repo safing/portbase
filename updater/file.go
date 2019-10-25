@@ -37,6 +37,5 @@ func (file *File) markActiveWithLocking() {
 	// update last used version
 	if file.resource.ActiveVersion != file.version {
 		file.resource.ActiveVersion = file.version
-		file.resource.registry.notifyOfChanges()
 	}
 }
