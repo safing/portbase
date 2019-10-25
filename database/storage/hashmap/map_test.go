@@ -1,9 +1,7 @@
 //nolint:unparam,maligned
-package bbolt
+package hashmap
 
 import (
-	"io/ioutil"
-	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -31,15 +29,9 @@ type TestRecord struct {
 	B    bool
 }
 
-func TestBBolt(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "testing-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir) // clean up
-
+func TestHashMap(t *testing.T) {
 	// start
-	db, err := NewBBolt("test", testDir)
+	db, err := NewHashMap("test", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,13 +63,7 @@ func TestBBolt(t *testing.T) {
 	}
 
 	// get and compare
-	r1, err := db.Get("A")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	a1 := &TestRecord{}
-	err = record.Unwrap(r1, a1)
+	a1, err := db.Get("A")
 	if err != nil {
 		t.Fatal(err)
 	}
