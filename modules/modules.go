@@ -118,7 +118,14 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 
 	modulesLock.Lock()
 	defer modulesLock.Unlock()
+	// check for already existing module
+	_, ok := modules[name]
+	if ok {
+		panic(fmt.Sprintf("modules: module %s is already registered", name))
+	}
+	// add new module
 	modules[name] = newModule
+
 	return newModule
 }
 

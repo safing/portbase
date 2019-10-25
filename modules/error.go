@@ -10,7 +10,7 @@ import (
 
 var (
 	errorReportingChannel chan *ModuleError
-	reportToStdErr        bool
+	reportToStdErr        = true
 	reportingLock         sync.RWMutex
 )
 

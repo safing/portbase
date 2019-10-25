@@ -26,12 +26,14 @@ func (m *Module) processEventTrigger(event string, data interface{}) {
 
 	hooks, ok := m.eventHooks[event]
 	if !ok {
-		log.Warningf("%s: tried to trigger non-existent event %s", m.Name, event)
+		log.Warningf(`%s: tried to trigger non-existent event "%s"`, m.Name, event)
 		return
 	}
 
 	for _, hook := range hooks {
-		go m.runEventHook(hook, event, data)
+		if !hook.hookingModule.ShutdownInProgress() {
+			go m.runEventHook(hook, event, data)
+		}
 	}
 }
 
@@ -79,7 +81,7 @@ func (m *Module) RegisterEventHook(module string, event string, description stri
 		eventModule, ok = modules[module]
 		modulesLock.RUnlock()
 		if !ok {
-			return fmt.Errorf("module %s does not exist", module)
+			return fmt.Errorf(`module "%s" does not exist`, module)
 		}
 	}
 
@@ -88,7 +90,7 @@ func (m *Module) RegisterEventHook(module string, event string, description stri
 	defer eventModule.eventHooksLock.Unlock()
 	hooks, ok := eventModule.eventHooks[event]
 	if !ok {
-		return fmt.Errorf("module %s event %s does not exist", eventModule.Name, event)
+		return fmt.Errorf(`event "%s/%s" does not exist`, eventModule.Name, event)
 	}
 
 	// add hook
