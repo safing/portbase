@@ -90,7 +90,7 @@ var (
 	startedSignal = make(chan struct{})
 )
 
-// SetPkgLevels sets individual log levels for packages.
+// SetPkgLevels sets individual log levels for packages. Only effective after Start().
 func SetPkgLevels(levels map[string]Severity) {
 	pkgLevelsLock.Lock()
 	pkgLevels = levels
@@ -103,7 +103,7 @@ func UnSetPkgLevels() {
 	pkgLevelsActive.UnSet()
 }
 
-// SetLogLevel sets a new log level.
+// SetLogLevel sets a new log level. Only effective after Start().
 func SetLogLevel(level Severity) {
 	atomic.StoreUint32(logLevel, uint32(level))
 }
@@ -138,7 +138,7 @@ func Start() (err error) {
 
 	initialLogLevel := ParseLevel(logLevelFlag)
 	if initialLogLevel > 0 {
-		atomic.StoreUint32(logLevel, uint32(initialLogLevel))
+		SetLogLevel(initialLogLevel)
 	} else {
 		err = fmt.Errorf("log warning: invalid log level \"%s\", falling back to level info", logLevelFlag)
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())

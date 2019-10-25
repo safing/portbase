@@ -2,6 +2,8 @@ package log
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -39,16 +41,51 @@ func writeLine(line *logLine, duplicates uint64) {
 }
 
 func startWriter() {
-	shutdownWaitGroup.Add(1)
 	fmt.Println(fmt.Sprintf("%s%s %s BOF%s", InfoLevel.color(), time.Now().Format(timeFormat), rightArrow, endColor()))
-	go writer()
+
+	shutdownWaitGroup.Add(1)
+	go writerManager()
 }
 
-func writer() {
+func writerManager() {
+	defer shutdownWaitGroup.Done()
+
+	for {
+		err := writer()
+		if err != nil {
+			Errorf("log: writer failed: %s", err)
+		} else {
+			return
+		}
+	}
+}
+
+func writer() (err error) {
+	defer func() {
+		// recover from panic
+		panicVal := recover()
+		if panicVal != nil {
+			err = fmt.Errorf("%s", panicVal)
+
+			// write stack to stderr
+			fmt.Fprintf(
+				os.Stderr,
+				`===== Error Report =====
+Message: %s
+StackTrace:
+
+%s
+===== End of Report =====
+`,
+				err,
+				string(debug.Stack()),
+			)
+		}
+	}()
+
 	var currentLine *logLine
 	var nextLine *logLine
 	var duplicates uint64
-	defer shutdownWaitGroup.Done()
 
 	for {
 		// reset
@@ -106,7 +143,9 @@ func writer() {
 		}
 
 		// write final line
-		writeLine(currentLine, duplicates)
+		if currentLine != nil {
+			writeLine(currentLine, duplicates)
+		}
 		// reset state
 		currentLine = nil //nolint:ineffassign
 		nextLine = nil
