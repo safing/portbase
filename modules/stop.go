@@ -12,6 +12,8 @@ import (
 var (
 	shutdownSignal       = make(chan struct{})
 	shutdownSignalClosed = abool.NewBool(false)
+
+	shutdownCompleteSignal = make(chan struct{})
 )
 
 // ShuttingDown returns a channel read on the global shutdown signal.
@@ -45,6 +47,7 @@ func Shutdown() error {
 	}
 
 	log.Shutdown()
+	close(shutdownCompleteSignal)
 	return err
 }
 

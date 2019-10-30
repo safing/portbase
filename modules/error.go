@@ -2,11 +2,16 @@ package modules
 
 import (
 	"fmt"
+	"os"
 	"runtime/debug"
+	"sync"
+	"time"
 )
 
 var (
 	errorReportingChannel chan *ModuleError
+	reportToStdErr        = true
+	reportingLock         sync.RWMutex
 )
 
 // ModuleError wraps a panic, error or message into an error that can be reported.
@@ -64,11 +69,42 @@ func (me *ModuleError) Error() string {
 
 // Report reports the error through the configured reporting channel.
 func (me *ModuleError) Report() {
+	reportingLock.RLock()
+	defer reportingLock.RUnlock()
+
 	if errorReportingChannel != nil {
 		select {
 		case errorReportingChannel <- me:
 		default:
 		}
+	}
+
+	if reportToStdErr {
+		// default to writing to stderr
+		fmt.Fprintf(
+			os.Stderr,
+			`===== Error Report =====
+Message: %s
+Timestamp: %s
+ModuleName: %s
+TaskName: %s
+TaskType: %s
+Severity: %s
+PanicValue: %s
+StackTrace:
+
+%s
+===== End of Report =====
+`,
+			me.Message,
+			time.Now(),
+			me.ModuleName,
+			me.TaskName,
+			me.TaskType,
+			me.Severity,
+			me.PanicValue,
+			me.StackTrace,
+		)
 	}
 }
 
@@ -84,7 +120,16 @@ func IsPanic(err error) (bool, *ModuleError) {
 
 // SetErrorReportingChannel sets the channel to report module errors through. By default only panics are reported, all other errors need to be manually wrapped into a *ModuleError and reported.
 func SetErrorReportingChannel(reportingChannel chan *ModuleError) {
-	if errorReportingChannel == nil {
-		errorReportingChannel = reportingChannel
-	}
+	reportingLock.Lock()
+	defer reportingLock.Unlock()
+
+	errorReportingChannel = reportingChannel
+}
+
+// SetStdErrReporting controls error reporting to stderr.
+func SetStdErrReporting(on bool) {
+	reportingLock.Lock()
+	defer reportingLock.Unlock()
+
+	reportToStdErr = on
 }

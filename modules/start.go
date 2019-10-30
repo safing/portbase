@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
@@ -26,8 +27,8 @@ func WaitForStartCompletion() <-chan struct{} {
 
 // Start starts all modules in the correct order. In case of an error, it will automatically shutdown again.
 func Start() error {
-	modulesLock.Lock()
-	defer modulesLock.Unlock()
+	modulesLock.RLock()
+	defer modulesLock.RUnlock()
 
 	// start microtask scheduler
 	go microTaskScheduler()
@@ -106,7 +107,11 @@ func prepareModules() error {
 				go func() {
 					reports <- &report{
 						module: execM,
-						err:    execM.runModuleCtrlFn("prep module", execM.prep),
+						err: execM.runCtrlFnWithTimeout(
+							"prep module",
+							10*time.Second,
+							execM.prep,
+						),
 					}
 				}()
 			}
@@ -154,7 +159,11 @@ func startModules() error {
 				go func() {
 					reports <- &report{
 						module: execM,
-						err:    execM.runModuleCtrlFn("start module", execM.start),
+						err: execM.runCtrlFnWithTimeout(
+							"start module",
+							60*time.Second,
+							execM.start,
+						),
 					}
 				}()
 			}

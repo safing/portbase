@@ -42,7 +42,7 @@ func TestMicroTaskWaiting(t *testing.T) {
 	go func() {
 		defer mtwWaitGroup.Done()
 		// exec at slot 1
-		_ = mtModule.StartMicroTask(&mtTestName, func(ctx context.Context) error {
+		_ = mtModule.RunMicroTask(&mtTestName, func(ctx context.Context) error {
 			mtwOutputChannel <- "1" // slot 1
 			time.Sleep(mtwSleepDuration * 5)
 			mtwOutputChannel <- "2" // slot 5
@@ -53,7 +53,7 @@ func TestMicroTaskWaiting(t *testing.T) {
 	time.Sleep(mtwSleepDuration * 1)
 
 	// clear clearances
-	_ = mtModule.StartMicroTask(&mtTestName, func(ctx context.Context) error {
+	_ = mtModule.RunMicroTask(&mtTestName, func(ctx context.Context) error {
 		return nil
 	})
 
@@ -61,7 +61,7 @@ func TestMicroTaskWaiting(t *testing.T) {
 	go func() {
 		defer mtwWaitGroup.Done()
 		// exec at slot 2
-		_ = mtModule.StartLowPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
+		_ = mtModule.RunLowPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
 			mtwOutputChannel <- "7" // slot 16
 			return nil
 		})
@@ -74,7 +74,7 @@ func TestMicroTaskWaiting(t *testing.T) {
 		defer mtwWaitGroup.Done()
 		time.Sleep(mtwSleepDuration * 8)
 		// exec at slot 10
-		_ = mtModule.StartMicroTask(&mtTestName, func(ctx context.Context) error {
+		_ = mtModule.RunMicroTask(&mtTestName, func(ctx context.Context) error {
 			mtwOutputChannel <- "4" // slot 10
 			time.Sleep(mtwSleepDuration * 5)
 			mtwOutputChannel <- "6" // slot 15
@@ -86,7 +86,7 @@ func TestMicroTaskWaiting(t *testing.T) {
 	go func() {
 		defer mtwWaitGroup.Done()
 		// exec at slot 3
-		_ = mtModule.StartMediumPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
+		_ = mtModule.RunMediumPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
 			mtwOutputChannel <- "3" // slot 6
 			time.Sleep(mtwSleepDuration * 7)
 			mtwOutputChannel <- "5" // slot 13
@@ -122,7 +122,7 @@ var mtoWaitCh chan struct{}
 func mediumPrioTaskTester() {
 	defer mtoWaitGroup.Done()
 	<-mtoWaitCh
-	_ = mtModule.StartMediumPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
+	_ = mtModule.RunMediumPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
 		mtoOutputChannel <- "1"
 		time.Sleep(2 * time.Millisecond)
 		return nil
@@ -132,7 +132,7 @@ func mediumPrioTaskTester() {
 func lowPrioTaskTester() {
 	defer mtoWaitGroup.Done()
 	<-mtoWaitCh
-	_ = mtModule.StartLowPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
+	_ = mtModule.RunLowPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
 		mtoOutputChannel <- "2"
 		time.Sleep(2 * time.Millisecond)
 		return nil

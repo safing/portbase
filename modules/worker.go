@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -15,8 +16,20 @@ const (
 )
 
 var (
-	errNoModule = errors.New("missing module (is nil!)")
+	// ErrRestartNow may be returned (wrapped) by service workers to request an immediate restart.
+	ErrRestartNow = errors.New("requested restart")
+	errNoModule   = errors.New("missing module (is nil!)")
 )
+
+// StartWorker directly starts a generic worker that does not fit to be a Task or MicroTask, such as long running (and possibly mostly idle) sessions. A call to StartWorker starts a new goroutine and returns immediately.
+func (m *Module) StartWorker(name string, fn func(context.Context) error) {
+	go func() {
+		err := m.RunWorker(name, fn)
+		if err != nil {
+			log.Warningf("%s: worker %s failed: %s", m.Name, name, err)
+		}
+	}()
+}
 
 // RunWorker directly runs a generic worker that does not fit to be a Task or MicroTask, such as long running (and possibly mostly idle) sessions. A call to RunWorker blocks until the worker is finished.
 func (m *Module) RunWorker(name string, fn func(context.Context) error) error {
@@ -66,18 +79,22 @@ func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn
 
 		err := m.runWorker(name, fn)
 		if err != nil {
-			// reset fail counter if running without error for some time
-			if time.Now().Add(-5 * time.Minute).After(lastFail) {
-				failCnt = 0
+			if !errors.Is(err, ErrRestartNow) {
+				// reset fail counter if running without error for some time
+				if time.Now().Add(-5 * time.Minute).After(lastFail) {
+					failCnt = 0
+				}
+				// increase fail counter and set last failed time
+				failCnt++
+				lastFail = time.Now()
+				// log error
+				sleepFor := time.Duration(failCnt) * backoffDuration
+				log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
+				time.Sleep(sleepFor)
+				// loop to restart
+			} else {
+				log.Infof("%s: service-worker %s %s - restarting now", m.Name, name, err)
 			}
-			// increase fail counter and set last failed time
-			failCnt++
-			lastFail = time.Now()
-			// log error
-			sleepFor := time.Duration(failCnt) * backoffDuration
-			log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
-			time.Sleep(sleepFor)
-			// loop to restart
 		} else {
 			// finish
 			return
@@ -101,7 +118,27 @@ func (m *Module) runWorker(name string, fn func(context.Context) error) (err err
 	return
 }
 
-func (m *Module) runModuleCtrlFn(name string, fn func() error) (err error) {
+func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn func() error) error {
+
+	stopFnError := make(chan error)
+	go func() {
+		stopFnError <- m.runCtrlFn(name, fn)
+	}()
+
+	// wait for results
+	select {
+	case err := <-stopFnError:
+		return err
+	case <-time.After(timeout):
+		return fmt.Errorf("timed out (%s)", timeout)
+	}
+}
+
+func (m *Module) runCtrlFn(name string, fn func() error) (err error) {
+	if fn == nil {
+		return
+	}
+
 	defer func() {
 		// recover from panic
 		panicVal := recover()

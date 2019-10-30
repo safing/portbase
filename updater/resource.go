@@ -166,8 +166,6 @@ func (res *Resource) selectVersion() {
 			res.notifier.markAsUpgradeable()
 			res.notifier = nil
 		}
-
-		res.registry.notifyOfChanges()
 	}()
 
 	if len(res.Versions) == 0 {

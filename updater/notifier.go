@@ -31,26 +31,3 @@ func (file *File) UpgradeAvailable() bool {
 func (file *File) WaitForAvailableUpgrade() <-chan struct{} {
 	return file.notifier.notifyChannel
 }
-
-// registry wide change notifications
-
-func (reg *ResourceRegistry) notifyOfChanges() {
-	if !reg.notifyHooksEnabled.IsSet() {
-		return
-	}
-
-	reg.RLock()
-	defer reg.RUnlock()
-
-	for _, hook := range reg.notifyHooks {
-		go hook()
-	}
-}
-
-// RegisterNotifyHook registers a function that is called (as a goroutine) every time the resource registry changes.
-func (reg *ResourceRegistry) RegisterNotifyHook(fn func()) {
-	reg.Lock()
-	defer reg.Unlock()
-
-	reg.notifyHooks = append(reg.notifyHooks, fn)
-}

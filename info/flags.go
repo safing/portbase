@@ -15,7 +15,7 @@ var (
 )
 
 func init() {
-	modules.Register("info", prep, nil, nil, "base")
+	modules.Register("info", prep, nil, nil)
 
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 }
@@ -35,8 +35,10 @@ func prep() error {
 // CheckVersion checks if the metadata is ok.
 func CheckVersion() error {
 	if !strings.HasSuffix(os.Args[0], ".test") {
-		if name == "[NAME]" ||
-			version == "[version unknown]" ||
+		if name == "[NAME]" {
+			return errors.New("must call SetInfo() before calling CheckVersion()")
+		}
+		if version == "[version unknown]" ||
 			commit == "[commit unknown]" ||
 			license == "[license unknown]" ||
 			buildOptions == "[options unknown]" ||

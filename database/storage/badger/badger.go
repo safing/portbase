@@ -118,6 +118,7 @@ func (b *Badger) Query(q *query.Query, local, internal bool) (*iterator.Iterator
 	return queryIter, nil
 }
 
+//nolint:gocognit
 func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, local, internal bool) {
 	err := b.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
