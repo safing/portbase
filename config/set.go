@@ -17,9 +17,6 @@ var (
 
 	validityFlag     = abool.NewBool(true)
 	validityFlagLock sync.RWMutex
-
-	changedSignal     = make(chan struct{})
-	changedSignalLock sync.Mutex
 )
 
 func getValidityFlag() *abool.AtomicBool {
@@ -28,16 +25,10 @@ func getValidityFlag() *abool.AtomicBool {
 	return validityFlag
 }
 
-// Changed signals if any config option was changed.
-func Changed() <-chan struct{} {
-	changedSignalLock.Lock()
-	defer changedSignalLock.Unlock()
-	return changedSignal
-}
-
 func signalChanges() {
-	// refetch and save release level
+	// refetch and save release level and expertise level
 	updateReleaseLevel()
+	updateExpertiseLevel()
 
 	// reset validity flag
 	validityFlagLock.Lock()
@@ -45,11 +36,7 @@ func signalChanges() {
 	validityFlag = abool.NewBool(true)
 	validityFlagLock.Unlock()
 
-	// trigger change signal: signal listeners that a config option was changed.
-	changedSignalLock.Lock()
-	close(changedSignal)
-	changedSignal = make(chan struct{})
-	changedSignalLock.Unlock()
+	module.TriggerEvent(configChangeEvent, nil)
 }
 
 // setConfig sets the (prioritized) user defined config.

@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -56,8 +58,20 @@ func Serve() {
 
 	// start serving
 	log.Infof("api: starting to listen on %s", server.Addr)
-	// TODO: retry if failed
-	log.Errorf("api: failed to listen on %s: %s", server.Addr, server.ListenAndServe())
+	backoffDuration := 10 * time.Second
+	for {
+		// always returns an error
+		err := module.RunWorker("http endpoint", func(ctx context.Context) error {
+			return server.ListenAndServe()
+		})
+		// return on shutdown error
+		if err == http.ErrServerClosed {
+			return
+		}
+		// log error and restart
+		log.Errorf("api: http endpoint failed: %s - restarting in %s", err, backoffDuration)
+		time.Sleep(backoffDuration)
+	}
 }
 
 // GetMuxVars wraps github.com/gorilla/mux.Vars in order to mitigate context key issues in multi-repo projects.

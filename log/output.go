@@ -2,6 +2,8 @@ package log
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -39,37 +41,73 @@ func writeLine(line *logLine, duplicates uint64) {
 }
 
 func startWriter() {
-	shutdownWaitGroup.Add(1)
 	fmt.Println(fmt.Sprintf("%s%s %s BOF%s", InfoLevel.color(), time.Now().Format(timeFormat), rightArrow, endColor()))
-	go writer()
+
+	shutdownWaitGroup.Add(1)
+	go writerManager()
 }
 
-func writer() {
-	var line *logLine
-	var lastLine *logLine
-	var duplicates uint64
+func writerManager() {
 	defer shutdownWaitGroup.Done()
 
 	for {
+		err := writer()
+		if err != nil {
+			Errorf("log: writer failed: %s", err)
+		} else {
+			return
+		}
+	}
+}
+
+func writer() (err error) {
+	defer func() {
+		// recover from panic
+		panicVal := recover()
+		if panicVal != nil {
+			err = fmt.Errorf("%s", panicVal)
+
+			// write stack to stderr
+			fmt.Fprintf(
+				os.Stderr,
+				`===== Error Report =====
+Message: %s
+StackTrace:
+
+%s
+===== End of Report =====
+`,
+				err,
+				string(debug.Stack()),
+			)
+		}
+	}()
+
+	var currentLine *logLine
+	var nextLine *logLine
+	var duplicates uint64
+
+	for {
 		// reset
-		line = nil
-		lastLine = nil //nolint:ineffassign // only ineffectual in first loop
+		currentLine = nil
+		nextLine = nil
 		duplicates = 0
 
 		// wait until logs need to be processed
 		select {
-		case <-logsWaiting:
+		case <-logsWaiting: // normal process
 			logsWaitingFlag.UnSet()
-		case <-shutdownSignal:
+		case <-forceEmptyingOfBuffer: // log buffer is full!
+		case <-shutdownSignal: // shutting down
 			finalizeWriting()
 			return
 		}
 
-		// wait for timeslot to log, or when buffer is full
+		// wait for timeslot to log
 		select {
-		case <-writeTrigger:
-		case <-forceEmptyingOfBuffer:
-		case <-shutdownSignal:
+		case <-writeTrigger: // normal process
+		case <-forceEmptyingOfBuffer: // log buffer is full!
+		case <-shutdownSignal: // shutting down
 			finalizeWriting()
 			return
 		}
@@ -78,37 +116,40 @@ func writer() {
 	writeLoop:
 		for {
 			select {
-			case line = <-logBuffer:
-
-				// look-ahead for deduplication (best effort)
-			dedupLoop:
-				for {
-					// check if there is another line waiting
-					select {
-					case nextLine := <-logBuffer:
-						lastLine = line
-						line = nextLine
-					default:
-						break dedupLoop
-					}
-
-					// deduplication
-					if !line.Equal(lastLine) {
-						// no duplicate
-						break dedupLoop
-					}
-
-					// duplicate
-					duplicates++
+			case nextLine = <-logBuffer:
+				// first line we process, just assign to currentLine
+				if currentLine == nil {
+					currentLine = nextLine
+					continue writeLoop
 				}
 
-				// write actual line
-				writeLine(line, duplicates)
+				// we now have currentLine and nextLine
+
+				// if currentLine and nextLine are equal, do not print, just increase counter and continue
+				if nextLine.Equal(currentLine) {
+					duplicates++
+					continue writeLoop
+				}
+
+				// if currentLine and line are _not_ equal, output currentLine
+				writeLine(currentLine, duplicates)
+				// reset duplicate counter
 				duplicates = 0
+				// set new currentLine
+				currentLine = nextLine
 			default:
 				break writeLoop
 			}
 		}
+
+		// write final line
+		if currentLine != nil {
+			writeLine(currentLine, duplicates)
+		}
+		// reset state
+		currentLine = nil //nolint:ineffassign
+		nextLine = nil
+		duplicates = 0 //nolint:ineffassign
 
 		// back down a little
 		select {

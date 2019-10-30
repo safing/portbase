@@ -4,3 +4,8 @@ linters:
     - lll
     - gochecknoinits
     - gochecknoglobals
+    - funlen
+    - whitespace
+    - wsl
+    - godox
+

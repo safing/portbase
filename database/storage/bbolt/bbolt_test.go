@@ -31,7 +31,7 @@ type TestRecord struct {
 	B    bool
 }
 
-func TestBadger(t *testing.T) {
+func TestBBolt(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "testing-")
 	if err != nil {
 		t.Fatal(err)

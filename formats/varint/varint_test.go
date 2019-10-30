@@ -1,3 +1,4 @@
+//nolint:gocognit
 package varint
 
 import (

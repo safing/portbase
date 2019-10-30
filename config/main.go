@@ -10,7 +10,12 @@ import (
 	"github.com/safing/portmaster/core/structure"
 )
 
+const (
+	configChangeEvent = "config change"
+)
+
 var (
+	module   *modules.Module
 	dataRoot *utils.DirStructure
 )
 
@@ -22,7 +27,8 @@ func SetDataRoot(root *utils.DirStructure) {
 }
 
 func init() {
-	modules.Register("config", prep, start, nil, "base", "database")
+	module = modules.Register("config", prep, start, nil, "base", "database")
+	module.RegisterEvent(configChangeEvent)
 }
 
 func prep() error {

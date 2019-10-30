@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	modulesLock sync.Mutex
+	modulesLock sync.RWMutex
 	modules     = make(map[string]*Module)
 
 	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
@@ -46,6 +46,10 @@ type Module struct {
 	microTaskCnt *int32
 	waitGroup    sync.WaitGroup
 
+	// events
+	eventHooks     map[string][]*eventHook
+	eventHooksLock sync.RWMutex
+
 	// dependency mgmt
 	depNames   []string
 	depModules []*Module
@@ -67,15 +71,25 @@ func (m *Module) shutdown() error {
 	m.shutdownFlag.Set()
 	m.cancelCtx()
 
+	// start shutdown function
+	m.waitGroup.Add(1)
+	stopFnError := make(chan error, 1)
+	go func() {
+		stopFnError <- m.runCtrlFn("stop module", m.stop)
+		m.waitGroup.Done()
+	}()
+
 	// wait for workers
 	done := make(chan struct{})
 	go func() {
 		m.waitGroup.Wait()
 		close(done)
 	}()
+
+	// wait for results
 	select {
 	case <-done:
-	case <-time.After(3 * time.Second):
+	case <-time.After(30 * time.Second):
 		log.Warningf(
 			"%s: timed out while waiting for workers/tasks to finish: workers=%d tasks=%d microtasks=%d, continuing shutdown...",
 			m.Name,
@@ -85,12 +99,17 @@ func (m *Module) shutdown() error {
 		)
 	}
 
-	// call shutdown function
-	return m.stop()
-}
-
-func dummyAction() error {
-	return nil
+	// collect error
+	select {
+	case err := <-stopFnError:
+		return err
+	default:
+		log.Warningf(
+			"%s: timed out while waiting for stop function to finish, continuing shutdown...",
+			m.Name,
+		)
+		return nil
+	}
 }
 
 // Register registers a new module. The control functions `prep`, `start` and `stop` are technically optional. `stop` is called _after_ all added module workers finished.
@@ -99,7 +118,14 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 
 	modulesLock.Lock()
 	defer modulesLock.Unlock()
+	// check for already existing module
+	_, ok := modules[name]
+	if ok {
+		panic(fmt.Sprintf("modules: module %s is already registered", name))
+	}
+	// add new module
 	modules[name] = newModule
+
 	return newModule
 }
 
@@ -125,18 +151,8 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		prep:         prep,
 		start:        start,
 		stop:         stop,
+		eventHooks:   make(map[string][]*eventHook),
 		depNames:     dependencies,
-	}
-
-	// replace nil arguments with dummy action
-	if newModule.prep == nil {
-		newModule.prep = dummyAction
-	}
-	if newModule.start == nil {
-		newModule.start = dummyAction
-	}
-	if newModule.stop == nil {
-		newModule.stop = dummyAction
 	}
 
 	return newModule

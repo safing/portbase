@@ -1,4 +1,4 @@
-//nolint:nakedret,unconvert
+//nolint:nakedret,unconvert,gocognit
 package dsd
 
 import (

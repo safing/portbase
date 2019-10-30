@@ -83,7 +83,7 @@ func Tracer(ctx context.Context) *ContextTracer {
 
 // Submit collected logs on the context for further processing/outputting. Does nothing if called on a nil ContextTracer.
 func (tracer *ContextTracer) Submit() {
-	if tracer != nil {
+	if tracer == nil {
 		return
 	}
 
@@ -119,15 +119,21 @@ func (tracer *ContextTracer) Submit() {
 	select {
 	case logBuffer <- log:
 	default:
-		forceEmptyingOfBuffer <- struct{}{}
-		logBuffer <- log
+	forceEmptyingLoop:
+		// force empty buffer until we can send to it
+		for {
+			select {
+			case forceEmptyingOfBuffer <- struct{}{}:
+			case logBuffer <- log:
+				break forceEmptyingLoop
+			}
+		}
 	}
 
 	// wake up writer if necessary
 	if logsWaitingFlag.SetToIf(false, true) {
 		logsWaiting <- struct{}{}
 	}
-
 }
 
 func (tracer *ContextTracer) log(level Severity, msg string) {

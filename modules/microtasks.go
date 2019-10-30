@@ -45,14 +45,54 @@ func SetMaxConcurrentMicroTasks(n int) {
 	}
 }
 
-// StartMicroTask starts a new MicroTask with high priority. It will start immediately. The given function will be executed and panics caught. The supplied name should be a constant - the variable should never change as it won't be copied.
-func (m *Module) StartMicroTask(name *string, fn func(context.Context) error) error {
-	atomic.AddInt32(microTasks, 1)
+// StartMicroTask starts a new MicroTask with high priority. It will start immediately. The call starts a new goroutine and returns immediately. The given function will be executed and panics caught. The supplied name must not be changed.
+func (m *Module) StartMicroTask(name *string, fn func(context.Context) error) {
+	go func() {
+		err := m.RunMicroTask(name, fn)
+		if err != nil {
+			log.Warningf("%s: microtask %s failed: %s", m.Name, *name, err)
+		}
+	}()
+}
+
+// StartMediumPriorityMicroTask starts a new MicroTask with medium priority. The call starts a new goroutine and returns immediately. It will wait until a slot becomes available (max 3 seconds). The given function will be executed and panics caught. The supplied name must not be changed.
+func (m *Module) StartMediumPriorityMicroTask(name *string, fn func(context.Context) error) {
+	go func() {
+		err := m.RunMediumPriorityMicroTask(name, fn)
+		if err != nil {
+			log.Warningf("%s: microtask %s failed: %s", m.Name, *name, err)
+		}
+	}()
+}
+
+// StartLowPriorityMicroTask starts a new MicroTask with low priority. The call starts a new goroutine and returns immediately. It will wait until a slot becomes available (max 15 seconds). The given function will be executed and panics caught. The supplied name must not be changed.
+func (m *Module) StartLowPriorityMicroTask(name *string, fn func(context.Context) error) {
+	go func() {
+		err := m.RunLowPriorityMicroTask(name, fn)
+		if err != nil {
+			log.Warningf("%s: microtask %s failed: %s", m.Name, *name, err)
+		}
+	}()
+}
+
+// RunMicroTask runs a new MicroTask with high priority. It will start immediately. The call blocks until finished. The given function will be executed and panics caught. The supplied name must not be changed.
+func (m *Module) RunMicroTask(name *string, fn func(context.Context) error) error {
+	if m == nil {
+		log.Errorf(`modules: cannot start microtask "%s" with nil module`, *name)
+		return errNoModule
+	}
+
+	atomic.AddInt32(microTasks, 1) // increase global counter here, as high priority tasks are not started by the scheduler, where this counter is usually increased
 	return m.runMicroTask(name, fn)
 }
 
-// StartMediumPriorityMicroTask starts a new MicroTask with medium priority. It will wait until given a go (max 3 seconds). The given function will be executed and panics caught. The supplied name should be a constant - the variable should never change as it won't be copied.
-func (m *Module) StartMediumPriorityMicroTask(name *string, fn func(context.Context) error) error {
+// RunMediumPriorityMicroTask runs a new MicroTask with medium priority. It will wait until a slot becomes available (max 3 seconds). The call blocks until finished. The given function will be executed and panics caught. The supplied name must not be changed.
+func (m *Module) RunMediumPriorityMicroTask(name *string, fn func(context.Context) error) error {
+	if m == nil {
+		log.Errorf(`modules: cannot start microtask "%s" with nil module`, *name)
+		return errNoModule
+	}
+
 	// check if we can go immediately
 	select {
 	case <-mediumPriorityClearance:
@@ -66,8 +106,13 @@ func (m *Module) StartMediumPriorityMicroTask(name *string, fn func(context.Cont
 	return m.runMicroTask(name, fn)
 }
 
-// StartLowPriorityMicroTask starts a new MicroTask with low priority. It will wait until given a go (max 15 seconds). The given function will be executed and panics caught. The supplied name should be a constant - the variable should never change as it won't be copied.
-func (m *Module) StartLowPriorityMicroTask(name *string, fn func(context.Context) error) error {
+// RunLowPriorityMicroTask runs a new MicroTask with low priority. It will wait until a slot becomes available (max 15 seconds). The call blocks until finished. The given function will be executed and panics caught. The supplied name must not be changed.
+func (m *Module) RunLowPriorityMicroTask(name *string, fn func(context.Context) error) error {
+	if m == nil {
+		log.Errorf(`modules: cannot start microtask "%s" with nil module`, *name)
+		return errNoModule
+	}
+
 	// check if we can go immediately
 	select {
 	case <-lowPriorityClearance:
@@ -94,7 +139,7 @@ func (m *Module) runMicroTask(name *string, fn func(context.Context) error) (err
 		if panicVal != nil {
 			me := m.NewPanicError(*name, "microtask", panicVal)
 			me.Report()
-			log.Errorf("%s: microtask %s panicked: %s\n%s", m.Name, *name, panicVal, me.StackTrace)
+			log.Errorf("%s: microtask %s panicked: %s", m.Name, *name, panicVal)
 			err = me
 		}
 
@@ -150,7 +195,10 @@ microTaskManageLoop:
 			atomic.AddInt32(microTasks, 1)
 		} else {
 			// wait for signal that a task was completed
-			<-microTaskFinished
+			select {
+			case <-microTaskFinished:
+			case <-time.After(1 * time.Second):
+			}
 		}
 
 	}

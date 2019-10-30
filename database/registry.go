@@ -139,6 +139,7 @@ func saveRegistry(lock bool) error {
 	}
 
 	// write file
+	// FIXME: write atomically (best effort)
 	filePath := path.Join(rootStructure.Path, registryFileName)
 	return ioutil.WriteFile(filePath, data, 0600)
 }

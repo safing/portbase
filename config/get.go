@@ -81,21 +81,7 @@ func findValue(key string) interface{} {
 	option.Lock()
 	defer option.Unlock()
 
-	// check if option is active
-	optionActive := true
-	switch getReleaseLevel() {
-	case ReleaseLevelStable:
-		// In stable, only stable is active
-		optionActive = option.ReleaseLevel == ReleaseLevelStable
-	case ReleaseLevelBeta:
-		// In beta, only stable and beta are active
-		optionActive = option.ReleaseLevel == ReleaseLevelStable || option.ReleaseLevel == ReleaseLevelBeta
-	case ReleaseLevelExperimental:
-		// In experimental, everything is active
-		optionActive = true
-	}
-
-	if optionActive && option.activeValue != nil {
+	if option.ReleaseLevel <= getReleaseLevel() && option.activeValue != nil {
 		return option.activeValue
 	}
 
