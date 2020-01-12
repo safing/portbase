@@ -2,6 +2,7 @@ package container
 
 import (
 	"errors"
+	"io"
 
 	"github.com/safing/portbase/formats/varint"
 )
@@ -144,6 +145,21 @@ func (c *Container) WriteToSlice(slice []byte) (n int, containerEmptied bool) {
 	}
 	c.checkOffset()
 	return n, true
+}
+
+// WriteAllTo writes all the data to the given io.Writer. Data IS NOT copied (but may be by writer) and IS NOT consumed.
+func (c *Container) WriteAllTo(writer io.Writer) error {
+	for i := c.offset; i < len(c.compartments); i++ {
+		written := 0
+		for written < len(c.compartments[i]) {
+			n, err := writer.Write(c.compartments[i][written:])
+			if err != nil {
+				return err
+			}
+			written += n
+		}
+	}
+	return nil
 }
 
 func (c *Container) clean() {
