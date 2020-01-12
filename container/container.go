@@ -2,6 +2,7 @@ package container
 
 import (
 	"errors"
+	"io"
 
 	"github.com/safing/portbase/formats/varint"
 )
@@ -48,10 +49,26 @@ func (c *Container) AppendNumber(n uint64) {
 	c.compartments = append(c.compartments, varint.Pack64(n))
 }
 
+// AppendInt appends an int (varint encoded).
+func (c *Container) AppendInt(n int) {
+	c.compartments = append(c.compartments, varint.Pack64(uint64(n)))
+}
+
 // AppendAsBlock appends the length of the data and the data itself. Data will NOT be copied.
 func (c *Container) AppendAsBlock(data []byte) {
 	c.AppendNumber(uint64(len(data)))
 	c.Append(data)
+}
+
+// AppendContainer appends another Container. Data will NOT be copied.
+func (c *Container) AppendContainer(data *Container) {
+	c.compartments = append(c.compartments, data.compartments...)
+}
+
+// AppendContainerAsBlock appends another Container (length and data). Data will NOT be copied.
+func (c *Container) AppendContainerAsBlock(data *Container) {
+	c.AppendNumber(uint64(data.Length()))
+	c.compartments = append(c.compartments, data.compartments...)
 }
 
 // Length returns the full length of all bytes held by the container.
@@ -92,6 +109,16 @@ func (c *Container) Get(n int) ([]byte, error) {
 	return buf, nil
 }
 
+// GetAsContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS consumed.
+func (c *Container) GetAsContainer(n int) (*Container, error) {
+	new := c.gatherAsContainer(n)
+	if new == nil {
+		return nil, errors.New("container: not enough data to return")
+	}
+	c.skip(n)
+	return new, nil
+}
+
 // GetMax returns as much as possible, but the given amount of bytes at maximum. Data MAY be copied and IS consumed.
 func (c *Container) GetMax(n int) []byte {
 	buf := c.gather(n)
@@ -118,6 +145,21 @@ func (c *Container) WriteToSlice(slice []byte) (n int, containerEmptied bool) {
 	}
 	c.checkOffset()
 	return n, true
+}
+
+// WriteAllTo writes all the data to the given io.Writer. Data IS NOT copied (but may be by writer) and IS NOT consumed.
+func (c *Container) WriteAllTo(writer io.Writer) error {
+	for i := c.offset; i < len(c.compartments); i++ {
+		written := 0
+		for written < len(c.compartments[i]) {
+			n, err := writer.Write(c.compartments[i][written:])
+			if err != nil {
+				return err
+			}
+			written += n
+		}
+	}
+	return nil
 }
 
 func (c *Container) clean() {
@@ -214,6 +256,23 @@ func (c *Container) gather(n int) []byte {
 	return slice[:n]
 }
 
+func (c *Container) gatherAsContainer(n int) (new *Container) {
+	new = &Container{}
+	for i := c.offset; i < len(c.compartments); i++ {
+		if n >= len(c.compartments[i]) {
+			new.compartments = append(new.compartments, c.compartments[i])
+			n -= len(c.compartments[i])
+		} else {
+			new.compartments = append(new.compartments, c.compartments[i][:n])
+			n = 0
+		}
+	}
+	if n > 0 {
+		return nil
+	}
+	return new
+}
+
 func (c *Container) skip(n int) {
 	for i := c.offset; i < len(c.compartments); i++ {
 		if len(c.compartments[i]) <= n {
@@ -233,13 +292,22 @@ func (c *Container) skip(n int) {
 	c.checkOffset()
 }
 
-// GetNextBlock returns the next block of data defined by a varint (note: data will MAY be copied and IS consumed).
+// GetNextBlock returns the next block of data defined by a varint. Data MAY be copied and IS consumed.
 func (c *Container) GetNextBlock() ([]byte, error) {
 	blockSize, err := c.GetNextN64()
 	if err != nil {
 		return nil, err
 	}
 	return c.Get(int(blockSize))
+}
+
+// GetNextBlockAsContainer returns the next block of data as a Container defined by a varint. Data will NOT be copied and IS consumed.
+func (c *Container) GetNextBlockAsContainer() (*Container, error) {
+	blockSize, err := c.GetNextN64()
+	if err != nil {
+		return nil, err
+	}
+	return c.GetAsContainer(int(blockSize))
 }
 
 // GetNextN8 parses and returns a varint of type uint8.

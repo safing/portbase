@@ -15,12 +15,21 @@ import (
 
 // define types
 const (
-	AUTO    = 0
+	AUTO = 0
+	NONE = 1
+
+	// special
+	LIST = 76 // L
+
+	// serialization
 	STRING  = 83 // S
 	BYTES   = 88 // X
 	JSON    = 74 // J
 	BSON    = 66 // B
 	GenCode = 71 // G
+
+	// compression
+	GZIP = 90 // Z
 )
 
 // define errors
@@ -29,10 +38,6 @@ var errNotImplemented = errors.New("dsd: this type is not yet implemented")
 
 // Load loads an dsd structured data blob into the given interface.
 func Load(data []byte, t interface{}) (interface{}, error) {
-	if len(data) < 2 {
-		return nil, errNoMoreSpace
-	}
-
 	format, read, err := varint.Unpack8(data)
 	if err != nil {
 		return nil, err
@@ -41,7 +46,12 @@ func Load(data []byte, t interface{}) (interface{}, error) {
 		return nil, errNoMoreSpace
 	}
 
-	return LoadAsFormat(data[read:], format, t)
+	switch format {
+	case GZIP:
+		return DecompressAndLoad(data[read:], format, t)
+	default:
+		return LoadAsFormat(data[read:], format, t)
+	}
 }
 
 // LoadAsFormat loads a data blob into the interface using the specified format.
@@ -81,6 +91,11 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 
 // Dump stores the interface as a dsd formatted data structure.
 func Dump(t interface{}, format uint8) ([]byte, error) {
+	return DumpIndent(t, format, "")
+}
+
+// DumpIndent stores the interface as a dsd formatted data structure with indentation, if available.
+func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
 	if format == AUTO {
 		switch t.(type) {
 		case string:
@@ -102,7 +117,11 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 		data = t.([]byte)
 	case JSON:
 		// TODO: use SetEscapeHTML(false)
-		data, err = json.Marshal(t)
+		if indent != "" {
+			data, err = json.MarshalIndent(t, "", indent)
+		} else {
+			data, err = json.Marshal(t)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +141,7 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 			return nil, fmt.Errorf("dsd: failed to pack gencode struct: %s", err)
 		}
 	default:
-		return nil, fmt.Errorf("dsd: tried to dump unknown type %d", format)
+		return nil, fmt.Errorf("dsd: tried to dump with unknown format %d", format)
 	}
 
 	r := append(f, data...)
