@@ -1,7 +1,9 @@
 package info
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 )
@@ -79,4 +81,24 @@ func FullVersion() string {
 	s += fmt.Sprintf("  on %s\n", buildDate)
 	s += fmt.Sprintf("\nLicensed under the %s license.\nThe source code is available here: %s", license, buildSource)
 	return s
+}
+
+// CheckVersion checks if the metadata is ok.
+func CheckVersion() error {
+	if !strings.HasSuffix(os.Args[0], ".test") {
+		if name == "[NAME]" {
+			return errors.New("must call SetInfo() before calling CheckVersion()")
+		}
+		if version == "[version unknown]" ||
+			commit == "[commit unknown]" ||
+			license == "[license unknown]" ||
+			buildOptions == "[options unknown]" ||
+			buildUser == "[user unknown]" ||
+			buildHost == "[host unknown]" ||
+			buildDate == "[date unknown]" ||
+			buildSource == "[source unknown]" {
+			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
+		}
+	}
+	return nil
 }

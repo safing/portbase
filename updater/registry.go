@@ -5,8 +5,6 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/tevino/abool"
-
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
@@ -30,9 +28,6 @@ type ResourceRegistry struct {
 	Beta    bool
 	DevMode bool
 	Online  bool
-
-	notifyHooks        []func()
-	notifyHooksEnabled *abool.AtomicBool
 }
 
 // Initialize initializes a raw registry struct and makes it ready for usage.
@@ -52,7 +47,6 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	reg.storageDir = storageDir
 	reg.tmpDir = storageDir.ChildDir("tmp", 0700)
 	reg.resources = make(map[string]*Resource)
-	reg.notifyHooksEnabled = abool.NewBool(true)
 
 	return nil
 }
