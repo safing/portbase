@@ -35,22 +35,29 @@ func init() {
 var qtWg sync.WaitGroup
 var qtOutputChannel chan string
 var qtSleepDuration time.Duration
-var qtModule = initNewModule("task test module", nil, nil, nil)
+var qtModule *Module
+
+func init() {
+	qtModule = initNewModule("task test module", nil, nil, nil)
+	qtModule.status = StatusOnline
+}
 
 // functions
 func queuedTaskTester(s string) {
-	qtModule.NewTask(s, func(ctx context.Context, t *Task) {
+	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(qtSleepDuration * 2)
 		qtOutputChannel <- s
 		qtWg.Done()
+		return nil
 	}).Queue()
 }
 
 func prioritizedTaskTester(s string) {
-	qtModule.NewTask(s, func(ctx context.Context, t *Task) {
+	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(qtSleepDuration * 2)
 		qtOutputChannel <- s
 		qtWg.Done()
+		return nil
 	}).Prioritize()
 }
 
@@ -109,10 +116,11 @@ var stWaitCh chan bool
 
 // functions
 func scheduledTaskTester(s string, sched time.Time) {
-	qtModule.NewTask(s, func(ctx context.Context, t *Task) {
+	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(stSleepDuration)
 		stOutputChannel <- s
 		stWg.Done()
+		return nil
 	}).Schedule(sched)
 }
 

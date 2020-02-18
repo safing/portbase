@@ -13,32 +13,44 @@ import (
 )
 
 var (
-	modulesLock sync.RWMutex
-	modules     = make(map[string]*Module)
+	modules  = make(map[string]*Module)
+	mgmtLock sync.Mutex
+
+	// lock modules when starting
+	modulesLocked = abool.New()
 
 	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
 	ErrCleanExit = errors.New("clean exit requested")
 )
 
 // Module represents a module.
-type Module struct {
+type Module struct { //nolint:maligned // not worth the effort
+	sync.RWMutex
+
 	Name string
 
-	// lifecycle mgmt
-	Prepped      *abool.AtomicBool
-	Started      *abool.AtomicBool
-	Stopped      *abool.AtomicBool
-	inTransition *abool.AtomicBool
+	// status mgmt
+	enabled             *abool.AtomicBool
+	enabledAsDependency *abool.AtomicBool
+	status              uint8
+
+	// failure status
+	failureStatus uint8
+	failureID     string
+	failureMsg    string
 
 	// lifecycle callback functions
-	prep  func() error
-	start func() error
-	stop  func() error
+	prepFn  func() error
+	startFn func() error
+	stopFn  func() error
 
-	// shutdown mgmt
-	Ctx          context.Context
-	cancelCtx    func()
-	shutdownFlag *abool.AtomicBool
+	// lifecycle mgmt
+	// start
+	startComplete chan struct{}
+	// stop
+	Ctx       context.Context
+	cancelCtx func()
+	stopFlag  *abool.AtomicBool
 
 	// workers/tasks
 	workerCnt    *int32
@@ -56,30 +68,177 @@ type Module struct {
 	depReverse []*Module
 }
 
-// ShutdownInProgress returns whether the module has started shutting down. In most cases, you should use ShuttingDown instead.
-func (m *Module) ShutdownInProgress() bool {
-	return m.shutdownFlag.IsSet()
+// StartCompleted returns a channel read that triggers when the module has finished starting.
+func (m *Module) StartCompleted() <-chan struct{} {
+	m.RLock()
+	defer m.RUnlock()
+	return m.startComplete
 }
 
-// ShuttingDown lets you listen for the shutdown signal.
-func (m *Module) ShuttingDown() <-chan struct{} {
+// Stopping returns a channel read that triggers when the module has initiated the stop procedure.
+func (m *Module) Stopping() <-chan struct{} {
+	m.RLock()
+	defer m.RUnlock()
 	return m.Ctx.Done()
 }
 
-func (m *Module) shutdown() error {
-	// signal shutdown
-	m.shutdownFlag.Set()
-	m.cancelCtx()
+// IsStopping returns whether the module has started shutting down. In most cases, you should use Stopping instead.
+func (m *Module) IsStopping() bool {
+	return m.stopFlag.IsSet()
+}
 
-	// start shutdown function
-	m.waitGroup.Add(1)
-	stopFnError := make(chan error, 1)
+// Dependencies returns the module's dependencies.
+func (m *Module) Dependencies() []*Module {
+	m.RLock()
+	defer m.RUnlock()
+	return m.depModules
+}
+
+func (m *Module) prep(reports chan *report) {
+	// check and set intermediate status
+	m.Lock()
+	if m.status != StatusDead {
+		m.Unlock()
+		go func() {
+			reports <- &report{
+				module: m,
+				err:    fmt.Errorf("module already prepped"),
+			}
+		}()
+		return
+	}
+	m.status = StatusPreparing
+	m.Unlock()
+
+	// run prep function
 	go func() {
-		stopFnError <- m.runCtrlFn("stop module", m.stop)
-		m.waitGroup.Done()
+		var err error
+		if m.prepFn != nil {
+			// execute function
+			err = m.runCtrlFnWithTimeout(
+				"prep module",
+				10*time.Second,
+				m.prepFn,
+			)
+		}
+		// set status
+		if err != nil {
+			m.Error(
+				"module-failed-prep",
+				fmt.Sprintf("failed to prep module: %s", err.Error()),
+			)
+		} else {
+			m.Lock()
+			m.status = StatusOffline
+			m.Unlock()
+			m.notifyOfChange()
+		}
+		// send report
+		reports <- &report{
+			module: m,
+			err:    err,
+		}
 	}()
+}
 
-	// wait for workers
+func (m *Module) start(reports chan *report) {
+	// check and set intermediate status
+	m.Lock()
+	if m.status != StatusOffline {
+		m.Unlock()
+		go func() {
+			reports <- &report{
+				module: m,
+				err:    fmt.Errorf("module not offline"),
+			}
+		}()
+		return
+	}
+	m.status = StatusStarting
+
+	// reset stop management
+	if m.cancelCtx != nil {
+		// trigger cancel just to be sure
+		m.cancelCtx()
+	}
+	m.Ctx, m.cancelCtx = context.WithCancel(context.Background())
+	m.stopFlag.UnSet()
+
+	m.Unlock()
+
+	// run start function
+	go func() {
+		var err error
+		if m.startFn != nil {
+			// execute function
+			err = m.runCtrlFnWithTimeout(
+				"start module",
+				10*time.Second,
+				m.startFn,
+			)
+		}
+		// set status
+		if err != nil {
+			m.Error(
+				"module-failed-start",
+				fmt.Sprintf("failed to start module: %s", err.Error()),
+			)
+		} else {
+			m.Lock()
+			m.status = StatusOnline
+			// init start management
+			close(m.startComplete)
+			m.Unlock()
+			m.notifyOfChange()
+		}
+		// send report
+		reports <- &report{
+			module: m,
+			err:    err,
+		}
+	}()
+}
+
+func (m *Module) stop(reports chan *report) {
+	// check and set intermediate status
+	m.Lock()
+	if m.status != StatusOnline {
+		m.Unlock()
+		go func() {
+			reports <- &report{
+				module: m,
+				err:    fmt.Errorf("module not online"),
+			}
+		}()
+		return
+	}
+	m.status = StatusStopping
+
+	// reset start management
+	m.startComplete = make(chan struct{})
+	// init stop management
+	m.cancelCtx()
+	m.stopFlag.Set()
+
+	m.Unlock()
+
+	go m.stopAllTasks(reports)
+}
+
+func (m *Module) stopAllTasks(reports chan *report) {
+	// start shutdown function
+	stopFnFinished := abool.NewBool(false)
+	var stopFnError error
+	if m.stopFn != nil {
+		m.waitGroup.Add(1)
+		go func() {
+			stopFnError = m.runCtrlFn("stop module", m.stopFn)
+			stopFnFinished.Set()
+			m.waitGroup.Done()
+		}()
+	}
+
+	// wait for workers and stop fn
 	done := make(chan struct{})
 	go func() {
 		m.waitGroup.Wait()
@@ -91,8 +250,9 @@ func (m *Module) shutdown() error {
 	case <-done:
 	case <-time.After(30 * time.Second):
 		log.Warningf(
-			"%s: timed out while waiting for workers/tasks to finish: workers=%d tasks=%d microtasks=%d, continuing shutdown...",
+			"%s: timed out while waiting for stopfn/workers/tasks to finish: stopFn=%v workers=%d tasks=%d microtasks=%d, continuing shutdown...",
 			m.Name,
+			stopFnFinished.IsSet(),
 			atomic.LoadInt32(m.workerCnt),
 			atomic.LoadInt32(m.taskCnt),
 			atomic.LoadInt32(m.microTaskCnt),
@@ -100,24 +260,37 @@ func (m *Module) shutdown() error {
 	}
 
 	// collect error
-	select {
-	case err := <-stopFnError:
-		return err
-	default:
-		log.Warningf(
-			"%s: timed out while waiting for stop function to finish, continuing shutdown...",
-			m.Name,
+	var err error
+	if stopFnFinished.IsSet() && stopFnError != nil {
+		err = stopFnError
+	}
+	// set status
+	if err != nil {
+		m.Error(
+			"module-failed-stop",
+			fmt.Sprintf("failed to stop module: %s", err.Error()),
 		)
-		return nil
+	} else {
+		m.Lock()
+		m.status = StatusOffline
+		m.Unlock()
+		m.notifyOfChange()
+	}
+	// send report
+	reports <- &report{
+		module: m,
+		err:    err,
 	}
 }
 
 // Register registers a new module. The control functions `prep`, `start` and `stop` are technically optional. `stop` is called _after_ all added module workers finished.
 func Register(name string, prep, start, stop func() error, dependencies ...string) *Module {
+	if modulesLocked.IsSet() {
+		return nil
+	}
+
 	newModule := initNewModule(name, prep, start, stop, dependencies...)
 
-	modulesLock.Lock()
-	defer modulesLock.Unlock()
 	// check for already existing module
 	_, ok := modules[name]
 	if ok {
@@ -136,23 +309,22 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 	var microTaskCnt int32
 
 	newModule := &Module{
-		Name:         name,
-		Prepped:      abool.NewBool(false),
-		Started:      abool.NewBool(false),
-		Stopped:      abool.NewBool(false),
-		inTransition: abool.NewBool(false),
-		Ctx:          ctx,
-		cancelCtx:    cancelCtx,
-		shutdownFlag: abool.NewBool(false),
-		waitGroup:    sync.WaitGroup{},
-		workerCnt:    &workerCnt,
-		taskCnt:      &taskCnt,
-		microTaskCnt: &microTaskCnt,
-		prep:         prep,
-		start:        start,
-		stop:         stop,
-		eventHooks:   make(map[string][]*eventHook),
-		depNames:     dependencies,
+		Name:                name,
+		enabled:             abool.NewBool(false),
+		enabledAsDependency: abool.NewBool(false),
+		prepFn:              prep,
+		startFn:             start,
+		stopFn:              stop,
+		startComplete:       make(chan struct{}),
+		Ctx:                 ctx,
+		cancelCtx:           cancelCtx,
+		stopFlag:            abool.NewBool(false),
+		workerCnt:           &workerCnt,
+		taskCnt:             &taskCnt,
+		microTaskCnt:        &microTaskCnt,
+		waitGroup:           sync.WaitGroup{},
+		eventHooks:          make(map[string][]*eventHook),
+		depNames:            dependencies,
 	}
 
 	return newModule
@@ -176,50 +348,4 @@ func initDependencies() error {
 	}
 
 	return nil
-}
-
-// ReadyToPrep returns whether all dependencies are ready for this module to prep.
-func (m *Module) ReadyToPrep() bool {
-	if m.inTransition.IsSet() || m.Prepped.IsSet() {
-		return false
-	}
-
-	for _, dep := range m.depModules {
-		if !dep.Prepped.IsSet() {
-			return false
-		}
-	}
-
-	return true
-}
-
-// ReadyToStart returns whether all dependencies are ready for this module to start.
-func (m *Module) ReadyToStart() bool {
-	if m.inTransition.IsSet() || m.Started.IsSet() {
-		return false
-	}
-
-	for _, dep := range m.depModules {
-		if !dep.Started.IsSet() {
-			return false
-		}
-	}
-
-	return true
-}
-
-// ReadyToStop returns whether all dependencies are ready for this module to stop.
-func (m *Module) ReadyToStop() bool {
-	if !m.Started.IsSet() || m.inTransition.IsSet() || m.Stopped.IsSet() {
-		return false
-	}
-
-	for _, revDep := range m.depReverse {
-		// not ready if a reverse dependency was started, but not yet stopped
-		if revDep.Started.IsSet() && !revDep.Stopped.IsSet() {
-			return false
-		}
-	}
-
-	return true
 }

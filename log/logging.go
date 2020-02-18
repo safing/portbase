@@ -82,6 +82,7 @@ var (
 	logsWaiting     = make(chan struct{}, 4)
 	logsWaitingFlag = abool.NewBool(false)
 
+	shutdownFlag      = abool.NewBool(false)
 	shutdownSignal    = make(chan struct{})
 	shutdownWaitGroup sync.WaitGroup
 
@@ -179,6 +180,8 @@ func Start() (err error) {
 
 // Shutdown writes remaining log lines and then stops the log system.
 func Shutdown() {
-	close(shutdownSignal)
+	if shutdownFlag.SetToIf(false, true) {
+		close(shutdownSignal)
+	}
 	shutdownWaitGroup.Wait()
 }
