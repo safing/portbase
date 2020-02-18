@@ -7,5 +7,11 @@ linters:
     - funlen
     - whitespace
     - wsl
-    - godox
+    - gomnd
 
+linters-settings:
+  godox:
+    # report any comments starting with keywords, this is useful for TODO or FIXME comments that
+    # might be left in the code accidentally and should be resolved before merging
+    keywords:
+      - FIXME
