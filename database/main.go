@@ -23,15 +23,15 @@ var (
 	databasesStructure *utils.DirStructure
 )
 
-// Initialize initializes the database at the specified location. Supply either a path or dir structure.
-func Initialize(dirPath string, dirStructureRoot *utils.DirStructure) error {
-	if initialized.SetToIf(false, true) {
+// InitializeWithPath initializes the database at the specified location using a path.
+func InitializeWithPath(dirPath string) error {
+	return Initialize(utils.NewDirStructure(dirPath, 0755))
+}
 
-		if dirStructureRoot != nil {
-			rootStructure = dirStructureRoot
-		} else {
-			rootStructure = utils.NewDirStructure(dirPath, 0755)
-		}
+// Initialize initializes the database at the specified location using a dir structure.
+func Initialize(dirStructureRoot *utils.DirStructure) error {
+	if initialized.SetToIf(false, true) {
+		rootStructure = dirStructureRoot
 
 		// ensure root and databases dirs
 		databasesStructure = rootStructure.ChildDir(databasesSubDir, 0700)

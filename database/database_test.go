@@ -128,12 +128,12 @@ func TestDatabaseSystem(t *testing.T) {
 		os.Exit(1)
 	}()
 
-	testDir, err := ioutil.TempDir("", "testing-")
+	testDir, err := ioutil.TempDir("", "portbase-database-testing-")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = Initialize(testDir, nil)
+	err = InitializeWithPath(testDir)
 	if err != nil {
 		t.Fatal(err)
 	}
