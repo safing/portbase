@@ -5,40 +5,36 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 )
 
 var (
-	orderLock     sync.Mutex
-	startOrder    string
-	shutdownOrder string
+	changeHistoryLock sync.Mutex
+	changeHistory     string
 )
 
-func testPrep(t *testing.T, name string) func() error {
-	return func() error {
-		t.Logf("prep %s\n", name)
-		return nil
-	}
-}
-
-func testStart(t *testing.T, name string) func() error {
-	return func() error {
-		orderLock.Lock()
-		defer orderLock.Unlock()
-		t.Logf("start %s\n", name)
-		startOrder = fmt.Sprintf("%s>%s", startOrder, name)
-		return nil
-	}
-}
-
-func testStop(t *testing.T, name string) func() error {
-	return func() error {
-		orderLock.Lock()
-		defer orderLock.Unlock()
-		t.Logf("stop %s\n", name)
-		shutdownOrder = fmt.Sprintf("%s>%s", shutdownOrder, name)
-		return nil
-	}
+func registerTestModule(t *testing.T, name string, dependencies ...string) {
+	Register(
+		name,
+		func() error {
+			t.Logf("prep %s\n", name)
+			return nil
+		},
+		func() error {
+			changeHistoryLock.Lock()
+			defer changeHistoryLock.Unlock()
+			t.Logf("start %s\n", name)
+			changeHistory = fmt.Sprintf("%s on:%s", changeHistory, name)
+			return nil
+		},
+		func() error {
+			changeHistoryLock.Lock()
+			defer changeHistoryLock.Unlock()
+			t.Logf("stop %s\n", name)
+			changeHistory = fmt.Sprintf("%s off:%s", changeHistory, name)
+			return nil
+		},
+		dependencies...,
+	)
 }
 
 func testFail() error {
@@ -53,135 +49,94 @@ func TestModules(t *testing.T) {
 	t.Parallel() // Not really, just a workaround for running these tests last.
 
 	t.Run("TestModuleOrder", testModuleOrder)
+	t.Run("TestModuleMgmt", testModuleMgmt)
 	t.Run("TestModuleErrors", testModuleErrors)
 }
 
 func testModuleOrder(t *testing.T) {
 
-	Register("database", testPrep(t, "database"), testStart(t, "database"), testStop(t, "database"))
-	Register("stats", testPrep(t, "stats"), testStart(t, "stats"), testStop(t, "stats"), "database")
-	Register("service", testPrep(t, "service"), testStart(t, "service"), testStop(t, "service"), "database")
-	Register("analytics", testPrep(t, "analytics"), testStart(t, "analytics"), testStop(t, "analytics"), "stats", "database")
+	registerTestModule(t, "database")
+	registerTestModule(t, "stats", "database")
+	registerTestModule(t, "service", "database")
+	registerTestModule(t, "analytics", "stats", "database")
 
 	err := Start()
 	if err != nil {
 		t.Error(err)
 	}
 
-	if startOrder != ">database>service>stats>analytics" &&
-		startOrder != ">database>stats>service>analytics" &&
-		startOrder != ">database>stats>analytics>service" {
-		t.Errorf("start order mismatch, was %s", startOrder)
+	if changeHistory != " on:database on:service on:stats on:analytics" &&
+		changeHistory != " on:database on:stats on:service on:analytics" &&
+		changeHistory != " on:database on:stats on:analytics on:service" {
+		t.Errorf("start order mismatch, was %s", changeHistory)
 	}
+	changeHistory = ""
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		select {
-		case <-ShuttingDown():
-		case <-time.After(1 * time.Second):
-			t.Error("did not receive shutdown signal")
-		}
-		wg.Done()
-	}()
 	err = Shutdown()
 	if err != nil {
 		t.Error(err)
 	}
 
-	if shutdownOrder != ">analytics>service>stats>database" &&
-		shutdownOrder != ">analytics>stats>service>database" &&
-		shutdownOrder != ">service>analytics>stats>database" {
-		t.Errorf("shutdown order mismatch, was %s", shutdownOrder)
+	if changeHistory != " off:analytics off:service off:stats off:database" &&
+		changeHistory != " off:analytics off:stats off:service off:database" &&
+		changeHistory != " off:service off:analytics off:stats off:database" {
+		t.Errorf("shutdown order mismatch, was %s", changeHistory)
 	}
+	changeHistory = ""
 
-	wg.Wait()
-
-	printAndRemoveModules()
-}
-
-func printAndRemoveModules() {
-	modulesLock.Lock()
-	defer modulesLock.Unlock()
-
-	fmt.Printf("All %d modules:\n", len(modules))
-	for _, m := range modules {
-		fmt.Printf("module %s: %+v\n", m.Name, m)
-	}
-
-	modules = make(map[string]*Module)
+	resetTestEnvironment()
 }
 
 func testModuleErrors(t *testing.T) {
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
-
 	// test prep error
-	Register("prepfail", testFail, testStart(t, "prepfail"), testStop(t, "prepfail"))
+	Register("prepfail", testFail, nil, nil)
 	err := Start()
 	if err == nil {
 		t.Error("should fail")
 	}
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
+	resetTestEnvironment()
 
 	// test prep clean exit
-	Register("prepcleanexit", testCleanExit, testStart(t, "prepcleanexit"), testStop(t, "prepcleanexit"))
+	Register("prepcleanexit", testCleanExit, nil, nil)
 	err = Start()
 	if err != ErrCleanExit {
 		t.Error("should fail with clean exit")
 	}
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
+	resetTestEnvironment()
 
 	// test invalid dependency
-	Register("database", nil, testStart(t, "database"), testStop(t, "database"), "invalid")
+	Register("database", nil, nil, nil, "invalid")
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
 	}
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
+	resetTestEnvironment()
 
 	// test dependency loop
-	Register("database", nil, testStart(t, "database"), testStop(t, "database"), "helper")
-	Register("helper", nil, testStart(t, "helper"), testStop(t, "helper"), "database")
+	registerTestModule(t, "database", "helper")
+	registerTestModule(t, "helper", "database")
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
 	}
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
+	resetTestEnvironment()
 
 	// test failing module start
-	Register("startfail", nil, testFail, testStop(t, "startfail"))
+	Register("startfail", nil, testFail, nil)
 	err = Start()
 	if err == nil {
 		t.Error("should fail")
 	}
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
+	resetTestEnvironment()
 
 	// test failing module stop
-	Register("stopfail", nil, testStart(t, "stopfail"), testFail)
+	Register("stopfail", nil, nil, testFail)
 	err = Start()
 	if err != nil {
 		t.Error("should not fail")
@@ -191,10 +146,7 @@ func testModuleErrors(t *testing.T) {
 		t.Error("should fail")
 	}
 
-	// reset modules
-	modules = make(map[string]*Module)
-	startComplete.UnSet()
-	startCompleteSignal = make(chan struct{})
+	resetTestEnvironment()
 
 	// test help flag
 	HelpFlag = true
@@ -204,4 +156,20 @@ func testModuleErrors(t *testing.T) {
 	}
 	HelpFlag = false
 
+	resetTestEnvironment()
+}
+
+func printModules() { //nolint:unused,deadcode
+	fmt.Printf("All %d modules:\n", len(modules))
+	for _, m := range modules {
+		fmt.Printf("module %s: %+v\n", m.Name, m)
+	}
+}
+
+func resetTestEnvironment() {
+	modules = make(map[string]*Module)
+	shutdownSignal = make(chan struct{})
+	shutdownCompleteSignal = make(chan struct{})
+	shutdownFlag.UnSet()
+	modulesLocked.UnSet()
 }

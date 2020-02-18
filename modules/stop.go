@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	shutdownSignal       = make(chan struct{})
-	shutdownSignalClosed = abool.NewBool(false)
+	shutdownSignal = make(chan struct{})
+	shutdownFlag   = abool.NewBool(false)
 
 	shutdownCompleteSignal = make(chan struct{})
 )
@@ -23,18 +23,19 @@ func ShuttingDown() <-chan struct{} {
 
 // Shutdown stops all modules in the correct order.
 func Shutdown() error {
+	// lock mgmt
+	mgmtLock.Lock()
+	defer mgmtLock.Unlock()
 
-	if shutdownSignalClosed.SetToIf(false, true) {
+	if shutdownFlag.SetToIf(false, true) {
 		close(shutdownSignal)
 	} else {
 		// shutdown was already issued
 		return errors.New("shutdown already initiated")
 	}
 
-	if startComplete.IsSet() {
+	if initialStartCompleted.IsSet() {
 		log.Warning("modules: starting shutdown...")
-		modulesLock.Lock()
-		defer modulesLock.Unlock()
 	} else {
 		log.Warning("modules: aborting, shutting down...")
 	}
@@ -61,46 +62,42 @@ func stopModules() error {
 	// get number of started modules
 	startedCnt := 0
 	for _, m := range modules {
-		if m.Started.IsSet() {
+		if m.Status() >= StatusStarting {
 			startedCnt++
 		}
 	}
 
 	for {
+		waiting := 0
+
 		// find modules to exec
 		for _, m := range modules {
-			if m.ReadyToStop() {
+			switch m.readyToStop() {
+			case statusNothingToDo:
+			case statusWaiting:
+				waiting++
+			case statusReady:
 				execCnt++
-				m.inTransition.Set()
-
-				execM := m
-				go func() {
-					reports <- &report{
-						module: execM,
-						err:    execM.shutdown(),
-					}
-				}()
+				m.stop(reports)
 			}
 		}
 
-		// check for dep loop
-		if execCnt == reportCnt {
-			return fmt.Errorf("modules: dependency loop detected, cannot continue")
-		}
-
-		// wait for reports
-		rep = <-reports
-		rep.module.inTransition.UnSet()
-		if rep.err != nil {
-			lastErr = rep.err
-			log.Warningf("modules: could not stop module %s: %s", rep.module.Name, rep.err)
-		}
-		reportCnt++
-		rep.module.Stopped.Set()
-		log.Infof("modules: stopped %s", rep.module.Name)
-
-		// exit if done
-		if reportCnt == startedCnt {
+		if reportCnt < execCnt {
+			// wait for reports
+			rep = <-reports
+			if rep.err != nil {
+				lastErr = rep.err
+				log.Warningf("modules: could not stop module %s: %s", rep.module.Name, rep.err)
+			}
+			reportCnt++
+			log.Infof("modules: stopped %s", rep.module.Name)
+		} else {
+			// finished
+			if waiting > 0 {
+				// check for dep loop
+				return fmt.Errorf("modules: dependency loop detected, cannot continue")
+			}
+			// return last error
 			return lastErr
 		}
 	}

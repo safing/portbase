@@ -12,7 +12,6 @@ func init() {
 }
 
 func parseFlags() error {
-
 	// parse flags
 	flag.Parse()
 
