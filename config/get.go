@@ -52,7 +52,7 @@ func getValueCache(name string, option *Option, requestedType uint8) (*Option, *
 
 // GetAsString returns a function that returns the wanted string with high performance.
 func GetAsString(name string, fallback string) StringOption {
-	valid := GetValidityFlag()
+	valid := getValidityFlag()
 	option, valueCache := getValueCache(name, nil, OptTypeString)
 	value := fallback
 	if valueCache != nil {
@@ -61,7 +61,7 @@ func GetAsString(name string, fallback string) StringOption {
 
 	return func() string {
 		if !valid.IsSet() {
-			valid = GetValidityFlag()
+			valid = getValidityFlag()
 			option, valueCache = getValueCache(name, option, OptTypeString)
 			if valueCache != nil {
 				value = valueCache.stringVal
@@ -75,7 +75,7 @@ func GetAsString(name string, fallback string) StringOption {
 
 // GetAsStringArray returns a function that returns the wanted string with high performance.
 func GetAsStringArray(name string, fallback []string) StringArrayOption {
-	valid := GetValidityFlag()
+	valid := getValidityFlag()
 	option, valueCache := getValueCache(name, nil, OptTypeStringArray)
 	value := fallback
 	if valueCache != nil {
@@ -84,7 +84,7 @@ func GetAsStringArray(name string, fallback []string) StringArrayOption {
 
 	return func() []string {
 		if !valid.IsSet() {
-			valid = GetValidityFlag()
+			valid = getValidityFlag()
 			option, valueCache = getValueCache(name, option, OptTypeStringArray)
 			if valueCache != nil {
 				value = valueCache.stringArrayVal
@@ -98,7 +98,7 @@ func GetAsStringArray(name string, fallback []string) StringArrayOption {
 
 // GetAsInt returns a function that returns the wanted int with high performance.
 func GetAsInt(name string, fallback int64) IntOption {
-	valid := GetValidityFlag()
+	valid := getValidityFlag()
 	option, valueCache := getValueCache(name, nil, OptTypeInt)
 	value := fallback
 	if valueCache != nil {
@@ -107,7 +107,7 @@ func GetAsInt(name string, fallback int64) IntOption {
 
 	return func() int64 {
 		if !valid.IsSet() {
-			valid = GetValidityFlag()
+			valid = getValidityFlag()
 			option, valueCache = getValueCache(name, option, OptTypeInt)
 			if valueCache != nil {
 				value = valueCache.intVal
@@ -121,7 +121,7 @@ func GetAsInt(name string, fallback int64) IntOption {
 
 // GetAsBool returns a function that returns the wanted int with high performance.
 func GetAsBool(name string, fallback bool) BoolOption {
-	valid := GetValidityFlag()
+	valid := getValidityFlag()
 	option, valueCache := getValueCache(name, nil, OptTypeBool)
 	value := fallback
 	if valueCache != nil {
@@ -130,7 +130,7 @@ func GetAsBool(name string, fallback bool) BoolOption {
 
 	return func() bool {
 		if !valid.IsSet() {
-			valid = GetValidityFlag()
+			valid = getValidityFlag()
 			option, valueCache = getValueCache(name, option, OptTypeBool)
 			if valueCache != nil {
 				value = valueCache.boolVal

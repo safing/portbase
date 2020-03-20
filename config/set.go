@@ -19,8 +19,8 @@ var (
 	validityFlagLock sync.RWMutex
 )
 
-// GetValidityFlag returns a flag that signifies if the configuration has been changed. This flag must not be changed, only read.
-func GetValidityFlag() *abool.AtomicBool {
+// getValidityFlag returns a flag that signifies if the configuration has been changed. This flag must not be changed, only read.
+func getValidityFlag() *abool.AtomicBool {
 	validityFlagLock.RLock()
 	defer validityFlagLock.RUnlock()
 	return validityFlag
