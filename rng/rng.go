@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	modules.Register("random", prep, Start, nil, "base")
+	modules.Register("random", prep, Start, nil)
 }
 
 func prep() error {
