@@ -41,6 +41,7 @@ type Option struct {
 	Name        string
 	Key         string // in path format: category/sub/key
 	Description string
+	Help        string
 
 	OptType        uint8
 	ExpertiseLevel uint8
@@ -52,9 +53,10 @@ type Option struct {
 	ExternalOptType string
 	ValidationRegex string
 
-	activeValue        interface{} // runtime value (loaded from config file or set by user)
-	activeDefaultValue interface{} // runtime default value (may be set internally)
-	compiledRegex      *regexp.Regexp
+	activeValue         *valueCache // runtime value (loaded from config file or set by user)
+	activeDefaultValue  *valueCache // runtime default value (may be set internally)
+	activeFallbackValue *valueCache // default value from option registration
+	compiledRegex       *regexp.Regexp
 }
 
 // Export expors an option to a Record.

@@ -19,7 +19,8 @@ var (
 	validityFlagLock sync.RWMutex
 )
 
-func getValidityFlag() *abool.AtomicBool {
+// GetValidityFlag returns a flag that signifies if the configuration has been changed. This flag must not be changed, only read.
+func GetValidityFlag() *abool.AtomicBool {
 	validityFlagLock.RLock()
 	defer validityFlagLock.RUnlock()
 	return validityFlag
@@ -41,14 +42,24 @@ func signalChanges() {
 
 // setConfig sets the (prioritized) user defined config.
 func setConfig(newValues map[string]interface{}) error {
+	var firstErr error
+	var errCnt int
+
 	optionsLock.Lock()
 	for key, option := range options {
 		newValue, ok := newValues[key]
 		option.Lock()
+		option.activeValue = nil
 		if ok {
-			option.activeValue = newValue
-		} else {
-			option.activeValue = nil
+			valueCache, err := validateValue(option, newValue)
+			if err == nil {
+				option.activeValue = valueCache
+			} else {
+				errCnt++
+				if firstErr == nil {
+					firstErr = err
+				}
+			}
 		}
 		option.Unlock()
 	}
@@ -56,19 +67,37 @@ func setConfig(newValues map[string]interface{}) error {
 
 	signalChanges()
 	go pushFullUpdate()
+
+	if firstErr != nil {
+		if errCnt > 0 {
+			return fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+		}
+		return firstErr
+	}
+
 	return nil
 }
 
 // SetDefaultConfig sets the (fallback) default config.
 func SetDefaultConfig(newValues map[string]interface{}) error {
+	var firstErr error
+	var errCnt int
+
 	optionsLock.Lock()
 	for key, option := range options {
 		newValue, ok := newValues[key]
 		option.Lock()
+		option.activeDefaultValue = nil
 		if ok {
-			option.activeDefaultValue = newValue
-		} else {
-			option.activeDefaultValue = nil
+			valueCache, err := validateValue(option, newValue)
+			if err == nil {
+				option.activeDefaultValue = valueCache
+			} else {
+				errCnt++
+				if firstErr == nil {
+					firstErr = err
+				}
+			}
 		}
 		option.Unlock()
 	}
@@ -76,51 +105,15 @@ func SetDefaultConfig(newValues map[string]interface{}) error {
 
 	signalChanges()
 	go pushFullUpdate()
-	return nil
-}
 
-func validateValue(option *Option, value interface{}) error {
-	switch v := value.(type) {
-	case string:
-		if option.OptType != OptTypeString {
-			return fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+	if firstErr != nil {
+		if errCnt > 0 {
+			return fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
 		}
-		if option.compiledRegex != nil {
-			if !option.compiledRegex.MatchString(v) {
-				return fmt.Errorf("validation failed: string \"%s\" did not match regex for option %s", v, option.Key)
-			}
-		}
-		return nil
-	case []string:
-		if option.OptType != OptTypeStringArray {
-			return fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
-		}
-		if option.compiledRegex != nil {
-			for pos, entry := range v {
-				if !option.compiledRegex.MatchString(entry) {
-					return fmt.Errorf("validation failed: string \"%s\" at index %d did not match regex for option %s", entry, pos, option.Key)
-				}
-			}
-		}
-		return nil
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		if option.OptType != OptTypeInt {
-			return fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
-		}
-		if option.compiledRegex != nil {
-			if !option.compiledRegex.MatchString(fmt.Sprintf("%d", v)) {
-				return fmt.Errorf("validation failed: number \"%d\" did not match regex for option %s", v, option.Key)
-			}
-		}
-		return nil
-	case bool:
-		if option.OptType != OptTypeBool {
-			return fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
-		}
-		return nil
-	default:
-		return fmt.Errorf("invalid option value type: %T", value)
+		return firstErr
 	}
+
+	return nil
 }
 
 // SetConfigOption sets a single value in the (prioritized) user defined config.
@@ -140,9 +133,10 @@ func setConfigOption(key string, value interface{}, push bool) (err error) {
 	if value == nil {
 		option.activeValue = nil
 	} else {
-		err = validateValue(option, value)
+		var valueCache *valueCache
+		valueCache, err = validateValue(option, value)
 		if err == nil {
-			option.activeValue = value
+			option.activeValue = valueCache
 		}
 	}
 	option.Unlock()
@@ -175,9 +169,10 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 	if value == nil {
 		option.activeDefaultValue = nil
 	} else {
-		err = validateValue(option, value)
+		var valueCache *valueCache
+		valueCache, err = validateValue(option, value)
 		if err == nil {
-			option.activeDefaultValue = value
+			option.activeDefaultValue = valueCache
 		}
 	}
 	option.Unlock()

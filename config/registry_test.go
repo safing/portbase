@@ -15,7 +15,7 @@ func TestRegistry(t *testing.T) {
 		ReleaseLevel:    ReleaseLevelStable,
 		ExpertiseLevel:  ExpertiseLevelUser,
 		OptType:         OptTypeString,
-		DefaultValue:    "default",
+		DefaultValue:    "water",
 		ValidationRegex: "^(banana|water)$",
 	}); err != nil {
 		t.Error(err)
