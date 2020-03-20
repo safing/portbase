@@ -384,9 +384,9 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 				default:
 					api.send(opID, dbMsgTypeUpd, r.Key(), data)
 				}
-			} else if sub.Err != nil {
+			} else {
 				// sub feed ended
-				api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
+				api.send(opID, dbMsgTypeDone, "", nil)
 			}
 		}
 	}
