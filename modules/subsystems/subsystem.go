@@ -14,6 +14,7 @@ type Subsystem struct { //nolint:maligned // not worth the effort
 	record.Base
 	sync.Mutex
 
+	ID          string
 	Name        string
 	Description string
 	module      *modules.Module
@@ -22,7 +23,7 @@ type Subsystem struct { //nolint:maligned // not worth the effort
 	Dependencies  []*ModuleStatus
 	FailureStatus uint8
 
-	ToggleOptionKey string // empty == forced on
+	ToggleOptionKey string
 	toggleOption    *config.Option
 	toggleValue     func() bool
 	ExpertiseLevel  uint8 // copied from toggleOption
@@ -49,7 +50,9 @@ type ModuleStatus struct {
 // Save saves the Subsystem Status to the database.
 func (sub *Subsystem) Save() {
 	if databaseKeySpace != "" {
-		// sub.SetKey() // FIXME
+		if !sub.KeyIsSet() {
+			sub.SetKey(databaseKeySpace + sub.ID)
+		}
 		err := db.Put(sub)
 		if err != nil {
 			log.Errorf("subsystems: could not save subsystem status to database: %s", err)

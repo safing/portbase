@@ -2,7 +2,6 @@ package subsystems
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -22,25 +21,26 @@ var (
 	handlingConfigChanges = abool.New()
 )
 
-// Register registers a new subsystem. The given option must be a bool option. Should be called in the module's prep function. The config option must not yet be registered and will be registered for you.
-func Register(name, description string, module *modules.Module, configKeySpace string, option *config.Option) error {
+// Register registers a new subsystem. The given option must be a bool option. Should be called in init() directly after the modules.Register() function. The config option must not yet be registered and will be registered for you. Pass a nil option to force enable.
+func Register(id, name, description string, module *modules.Module, configKeySpace string, option *config.Option) {
 	// lock slice and map
 	subsystemsLock.Lock()
 	defer subsystemsLock.Unlock()
 
 	// check if registration is closed
 	if subsystemsLocked.IsSet() {
-		return errors.New("subsystems can only be registered in prep phase")
+		panic("subsystems can only be registered in prep phase or earlier")
 	}
 
 	// check if already registered
 	_, ok := subsystemsMap[name]
 	if ok {
-		return fmt.Errorf(`subsystem "%s" already registered`, name)
+		panic(fmt.Sprintf(`subsystem "%s" already registered`, name))
 	}
 
 	// create new
 	new := &Subsystem{
+		ID:          id,
 		Name:        name,
 		Description: description,
 		module:      module,
@@ -60,21 +60,27 @@ func Register(name, description string, module *modules.Module, configKeySpace s
 	if option != nil {
 		err := config.Register(option)
 		if err != nil {
-			return fmt.Errorf("failed to register config: %s", err)
+			panic(fmt.Sprintf("failed to register config: %s", err))
 		}
+		new.toggleValue = config.GetAsBool(new.ToggleOptionKey, false)
+	} else {
+		// force enabled
+		new.toggleValue = func() bool { return true }
 	}
-	new.toggleValue = config.GetAsBool(new.ToggleOptionKey, false)
 
 	// add to lists
 	subsystemsMap[name] = new
 	subsystems = append(subsystems, new)
-
-	return nil
 }
 
 func handleModuleChanges(m *modules.Module) {
 	// check if ready
 	if !subsystemsLocked.IsSet() {
+		return
+	}
+
+	// check if shutting down
+	if modules.IsShuttingDown() {
 		return
 	}
 

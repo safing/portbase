@@ -1,6 +1,9 @@
 package subsystems
 
 import (
+	"context"
+	"flag"
+	"fmt"
 	"strings"
 
 	"github.com/safing/portbase/database"
@@ -14,7 +17,8 @@ const (
 )
 
 var (
-	module *modules.Module
+	module         *modules.Module
+	printGraphFlag bool
 
 	databaseKeySpace string
 	db               = database.NewInterface(nil)
@@ -30,9 +34,16 @@ func init() {
 
 	// register event for changes in the subsystem
 	module.RegisterEvent(subsystemsStatusChange)
+
+	flag.BoolVar(&printGraphFlag, "print-subsystem-graph", false, "print the subsystem module dependency graph")
 }
 
 func prep() error {
+	if printGraphFlag {
+		printGraph()
+		return modules.ErrCleanExit
+	}
+
 	return module.RegisterEventHook("config", configChangeEvent, "control subsystems", handleConfigChanges)
 }
 
@@ -54,7 +65,10 @@ func start() error {
 	subsystemsLock.Unlock()
 
 	// apply config
-	return handleConfigChanges(module.Ctx, nil)
+	module.StartWorker("initial subsystem configuration", func(ctx context.Context) error {
+		return handleConfigChanges(module.Ctx, nil)
+	})
+	return nil
 }
 
 func (sub *Subsystem) addDependencies(module *modules.Module, seen map[string]struct{}) {
@@ -78,6 +92,26 @@ func SetDatabaseKeySpace(keySpace string) {
 
 		if !strings.HasSuffix(databaseKeySpace, "/") {
 			databaseKeySpace += "/"
+		}
+	}
+}
+
+func printGraph() {
+	// mark roots
+	for _, sub := range subsystems {
+		sub.module.Enable() // mark as tree root
+	}
+	// print
+	for _, sub := range subsystems {
+		printModuleGraph("", sub.module, true)
+	}
+}
+
+func printModuleGraph(prefix string, module *modules.Module, root bool) {
+	fmt.Printf("%s├── %s\n", prefix, module.Name)
+	if root || !module.Enabled() {
+		for _, dep := range module.Dependencies() {
+			printModuleGraph(fmt.Sprintf("│   %s", prefix), dep, false)
 		}
 	}
 }

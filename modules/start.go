@@ -48,7 +48,9 @@ func Start() error {
 	// parse flags
 	err = parseFlags()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "CRITICAL ERROR: failed to parse flags: %s\n", err)
+		if err != ErrCleanExit {
+			fmt.Fprintf(os.Stderr, "CRITICAL ERROR: failed to parse flags: %s\n", err)
+		}
 		return err
 	}
 
@@ -92,7 +94,11 @@ func Start() error {
 	}
 
 	// complete startup
-	log.Infof("modules: started %d modules", len(modules))
+	if moduleMgmtEnabled.IsSet() {
+		log.Info("modules: initiated subsystems manager")
+	} else {
+		log.Infof("modules: started %d modules", len(modules))
+	}
 
 	go taskQueueHandler()
 	go taskScheduleHandler()

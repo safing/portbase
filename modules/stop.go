@@ -16,6 +16,11 @@ var (
 	shutdownCompleteSignal = make(chan struct{})
 )
 
+// IsShuttingDown returns whether the global shutdown is in progress.
+func IsShuttingDown() bool {
+	return shutdownFlag.IsSet()
+}
+
 // ShuttingDown returns a channel read on the global shutdown signal.
 func ShuttingDown() <-chan struct{} {
 	return shutdownSignal
