@@ -18,16 +18,13 @@ var (
 )
 
 func init() {
+	// register base module, for database initialization
+	modules.Register("base", nil, nil, nil)
+
 	// register module
 	module = modules.Register("template", prep, start, stop) // add dependencies...
-
-	// register events that other modules can subscribe to
-	module.RegisterEvent(eventStateUpdate)
-}
-
-func prep() error {
-	// register module as subsystem
-	err := subsystems.Register(
+	subsystems.Register(
+		"template-subsystem",                           // ID
 		"Template Subsystem",                           // name
 		"This subsystem is a template for quick setup", // description
 		module,
@@ -40,12 +37,14 @@ func prep() error {
 			DefaultValue: false,
 		},
 	)
-	if err != nil {
-		return err
-	}
 
+	// register events that other modules can subscribe to
+	module.RegisterEvent(eventStateUpdate)
+}
+
+func prep() error {
 	// register options
-	err = config.Register(&config.Option{
+	err := config.Register(&config.Option{
 		Name:            "language",
 		Key:             "config:template/language",
 		Description:     "Sets the language for the template [TEMPLATE]",
@@ -99,6 +98,7 @@ func serviceWorker(ctx context.Context) error {
 				return err
 			}
 		case <-ctx.Done():
+			return nil
 		}
 	}
 }

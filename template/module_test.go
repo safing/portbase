@@ -11,30 +11,39 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	// enable module for testing
+	module.Enable()
+
 	// tmp dir for data root (db & config)
 	tmpDir, err := ioutil.TempDir("", "portbase-testing-")
-	// initialize data dir
-	if err == nil {
-		err = dataroot.Initialize(tmpDir, 0755)
-	}
-	// start modules
-	if err == nil {
-		err = modules.Start()
-	}
-	// handle setup error
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to setup test: %s", err)
+		fmt.Fprintf(os.Stderr, "failed to create tmp dir: %s\n", err)
+		os.Exit(1)
+	}
+	// initialize data dir
+	err = dataroot.Initialize(tmpDir, 0755)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize data root: %s\n", err)
 		os.Exit(1)
 	}
 
-	// run tests
-	exitCode := m.Run()
+	// start modules
+	var exitCode int
+	err = modules.Start()
+	if err != nil {
+		// starting failed
+		fmt.Fprintf(os.Stderr, "failed to setup test: %s\n", err)
+		exitCode = 1
+	} else {
+		// run tests
+		exitCode = m.Run()
+	}
 
 	// shutdown
 	_ = modules.Shutdown()
 	if modules.GetExitStatusCode() != 0 {
 		exitCode = modules.GetExitStatusCode()
-		fmt.Fprintf(os.Stderr, "failed to cleanly shutdown test: %s", err)
+		fmt.Fprintf(os.Stderr, "failed to cleanly shutdown test: %s\n", err)
 	}
 	// clean up and exit
 	os.RemoveAll(tmpDir)
