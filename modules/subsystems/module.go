@@ -56,6 +56,10 @@ func start() error {
 	// go through all dependencies
 	seen := make(map[string]struct{})
 	for _, sub := range subsystems {
+		// mark subsystem module as seen
+		seen[sub.module.Name] = struct{}{}
+	}
+	for _, sub := range subsystems {
 		// add main module
 		sub.Dependencies = append(sub.Dependencies, statusFromModule(sub.module))
 		// add dependencies
@@ -97,6 +101,8 @@ func SetDatabaseKeySpace(keySpace string) {
 }
 
 func printGraph() {
+	// unmark subsystems module
+	module.Disable()
 	// mark roots
 	for _, sub := range subsystems {
 		sub.module.Enable() // mark as tree root

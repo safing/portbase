@@ -26,20 +26,18 @@ func TestSubsystems(t *testing.T) {
 	// register
 
 	baseModule := modules.Register("base", nil, nil, nil)
-	err = Register(
+	Register(
+		"base",
 		"Base",
 		"Framework Groundwork",
 		baseModule,
 		"config:base",
 		nil,
 	)
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
 
 	feature1 := modules.Register("feature1", nil, nil, nil)
-	err = Register(
+	Register(
+		"feature-one",
 		"Feature One",
 		"Provides feature one",
 		feature1,
@@ -52,14 +50,11 @@ func TestSubsystems(t *testing.T) {
 			DefaultValue: false,
 		},
 	)
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
 	sub1 := subsystemsMap["Feature One"]
 
 	feature2 := modules.Register("feature2", nil, nil, nil)
-	err = Register(
+	Register(
+		"feature-two",
 		"Feature Two",
 		"Provides feature two",
 		feature2,
@@ -72,10 +67,6 @@ func TestSubsystems(t *testing.T) {
 			DefaultValue: false,
 		},
 	)
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
 
 	// start
 	err = modules.Start()

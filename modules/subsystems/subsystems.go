@@ -135,6 +135,11 @@ func handleConfigChanges(ctx context.Context, data interface{}) error {
 		return nil
 	}
 
+	// don't do anything if we are already shutting down globally
+	if modules.IsShuttingDown() {
+		return nil
+	}
+
 	// only run one instance at any time
 	subsystemsLock.Lock()
 	defer subsystemsLock.Unlock()
