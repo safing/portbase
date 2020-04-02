@@ -162,14 +162,6 @@
   version = "v0.8.1"
 
 [[projects]]
-  branch = "develop"
-  digest = "1:d88649ff4a4a0746857dd9e39915aedddce2b08e442ac131a91e573cd45bde93"
-  name = "github.com/safing/portmaster"
-  packages = ["core/structure"]
-  pruneopts = "UT"
-  revision = "26c307b7a0db78d91b35ef9020706f106ebef8b6"
-
-[[projects]]
   digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
   name = "github.com/satori/go.uuid"
   packages = ["."]
@@ -332,7 +324,6 @@
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
     "github.com/hashicorp/go-version",
-    "github.com/safing/portmaster/core/structure",
     "github.com/satori/go.uuid",
     "github.com/seehuhn/fortuna",
     "github.com/shirou/gopsutil/host",
