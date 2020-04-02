@@ -11,7 +11,7 @@ var (
 )
 
 func init() {
-	module = modules.Register("notifications", nil, start, nil, "database")
+	module = modules.Register("notifications", nil, start, nil, "database", "base")
 }
 
 func start() error {

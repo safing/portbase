@@ -29,7 +29,7 @@ func init() {
 	modules.EnableModuleManagement(handleModuleChanges)
 
 	// register module and enable it for starting
-	module = modules.Register("subsystems", prep, start, nil, "config", "database")
+	module = modules.Register("subsystems", prep, start, nil, "config", "database", "base")
 	module.Enable()
 
 	// register event for changes in the subsystem
