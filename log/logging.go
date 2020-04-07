@@ -137,12 +137,14 @@ func Start() (err error) {
 
 	logBuffer = make(chan *logLine, 1024)
 
-	initialLogLevel := ParseLevel(logLevelFlag)
-	if initialLogLevel > 0 {
+	if logLevelFlag != "" {
+		initialLogLevel := ParseLevel(logLevelFlag)
+		if initialLogLevel == 0 {
+			fmt.Fprintf(os.Stderr, "log warning: invalid log level \"%s\", falling back to level info\n", logLevelFlag)
+			initialLogLevel = InfoLevel
+		}
+
 		SetLogLevel(initialLogLevel)
-	} else {
-		err = fmt.Errorf("log warning: invalid log level \"%s\", falling back to level info", logLevelFlag)
-		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 	}
 
 	// get and set file loglevels
