@@ -40,6 +40,26 @@ func (s *Sinkhole) Put(m record.Record) error {
 	return nil
 }
 
+// PutMany stores many records in the database.
+func (s *Sinkhole) PutMany() (batch chan record.Record, err chan error) {
+	batch = make(chan record.Record, 100)
+	err = make(chan error, 1)
+
+	// start handler
+	go func() {
+		for {
+			r := <-batch
+			// finished?
+			if r == nil {
+				err <- nil
+				return
+			}
+		}
+	}()
+
+	return
+}
+
 // Delete deletes a record from the database.
 func (s *Sinkhole) Delete(key string) error {
 	return nil

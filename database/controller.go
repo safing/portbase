@@ -137,6 +137,28 @@ func (c *Controller) Put(r record.Record) (err error) {
 	return nil
 }
 
+// PutMany stores many records in the database.
+func (c *Controller) PutMany() (batch chan record.Record, err chan error) {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		batch = make(chan record.Record)
+		err = make(chan error, 1)
+		err <- ErrShuttingDown
+		return
+	}
+
+	if c.ReadOnly() {
+		batch = make(chan record.Record)
+		err = make(chan error, 1)
+		err <- ErrReadOnly
+		return
+	}
+
+	return c.storage.PutMany()
+}
+
 // Query executes the given query on the database.
 func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	c.readLock.RLock()

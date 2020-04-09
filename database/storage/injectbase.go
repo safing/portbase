@@ -25,6 +25,14 @@ func (i *InjectBase) Put(m record.Record) error {
 	return errNotImplemented
 }
 
+// PutMany stores many records in the database.
+func (i *InjectBase) PutMany() (batch chan record.Record, err chan error) {
+	batch = make(chan record.Record)
+	err = make(chan error, 1)
+	err <- errNotImplemented
+	return
+}
+
 // Delete deletes a record from the database.
 func (i *InjectBase) Delete(key string) error {
 	return errNotImplemented

@@ -52,6 +52,33 @@ func (hm *HashMap) Put(r record.Record) error {
 	return nil
 }
 
+// PutMany stores many records in the database.
+func (hm *HashMap) PutMany() (batch chan record.Record, err chan error) {
+	hm.dbLock.Lock()
+	defer hm.dbLock.Unlock()
+	// we could lock for every record, but we want to have the same behaviour
+	// as the other storage backends, especially for testing.
+
+	batch = make(chan record.Record, 100)
+	err = make(chan error, 1)
+
+	// start handler
+	go func() {
+		for {
+			r := <-batch
+			// finished?
+			if r == nil {
+				err <- nil
+				return
+			}
+			// put
+			hm.db[r.DatabaseKey()] = r
+		}
+	}()
+
+	return
+}
+
 // Delete deletes a record from the database.
 func (hm *HashMap) Delete(key string) error {
 	hm.dbLock.Lock()

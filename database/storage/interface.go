@@ -10,6 +10,7 @@ import (
 type Interface interface {
 	Get(key string) (record.Record, error)
 	Put(m record.Record) error
+	PutMany() (batch chan record.Record, err chan error)
 	Delete(key string) error
 	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
 
