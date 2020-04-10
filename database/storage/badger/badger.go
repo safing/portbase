@@ -94,15 +94,6 @@ func (b *Badger) Put(r record.Record) error {
 	return err
 }
 
-// PutMany stores many records in the database.
-func (b *Badger) PutMany() (batch chan record.Record, err chan error) {
-	// TODO: implement PutMany
-	batch = make(chan record.Record)
-	err = make(chan error, 1)
-	err <- errors.New("not implemented")
-	return
-}
-
 // Delete deletes a record from the database.
 func (b *Badger) Delete(key string) error {
 	return b.db.Update(func(txn *badger.Txn) error {

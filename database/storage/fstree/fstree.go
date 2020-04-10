@@ -131,15 +131,6 @@ func (fst *FSTree) Put(r record.Record) error {
 	return nil
 }
 
-// PutMany stores many records in the database.
-func (fst *FSTree) PutMany() (batch chan record.Record, err chan error) {
-	// TODO: implement PutMany
-	batch = make(chan record.Record)
-	err = make(chan error, 1)
-	err <- errors.New("not implemented")
-	return
-}
-
 // Delete deletes a record from the database.
 func (fst *FSTree) Delete(key string) error {
 	dstPath, err := fst.buildFilePath(key, true)

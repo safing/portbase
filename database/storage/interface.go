@@ -10,7 +10,6 @@ import (
 type Interface interface {
 	Get(key string) (record.Record, error)
 	Put(m record.Record) error
-	PutMany() (batch chan record.Record, err chan error)
 	Delete(key string) error
 	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
 
@@ -19,4 +18,9 @@ type Interface interface {
 	Maintain() error
 	MaintainThorough() error
 	Shutdown() error
+}
+
+// Batcher defines the database storage API for backends that support batch operations.
+type Batcher interface {
+	PutMany() (batch chan<- record.Record, errs <-chan error)
 }

@@ -106,20 +106,14 @@ func (b *BBolt) Put(r record.Record) error {
 }
 
 // PutMany stores many records in the database.
-func (b *BBolt) PutMany() (batch chan record.Record, errCh chan error) {
-	batch = make(chan record.Record, 100)
-	errCh = make(chan error, 1)
+func (b *BBolt) PutMany() (chan<- record.Record, <-chan error) {
+	batch := make(chan record.Record, 100)
+	errs := make(chan error, 1)
 
 	go func() {
 		err := b.db.Batch(func(tx *bbolt.Tx) error {
 			bucket := tx.Bucket(bucketName)
-			for {
-				r := <-batch
-				// finished?
-				if r == nil {
-					return nil
-				}
-
+			for r := range batch {
 				// marshal
 				data, txErr := r.MarshalRecord(r)
 				if txErr != nil {
@@ -132,11 +126,12 @@ func (b *BBolt) PutMany() (batch chan record.Record, errCh chan error) {
 					return txErr
 				}
 			}
+			return nil
 		})
-		errCh <- err
+		errs <- err
 	}()
 
-	return batch, errCh
+	return batch, errs
 }
 
 // Delete deletes a record from the database.

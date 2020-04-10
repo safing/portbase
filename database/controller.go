@@ -138,25 +138,29 @@ func (c *Controller) Put(r record.Record) (err error) {
 }
 
 // PutMany stores many records in the database.
-func (c *Controller) PutMany() (batch chan record.Record, err chan error) {
+func (c *Controller) PutMany() (chan<- record.Record, <-chan error) {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
 
 	if shuttingDown.IsSet() {
-		batch = make(chan record.Record)
-		err = make(chan error, 1)
-		err <- ErrShuttingDown
-		return
+		errs := make(chan error, 1)
+		errs <- ErrShuttingDown
+		return make(chan record.Record), errs
 	}
 
 	if c.ReadOnly() {
-		batch = make(chan record.Record)
-		err = make(chan error, 1)
-		err <- ErrReadOnly
-		return
+		errs := make(chan error, 1)
+		errs <- ErrReadOnly
+		return make(chan record.Record), errs
 	}
 
-	return c.storage.PutMany()
+	if batcher, ok := c.storage.(storage.Batcher); ok {
+		return batcher.PutMany()
+	}
+
+	errs := make(chan error, 1)
+	errs <- ErrNotImplemented
+	return make(chan record.Record), errs
 }
 
 // Query executes the given query on the database.

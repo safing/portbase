@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tevino/abool"
+
 	"github.com/bluele/gcache"
 
 	"github.com/safing/portbase/database/accessor"
@@ -245,16 +247,18 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	}
 
 	// start database access
-	dbBatch, errCh := db.PutMany()
+	dbBatch, errs := db.PutMany()
+	finished := abool.New()
+	var internalErr error
 
 	// interface options proxy
 	go func() {
+		defer close(dbBatch) // signify that we are finished
 		for {
 			select {
 			case r := <-interfaceBatch:
 				// finished?
 				if r == nil {
-					close(dbBatch) // signify that we are finished
 					return
 				}
 				// apply options
@@ -263,27 +267,47 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 				dbBatch <- r
 			case <-time.After(1 * time.Second):
 				// bail out
-				errCh <- errors.New("timeout: putmany unused for too long")
-				close(dbBatch) // signify that we are finished
+				internalErr = errors.New("timeout: putmany unused for too long")
+				finished.Set()
 				return
 			}
 		}
 	}()
 
 	return func(r record.Record) error {
-		if r == nil {
-			interfaceBatch <- nil // signify that we are finished
-			// do not close, as this fn could be called again with nil.
-			return <-errCh
+		// finished?
+		if finished.IsSet() {
+			// check for internal error
+			if internalErr != nil {
+				return internalErr
+			}
+			// check for previous error
+			select {
+			case err := <-errs:
+				return err
+			default:
+				return errors.New("batch is closed")
+			}
 		}
 
+		// finish?
+		if r == nil {
+			finished.Set()
+			interfaceBatch <- nil // signify that we are finished
+			// do not close, as this fn could be called again with nil.
+			return <-errs
+		}
+
+		// check record scope
 		if r.DatabaseName() != dbName {
 			return errors.New("record out of database scope")
 		}
+
+		// submit
 		select {
 		case interfaceBatch <- r:
 			return nil
-		case err := <-errCh:
+		case err := <-errs:
 			return err
 		}
 	}
