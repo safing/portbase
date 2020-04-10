@@ -1,16 +1,10 @@
 package record
 
-import "sync"
+import (
+	"sync"
+)
 
 type TestRecord struct {
 	Base
-	lock sync.Mutex
-}
-
-func (tm *TestRecord) Lock() {
-	tm.lock.Lock()
-}
-
-func (tm *TestRecord) Unlock() {
-	tm.lock.Unlock()
+	sync.Mutex
 }

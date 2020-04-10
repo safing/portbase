@@ -19,3 +19,8 @@ type Interface interface {
 	MaintainThorough() error
 	Shutdown() error
 }
+
+// Batcher defines the database storage API for backends that support batch operations.
+type Batcher interface {
+	PutMany() (batch chan<- record.Record, errs <-chan error)
+}
