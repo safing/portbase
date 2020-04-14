@@ -40,13 +40,10 @@ func Register(id, name, description string, module *modules.Module, configKeySpa
 
 	// create new
 	new := &Subsystem{
-		ID:          id,
-		Name:        name,
-		Description: description,
-		module:      module,
-
-		Status: statusFromModule(module),
-
+		ID:             id,
+		Name:           name,
+		Description:    description,
+		module:         module,
 		toggleOption:   option,
 		ConfigKeySpace: configKeySpace,
 	}
@@ -89,12 +86,7 @@ func handleModuleChanges(m *modules.Module) {
 	var moduleStatus *ModuleStatus
 subsystemLoop:
 	for _, subsystem := range subsystems {
-		if m.Name == subsystem.Status.Name {
-			moduleSubsystem = subsystem
-			moduleStatus = subsystem.Status
-			break subsystemLoop
-		}
-		for _, status := range subsystem.Dependencies {
+		for _, status := range subsystem.Modules {
 			if m.Name == status.Name {
 				moduleSubsystem = subsystem
 				moduleStatus = status

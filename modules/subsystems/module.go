@@ -61,7 +61,7 @@ func start() error {
 	}
 	for _, sub := range subsystems {
 		// add main module
-		sub.Dependencies = append(sub.Dependencies, statusFromModule(sub.module))
+		sub.Modules = append(sub.Modules, statusFromModule(sub.module))
 		// add dependencies
 		sub.addDependencies(sub.module, seen)
 	}
@@ -80,7 +80,7 @@ func (sub *Subsystem) addDependencies(module *modules.Module, seen map[string]st
 		_, ok := seen[module.Name]
 		if !ok {
 			// add dependency to modules
-			sub.Dependencies = append(sub.Dependencies, statusFromModule(module))
+			sub.Modules = append(sub.Modules, statusFromModule(module))
 			// mark as seen
 			seen[module.Name] = struct{}{}
 			// add further dependencies

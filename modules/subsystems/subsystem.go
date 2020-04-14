@@ -19,9 +19,8 @@ type Subsystem struct { //nolint:maligned // not worth the effort
 	Description string
 	module      *modules.Module
 
-	Status        *ModuleStatus
-	Dependencies  []*ModuleStatus
-	FailureStatus uint8
+	Modules       []*ModuleStatus
+	FailureStatus uint8 // summary: worst status
 
 	ToggleOptionKey string
 	toggleOption    *config.Option
@@ -103,10 +102,7 @@ func compareAndUpdateStatus(module *modules.Module, status *ModuleStatus) (chang
 func (sub *Subsystem) makeSummary() {
 	// find worst failing module
 	worstFailing := &ModuleStatus{}
-	if sub.Status.FailureStatus > worstFailing.FailureStatus {
-		worstFailing = sub.Status
-	}
-	for _, depStatus := range sub.Dependencies {
+	for _, depStatus := range sub.Modules {
 		if depStatus.FailureStatus > worstFailing.FailureStatus {
 			worstFailing = depStatus
 		}
