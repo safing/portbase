@@ -13,6 +13,21 @@ type valueCache struct {
 	boolVal        bool
 }
 
+func (vc *valueCache) getData(opt *Option) interface{} {
+	switch opt.OptType {
+	case OptTypeBool:
+		return vc.boolVal
+	case OptTypeInt:
+		return vc.intVal
+	case OptTypeString:
+		return vc.stringVal
+	case OptTypeStringArray:
+		return vc.stringArrayVal
+	default:
+		return nil
+	}
+}
+
 func validateValue(option *Option, value interface{}) (*valueCache, error) { //nolint:gocyclo
 	switch v := value.(type) {
 	case string:
