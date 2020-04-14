@@ -93,6 +93,7 @@ func (n *Notification) Save() *Notification {
 	nots[n.ID] = n
 
 	// push update
+	log.Tracef("notifications: pushing update for %s to subscribers", n.Key())
 	dbController.PushUpdate(n)
 
 	// persist
@@ -152,10 +153,11 @@ func (n *Notification) MakeAck() *Notification {
 // Response waits for the user to respond to the notification and returns the selected action.
 func (n *Notification) Response() <-chan string {
 	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	if n.actionTrigger == nil {
 		n.actionTrigger = make(chan string)
 	}
-	n.lock.Unlock()
 
 	return n.actionTrigger
 }
@@ -213,10 +215,11 @@ func (n *Notification) Delete() error {
 // Expired notifies the caller when the notification has expired.
 func (n *Notification) Expired() <-chan struct{} {
 	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	if n.expiredTrigger == nil {
 		n.expiredTrigger = make(chan struct{})
 	}
-	n.lock.Unlock()
 
 	return n.expiredTrigger
 }
