@@ -9,7 +9,7 @@ import (
 // Interface defines the database storage API.
 type Interface interface {
 	Get(key string) (record.Record, error)
-	Put(m record.Record) error
+	Put(m record.Record) (record.Record, error)
 	Delete(key string) error
 	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
 

@@ -82,16 +82,19 @@ func (b *Badger) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (b *Badger) Put(r record.Record) error {
+func (b *Badger) Put(r record.Record) (record.Record, error) {
 	data, err := r.MarshalRecord(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = b.db.Update(func(txn *badger.Txn) error {
 		return txn.Set([]byte(r.DatabaseKey()), data)
 	})
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 // Delete deletes a record from the database.

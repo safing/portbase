@@ -36,26 +36,30 @@ func (s *StorageInterface) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (s *StorageInterface) Put(r record.Record) error {
+func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 	if r.Meta().Deleted > 0 {
-		return setConfigOption(r.DatabaseKey(), nil, false)
+		return r, setConfigOption(r.DatabaseKey(), nil, false)
 	}
 
 	acc := r.GetAccessor(r)
 	if acc == nil {
-		return errors.New("invalid data")
+		return nil, errors.New("invalid data")
 	}
 
 	val, ok := acc.Get("Value")
 	if !ok || val == nil {
-		return setConfigOption(r.DatabaseKey(), nil, false)
+		err := setConfigOption(r.DatabaseKey(), nil, false)
+		if err != nil {
+			return nil, err
+		}
+		return s.Get(r.DatabaseKey())
 	}
 
 	optionsLock.RLock()
 	option, ok := options[r.DatabaseKey()]
 	optionsLock.RUnlock()
 	if !ok {
-		return errors.New("config option does not exist")
+		return nil, errors.New("config option does not exist")
 	}
 
 	var value interface{}
@@ -70,14 +74,14 @@ func (s *StorageInterface) Put(r record.Record) error {
 		value, ok = acc.GetBool("Value")
 	}
 	if !ok {
-		return errors.New("received invalid value in \"Value\"")
+		return nil, errors.New("received invalid value in \"Value\"")
 	}
 
 	err := setConfigOption(r.DatabaseKey(), value, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return option.Export()
 }
 
 // Delete deletes a record from the database.

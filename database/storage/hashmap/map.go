@@ -44,12 +44,12 @@ func (hm *HashMap) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (hm *HashMap) Put(r record.Record) error {
+func (hm *HashMap) Put(r record.Record) (record.Record, error) {
 	hm.dbLock.Lock()
 	defer hm.dbLock.Unlock()
 
 	hm.db[r.DatabaseKey()] = r
-	return nil
+	return r, nil
 }
 
 // PutMany stores many records in the database.
