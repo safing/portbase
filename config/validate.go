@@ -70,7 +70,8 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
 		}
 		if option.compiledRegex != nil {
-			if !option.compiledRegex.MatchString(fmt.Sprintf("%d", v)) {
+			// we need to use %v here so we handle float and int correctly.
+			if !option.compiledRegex.MatchString(fmt.Sprintf("%v", v)) {
 				return nil, fmt.Errorf("validation of option %s failed: number \"%d\" did not match validation regex", option.Key, v)
 			}
 		}
