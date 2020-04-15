@@ -41,7 +41,7 @@ func writeLine(line *logLine, duplicates uint64) {
 }
 
 func startWriter() {
-	fmt.Println(fmt.Sprintf("%s%s %s BOF%s", InfoLevel.color(), time.Now().Format(timeFormat), rightArrow, endColor()))
+	fmt.Printf("%s%s %s BOF%s\n", InfoLevel.color(), time.Now().Format(timeFormat), rightArrow, endColor())
 
 	shutdownWaitGroup.Add(1)
 	go writerManager()
@@ -168,7 +168,7 @@ func finalizeWriting() {
 		case line := <-logBuffer:
 			writeLine(line, 0)
 		case <-time.After(10 * time.Millisecond):
-			fmt.Println(fmt.Sprintf("%s%s %s EOF%s", InfoLevel.color(), time.Now().Format(timeFormat), leftArrow, endColor()))
+			fmt.Printf("%s%s %s EOF%s\n", InfoLevel.color(), time.Now().Format(timeFormat), leftArrow, endColor())
 			return
 		}
 	}

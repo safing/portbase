@@ -65,7 +65,7 @@ func TestBadger(t *testing.T) {
 	a.SetKey("test:A")
 
 	// put record
-	err = db.Put(a)
+	_, err = db.Put(a)
 	if err != nil {
 		t.Fatal(err)
 	}
