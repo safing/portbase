@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/tevino/abool"
@@ -119,9 +120,12 @@ func (c *Controller) Put(r record.Record) (err error) {
 		}
 	}
 
-	err = c.storage.Put(r)
+	r, err = c.storage.Put(r)
 	if err != nil {
 		return err
+	}
+	if r == nil {
+		return errors.New("storage returned nil record after successful put operation")
 	}
 
 	// process subscriptions

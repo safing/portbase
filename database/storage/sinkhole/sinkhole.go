@@ -36,8 +36,8 @@ func (s *Sinkhole) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (s *Sinkhole) Put(m record.Record) error {
-	return nil
+func (s *Sinkhole) Put(r record.Record) (record.Record, error) {
+	return r, nil
 }
 
 // PutMany stores many records in the database.

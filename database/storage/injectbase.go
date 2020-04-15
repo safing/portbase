@@ -21,8 +21,8 @@ func (i *InjectBase) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (i *InjectBase) Put(m record.Record) error {
-	return errNotImplemented
+func (i *InjectBase) Put(m record.Record) (record.Record, error) {
+	return nil, errNotImplemented
 }
 
 // PutMany stores many records in the database.

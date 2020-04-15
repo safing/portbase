@@ -104,15 +104,15 @@ func (fst *FSTree) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (fst *FSTree) Put(r record.Record) error {
+func (fst *FSTree) Put(r record.Record) (record.Record, error) {
 	dstPath, err := fst.buildFilePath(r.DatabaseKey(), true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	data, err := r.MarshalRecord(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = writeFile(dstPath, data, defaultFileMode)
@@ -120,15 +120,15 @@ func (fst *FSTree) Put(r record.Record) error {
 		// create dir and try again
 		err = os.MkdirAll(filepath.Dir(dstPath), defaultDirMode)
 		if err != nil {
-			return fmt.Errorf("fstree: failed to create directory %s: %s", filepath.Dir(dstPath), err)
+			return nil, fmt.Errorf("fstree: failed to create directory %s: %s", filepath.Dir(dstPath), err)
 		}
 		err = writeFile(dstPath, data, defaultFileMode)
 		if err != nil {
-			return fmt.Errorf("fstree: could not write file %s: %s", dstPath, err)
+			return nil, fmt.Errorf("fstree: could not write file %s: %s", dstPath, err)
 		}
 	}
 
-	return nil
+	return r, nil
 }
 
 // Delete deletes a record from the database.

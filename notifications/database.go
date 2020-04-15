@@ -111,26 +111,26 @@ func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
 }
 
 // Put stores a record in the database.
-func (s *StorageInterface) Put(r record.Record) error {
+func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 	// record is already locked!
 	key := r.DatabaseKey()
 	n, err := EnsureNotification(r)
 
 	if err != nil {
-		return ErrInvalidData
+		return nil, ErrInvalidData
 	}
 
 	// transform key
 	if strings.HasPrefix(key, "all/") {
 		key = strings.TrimPrefix(key, "all/")
 	} else {
-		return ErrInvalidPath
+		return nil, ErrInvalidPath
 	}
 
 	// continue in goroutine
 	go UpdateNotification(n, key)
 
-	return nil
+	return n, nil
 }
 
 // UpdateNotification updates a notification with input from a database action. Notification will not be saved/propagated if there is no valid change.

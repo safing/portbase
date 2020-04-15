@@ -70,14 +70,14 @@ func (option *Option) Export() (record.Record, error) {
 	}
 
 	if option.activeValue != nil {
-		data, err = sjson.SetBytes(data, "Value", option.activeValue)
+		data, err = sjson.SetBytes(data, "Value", option.activeValue.getData(option))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if option.activeDefaultValue != nil {
-		data, err = sjson.SetBytes(data, "DefaultValue", option.activeDefaultValue)
+		data, err = sjson.SetBytes(data, "DefaultValue", option.activeDefaultValue.getData(option))
 		if err != nil {
 			return nil, err
 		}

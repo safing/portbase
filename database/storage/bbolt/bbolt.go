@@ -86,10 +86,10 @@ func (b *BBolt) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (b *BBolt) Put(r record.Record) error {
+func (b *BBolt) Put(r record.Record) (record.Record, error) {
 	data, err := r.MarshalRecord(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = b.db.Update(func(tx *bbolt.Tx) error {
@@ -100,9 +100,9 @@ func (b *BBolt) Put(r record.Record) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return r, nil
 }
 
 // PutMany stores many records in the database.

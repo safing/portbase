@@ -65,7 +65,7 @@ func TestBBolt(t *testing.T) {
 	a.SetKey("test:A")
 
 	// put record
-	err = db.Put(a)
+	_, err = db.Put(a)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,15 +100,15 @@ func TestBBolt(t *testing.T) {
 	qZ.SetKey("test:z")
 	qZ.CreateMeta()
 	// put
-	err = db.Put(qA)
+	_, err = db.Put(qA)
 	if err == nil {
-		err = db.Put(qB)
+		_, err = db.Put(qB)
 	}
 	if err == nil {
-		err = db.Put(qC)
+		_, err = db.Put(qC)
 	}
 	if err == nil {
-		err = db.Put(qZ)
+		_, err = db.Put(qZ)
 	}
 	if err != nil {
 		t.Fatal(err)
