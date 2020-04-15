@@ -243,8 +243,8 @@ func (api *DatabaseAPI) handleGet(opID []byte, key string) {
 	if err == nil {
 		data, err = r.Marshal(r, record.JSON)
 	}
-	if err == nil {
-		api.send(opID, dbMsgTypeError, err.Error(), nil) //nolint:nilness // FIXME: possibly false positive (golangci-lint govet/nilness)
+	if err != nil {
+		api.send(opID, dbMsgTypeError, err.Error(), nil)
 		return
 	}
 	api.send(opID, dbMsgTypeOk, r.Key(), data)
@@ -384,9 +384,9 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 				default:
 					api.send(opID, dbMsgTypeUpd, r.Key(), data)
 				}
-			} else if sub.Err != nil {
+			} else {
 				// sub feed ended
-				api.send(opID, dbMsgTypeError, sub.Err.Error(), nil)
+				api.send(opID, dbMsgTypeDone, "", nil)
 			}
 		}
 	}
@@ -435,13 +435,13 @@ func (api *DatabaseAPI) handlePut(opID []byte, key string, data []byte, create b
 		return
 	}
 
-	// FIXME: remove transition code
-	if data[0] != record.JSON {
-		typedData := make([]byte, len(data)+1)
-		typedData[0] = record.JSON
-		copy(typedData[1:], data)
-		data = typedData
-	}
+	// TODO - staged for deletion: remove transition code
+	// if data[0] != record.JSON {
+	// 	typedData := make([]byte, len(data)+1)
+	// 	typedData[0] = record.JSON
+	// 	copy(typedData[1:], data)
+	// 	data = typedData
+	// }
 
 	r, err := record.NewWrapper(key, nil, data[0], data[1:])
 	if err != nil {

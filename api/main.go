@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	module = modules.Register("api", prep, start, stop, "base", "database", "config")
+	module = modules.Register("api", prep, start, stop, "database", "config")
 }
 
 func prep() error {

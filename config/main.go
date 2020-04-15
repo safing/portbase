@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/safing/portbase/dataroot"
 	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/utils"
-	"github.com/safing/portmaster/core/structure"
 )
 
 const (
@@ -27,12 +27,12 @@ func SetDataRoot(root *utils.DirStructure) {
 }
 
 func init() {
-	module = modules.Register("config", prep, start, nil, "base", "database")
+	module = modules.Register("config", prep, start, nil, "database")
 	module.RegisterEvent(configChangeEvent)
 }
 
 func prep() error {
-	SetDataRoot(structure.Root())
+	SetDataRoot(dataroot.Root())
 	if dataRoot == nil {
 		return errors.New("data root is not set")
 	}

@@ -10,10 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/safing/portbase/database/record"
+
 	q "github.com/safing/portbase/database/query"
 	_ "github.com/safing/portbase/database/storage/badger"
 	_ "github.com/safing/portbase/database/storage/bbolt"
 	_ "github.com/safing/portbase/database/storage/fstree"
+	_ "github.com/safing/portbase/database/storage/hashmap"
 )
 
 func makeKey(dbName, key string) string {
@@ -39,7 +42,10 @@ func testDatabase(t *testing.T, storageType string) {
 	}
 
 	// interface
-	db := NewInterface(nil)
+	db := NewInterface(&Options{
+		Local:    true,
+		Internal: true,
+	})
 
 	// sub
 	sub, err := db.Subscribe(q.New(dbName).MustBeValid())
@@ -107,6 +113,18 @@ func testDatabase(t *testing.T, storageType string) {
 		t.Fatalf("expected two records, got %d", cnt)
 	}
 
+	switch storageType {
+	case "bbolt", "hashmap":
+		batchPut := db.PutMany(dbName)
+		records := []record.Record{A, B, C, nil} // nil is to signify finish
+		for _, r := range records {
+			err = batchPut(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
 	err = hook.Cancel()
 	if err != nil {
 		t.Fatal(err)
@@ -128,12 +146,12 @@ func TestDatabaseSystem(t *testing.T) {
 		os.Exit(1)
 	}()
 
-	testDir, err := ioutil.TempDir("", "testing-")
+	testDir, err := ioutil.TempDir("", "portbase-database-testing-")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = Initialize(testDir, nil)
+	err = InitializeWithPath(testDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,6 +160,7 @@ func TestDatabaseSystem(t *testing.T) {
 	testDatabase(t, "badger")
 	testDatabase(t, "bbolt")
 	testDatabase(t, "fstree")
+	testDatabase(t, "hashmap")
 
 	err = MaintainRecordStates()
 	if err != nil {

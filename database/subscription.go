@@ -13,7 +13,6 @@ type Subscription struct {
 	canceled bool
 
 	Feed chan record.Record
-	Err  error
 }
 
 // Cancel cancels the subscription.

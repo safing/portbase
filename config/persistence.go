@@ -47,7 +47,7 @@ func saveConfig() error {
 	for key, option := range options {
 		option.Lock()
 		if option.activeValue != nil {
-			activeValues[key] = option.activeValue
+			activeValues[key] = option.activeValue.getData(option)
 		}
 		option.Unlock()
 	}

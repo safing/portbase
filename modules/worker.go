@@ -73,7 +73,7 @@ func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn
 	lastFail := time.Now()
 
 	for {
-		if m.ShutdownInProgress() {
+		if m.IsStopping() {
 			return
 		}
 

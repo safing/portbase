@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/tevino/abool"
@@ -119,9 +120,12 @@ func (c *Controller) Put(r record.Record) (err error) {
 		}
 	}
 
-	err = c.storage.Put(r)
+	r, err = c.storage.Put(r)
 	if err != nil {
 		return err
+	}
+	if r == nil {
+		return errors.New("storage returned nil record after successful put operation")
 	}
 
 	// process subscriptions
@@ -135,6 +139,32 @@ func (c *Controller) Put(r record.Record) (err error) {
 	}
 
 	return nil
+}
+
+// PutMany stores many records in the database.
+func (c *Controller) PutMany() (chan<- record.Record, <-chan error) {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		errs := make(chan error, 1)
+		errs <- ErrShuttingDown
+		return make(chan record.Record), errs
+	}
+
+	if c.ReadOnly() {
+		errs := make(chan error, 1)
+		errs <- ErrReadOnly
+		return make(chan record.Record), errs
+	}
+
+	if batcher, ok := c.storage.(storage.Batcher); ok {
+		return batcher.PutMany()
+	}
+
+	errs := make(chan error, 1)
+	errs <- ErrNotImplemented
+	return make(chan record.Record), errs
 }
 
 // Query executes the given query on the database.

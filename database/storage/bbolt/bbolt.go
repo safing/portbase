@@ -86,10 +86,10 @@ func (b *BBolt) Get(key string) (record.Record, error) {
 }
 
 // Put stores a record in the database.
-func (b *BBolt) Put(r record.Record) error {
+func (b *BBolt) Put(r record.Record) (record.Record, error) {
 	data, err := r.MarshalRecord(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = b.db.Update(func(tx *bbolt.Tx) error {
@@ -100,9 +100,38 @@ func (b *BBolt) Put(r record.Record) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return r, nil
+}
+
+// PutMany stores many records in the database.
+func (b *BBolt) PutMany() (chan<- record.Record, <-chan error) {
+	batch := make(chan record.Record, 100)
+	errs := make(chan error, 1)
+
+	go func() {
+		err := b.db.Batch(func(tx *bbolt.Tx) error {
+			bucket := tx.Bucket(bucketName)
+			for r := range batch {
+				// marshal
+				data, txErr := r.MarshalRecord(r)
+				if txErr != nil {
+					return txErr
+				}
+
+				// put
+				txErr = bucket.Put([]byte(r.DatabaseKey()), data)
+				if txErr != nil {
+					return txErr
+				}
+			}
+			return nil
+		})
+		errs <- err
+	}()
+
+	return batch, errs
 }
 
 // Delete deletes a record from the database.

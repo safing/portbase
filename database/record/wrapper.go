@@ -37,27 +37,19 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 	offset += n
 
 	newMeta := &Meta{}
-	if len(metaSection) == 34 && metaSection[4] == 0 {
-		// TODO: remove in 2020
-		// backward compatibility:
-		// format would byte shift and populate metaSection[4] with value > 0 (would naturally populate >0 at 07.02.2106 07:28:15)
-		// this must be gencode without format
-		_, err = newMeta.GenCodeUnmarshal(metaSection)
-		if err != nil {
-			return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
-		}
-	} else {
-		_, err = dsd.Load(metaSection, newMeta)
-		if err != nil {
-			return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
-		}
+	_, err = dsd.Load(metaSection, newMeta)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
 	}
 
-	format, n, err := varint.Unpack8(data[offset:])
-	if err != nil {
-		return nil, fmt.Errorf("could not get dsd format: %s", err)
+	var format uint8 = dsd.NONE
+	if !newMeta.IsDeleted() {
+		format, n, err = varint.Unpack8(data[offset:])
+		if err != nil {
+			return nil, fmt.Errorf("could not get dsd format: %s", err)
+		}
+		offset += n
 	}
-	offset += n
 
 	return &Wrapper{
 		Base{

@@ -5,6 +5,8 @@ package config
 import (
 	"fmt"
 	"sync/atomic"
+
+	"github.com/tevino/abool"
 )
 
 // Expertise Level constants
@@ -21,7 +23,9 @@ const (
 )
 
 var (
-	expertiseLevel *int32
+	expertiseLevel           *int32
+	expertiseLevelOption     *Option
+	expertiseLevelOptionFlag = abool.New()
 )
 
 func init() {
@@ -32,7 +36,7 @@ func init() {
 }
 
 func registerExpertiseLevelOption() {
-	err := Register(&Option{
+	expertiseLevelOption = &Option{
 		Name:        "Expertise Level",
 		Key:         expertiseLevelKey,
 		Description: "The Expertise Level controls the perceived complexity. Higher settings will show you more complex settings and information. This might also affect various other things relying on this setting. Modified settings in higher expertise levels stay in effect when switching back. (Unlike the Release Level)",
@@ -46,15 +50,31 @@ func registerExpertiseLevelOption() {
 
 		ExternalOptType: "string list",
 		ValidationRegex: fmt.Sprintf("^(%s|%s|%s)$", ExpertiseLevelNameUser, ExpertiseLevelNameExpert, ExpertiseLevelNameDeveloper),
-	})
+	}
+
+	err := Register(expertiseLevelOption)
 	if err != nil {
 		panic(err)
 	}
+
+	expertiseLevelOptionFlag.Set()
 }
 
 func updateExpertiseLevel() {
-	new := findStringValue(expertiseLevelKey, "")
-	switch new {
+	// check if already registered
+	if !expertiseLevelOptionFlag.IsSet() {
+		return
+	}
+	// get value
+	value := expertiseLevelOption.activeFallbackValue
+	if expertiseLevelOption.activeValue != nil {
+		value = expertiseLevelOption.activeValue
+	}
+	if expertiseLevelOption.activeDefaultValue != nil {
+		value = expertiseLevelOption.activeDefaultValue
+	}
+	// set atomic value
+	switch value.stringVal {
 	case ExpertiseLevelNameUser:
 		atomic.StoreInt32(expertiseLevel, int32(ExpertiseLevelUser))
 	case ExpertiseLevelNameExpert:

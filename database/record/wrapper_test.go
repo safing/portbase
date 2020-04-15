@@ -2,10 +2,7 @@ package record
 
 import (
 	"bytes"
-	"errors"
 	"testing"
-
-	"github.com/safing/portbase/container"
 )
 
 func TestWrapper(t *testing.T) {
@@ -54,43 +51,4 @@ func TestWrapper(t *testing.T) {
 	if !bytes.Equal(testData, wrapper2.Data) {
 		t.Error("marshal mismatch")
 	}
-
-	// test new format
-	oldRaw, err := oldWrapperMarshalRecord(wrapper, wrapper)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wrapper3, err := NewRawWrapper("test", "a", oldRaw)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(testData, wrapper3.Data) {
-		t.Error("marshal mismatch")
-	}
-}
-
-func oldWrapperMarshalRecord(w *Wrapper, r Record) ([]byte, error) {
-	if w.Meta() == nil {
-		return nil, errors.New("missing meta")
-	}
-
-	// version
-	c := container.New([]byte{1})
-
-	// meta
-	metaSection, err := w.meta.GenCodeMarshal(nil)
-	if err != nil {
-		return nil, err
-	}
-	c.AppendAsBlock(metaSection)
-
-	// data
-	dataSection, err := w.Marshal(r, JSON)
-	if err != nil {
-		return nil, err
-	}
-	c.Append(dataSection)
-
-	return c.CompileData(), nil
 }

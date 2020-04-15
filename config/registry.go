@@ -26,12 +26,18 @@ func Register(option *Option) error {
 		return fmt.Errorf("failed to register option: please set option.OptType")
 	}
 
+	var err error
+
 	if option.ValidationRegex != "" {
-		var err error
 		option.compiledRegex, err = regexp.Compile(option.ValidationRegex)
 		if err != nil {
 			return fmt.Errorf("config: could not compile option.ValidationRegex: %s", err)
 		}
+	}
+
+	option.activeFallbackValue, err = validateValue(option, option.DefaultValue)
+	if err != nil {
+		return fmt.Errorf("config: invalid default value: %s", err)
 	}
 
 	optionsLock.Lock()

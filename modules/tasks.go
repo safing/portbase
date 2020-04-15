@@ -8,21 +8,24 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tevino/abool"
-
 	"github.com/safing/portbase/log"
+	"github.com/tevino/abool"
 )
 
 // Task is managed task bound to a module.
 type Task struct {
 	name   string
 	module *Module
-	taskFn func(context.Context, *Task)
+	taskFn func(context.Context, *Task) error
 
-	queued     bool
-	canceled   bool
-	executing  bool
-	cancelFunc func()
+	queued    bool
+	canceled  bool
+	executing bool
+
+	// these are populated at task creation
+	// ctx is canceled when task is shutdown -> all tasks become canceled
+	ctx       context.Context
+	cancelCtx func()
 
 	executeAt time.Time
 	repeat    time.Duration
@@ -59,25 +62,46 @@ const (
 )
 
 // NewTask creates a new task with a descriptive name (non-unique), a optional deadline, and the task function to be executed. You must call one of Queue, Prioritize, StartASAP, Schedule or Repeat in order to have the Task executed.
-func (m *Module) NewTask(name string, fn func(context.Context, *Task)) *Task {
+func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Task {
+	m.Lock()
+	defer m.Unlock()
+
 	if m == nil {
 		log.Errorf(`modules: cannot create task "%s" with nil module`, name)
+		return &Task{
+			name:     name,
+			module:   &Module{Name: "[NONE]"},
+			canceled: true,
+		}
+	}
+	if m.Ctx == nil || !m.OnlineSoon() {
+		log.Errorf(`modules: tasks should only be started when the module is online or starting`)
+		return &Task{
+			name:     name,
+			module:   m,
+			canceled: true,
+		}
 	}
 
-	return &Task{
+	// create new task
+	new := &Task{
 		name:     name,
 		module:   m,
 		taskFn:   fn,
 		maxDelay: defaultMaxDelay,
 	}
+
+	// create context
+	new.ctx, new.cancelCtx = context.WithCancel(m.Ctx)
+
+	return new
 }
 
 func (t *Task) isActive() bool {
-	if t.module == nil {
+	if t.canceled {
 		return false
 	}
-
-	return !t.canceled && !t.module.ShutdownInProgress()
+	return t.module.OnlineSoon()
 }
 
 func (t *Task) prepForQueueing() (ok bool) {
@@ -197,45 +221,15 @@ func (t *Task) Repeat(interval time.Duration) *Task {
 func (t *Task) Cancel() {
 	t.lock.Lock()
 	t.canceled = true
-	if t.cancelFunc != nil {
-		t.cancelFunc()
+	if t.cancelCtx != nil {
+		t.cancelCtx()
 	}
 	t.lock.Unlock()
 }
 
-func (t *Task) runWithLocking() {
-	if t.module == nil {
-		return
-	}
-
-	// wait for good timeslot regarding microtasks
-	select {
-	case <-taskTimeslot:
-	case <-time.After(maxTimeslotWait):
-	}
-
-	t.lock.Lock()
-
-	// check state, return if already executing or inactive
-	if t.executing || !t.isActive() {
-		t.lock.Unlock()
-		return
-	}
-	t.executing = true
-
-	// get list elements
-	queueElement := t.queueElement
-	prioritizedQueueElement := t.prioritizedQueueElement
-	scheduleListElement := t.scheduleListElement
-
-	// create context
-	var taskCtx context.Context
-	taskCtx, t.cancelFunc = context.WithCancel(t.module.Ctx)
-
-	t.lock.Unlock()
-
+func (t *Task) removeFromQueues() {
 	// remove from lists
-	if queueElement != nil {
+	if t.queueElement != nil {
 		queuesLock.Lock()
 		taskQueue.Remove(t.queueElement)
 		queuesLock.Unlock()
@@ -243,7 +237,7 @@ func (t *Task) runWithLocking() {
 		t.queueElement = nil
 		t.lock.Unlock()
 	}
-	if prioritizedQueueElement != nil {
+	if t.prioritizedQueueElement != nil {
 		queuesLock.Lock()
 		prioritizedTaskQueue.Remove(t.prioritizedQueueElement)
 		queuesLock.Unlock()
@@ -251,7 +245,7 @@ func (t *Task) runWithLocking() {
 		t.prioritizedQueueElement = nil
 		t.lock.Unlock()
 	}
-	if scheduleListElement != nil {
+	if t.scheduleListElement != nil {
 		scheduleLock.Lock()
 		taskSchedule.Remove(t.scheduleListElement)
 		scheduleLock.Unlock()
@@ -259,14 +253,62 @@ func (t *Task) runWithLocking() {
 		t.scheduleListElement = nil
 		t.lock.Unlock()
 	}
+}
+
+func (t *Task) runWithLocking() {
+	t.lock.Lock()
+
+	// check if task is already executing
+	if t.executing {
+		t.lock.Unlock()
+		return
+	}
+
+	// check if task is active
+	if !t.isActive() {
+		t.removeFromQueues()
+		t.lock.Unlock()
+		return
+	}
+
+	// check if module was stopped
+	select {
+	case <-t.ctx.Done(): // check if module is stopped
+		t.removeFromQueues()
+		t.lock.Unlock()
+		return
+	default:
+	}
+
+	t.executing = true
+	t.lock.Unlock()
+
+	// wait for good timeslot regarding microtasks
+	select {
+	case <-taskTimeslot:
+	case <-time.After(maxTimeslotWait):
+	}
+
+	// wait for module start
+	if !t.module.Online() {
+		if t.module.OnlineSoon() {
+			// wait
+			<-t.module.StartCompleted()
+		} else {
+			t.lock.Lock()
+			t.removeFromQueues()
+			t.lock.Unlock()
+			return
+		}
+	}
 
 	// add to queue workgroup
 	queueWg.Add(1)
 
-	go t.executeWithLocking(taskCtx, t.cancelFunc)
+	go t.executeWithLocking()
 	go func() {
 		select {
-		case <-taskCtx.Done():
+		case <-t.ctx.Done():
 		case <-time.After(maxExecutionWait):
 		}
 		// complete queue worker (early) to allow next worker
@@ -274,7 +316,7 @@ func (t *Task) runWithLocking() {
 	}()
 }
 
-func (t *Task) executeWithLocking(ctx context.Context, cancelFunc func()) {
+func (t *Task) executeWithLocking() {
 	// start for module
 	// hint: only queueWg global var is important for scheduling, others can be set here
 	atomic.AddInt32(t.module.taskCnt, 1)
@@ -306,11 +348,16 @@ func (t *Task) executeWithLocking(ctx context.Context, cancelFunc func()) {
 		t.lock.Unlock()
 
 		// notify that we finished
-		cancelFunc()
+		if t.cancelCtx != nil {
+			t.cancelCtx()
+		}
 	}()
 
 	// run
-	t.taskFn(ctx, t)
+	err := t.taskFn(t.ctx, t)
+	if err != nil {
+		log.Errorf("%s: task %s failed: %s", t.module.Name, t.name, err)
+	}
 }
 
 func (t *Task) getExecuteAtWithLocking() time.Time {
@@ -320,6 +367,10 @@ func (t *Task) getExecuteAtWithLocking() time.Time {
 }
 
 func (t *Task) addToSchedule() {
+	if !t.isActive() {
+		return
+	}
+
 	scheduleLock.Lock()
 	defer scheduleLock.Unlock()
 	// defer printTaskList(taskSchedule) // for debugging
@@ -395,7 +446,7 @@ func taskQueueHandler() {
 			queueWg.Wait()
 
 			// check for shutdown
-			if shutdownSignalClosed.IsSet() {
+			if shutdownFlag.IsSet() {
 				return
 			}
 

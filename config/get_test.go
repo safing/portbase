@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/safing/portbase/log"
@@ -39,7 +40,7 @@ func quickRegister(t *testing.T, key string, optType uint8, defaultValue interfa
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestGet(t *testing.T) { //nolint:gocognit
 	// reset
 	options = make(map[string]*Option)
 
@@ -48,41 +49,41 @@ func TestGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	quickRegister(t, "monkey", OptTypeInt, -1)
+	quickRegister(t, "monkey", OptTypeString, "c")
 	quickRegister(t, "zebras/zebra", OptTypeStringArray, []string{"a", "b"})
 	quickRegister(t, "elephant", OptTypeInt, -1)
 	quickRegister(t, "hot", OptTypeBool, false)
 	quickRegister(t, "cold", OptTypeBool, true)
 
 	err = parseAndSetConfig(`
-  {
-    "monkey": "1",
+	{
+		"monkey": "a",
 		"zebras": {
 			"zebra": ["black", "white"]
 		},
-    "elephant": 2,
+		"elephant": 2,
 		"hot": true,
 		"cold": false
-  }
-  `)
+	}
+	`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	err = parseAndSetDefaultConfig(`
-  {
-    "monkey": "0",
-    "snake": "0",
-    "elephant": 0
-  }
-  `)
+	{
+		"monkey": "b",
+		"snake": "0",
+		"elephant": 0
+	}
+	`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	monkey := GetAsString("monkey", "none")
-	if monkey() != "1" {
-		t.Errorf("monkey should be 1, is %s", monkey())
+	if monkey() != "a" {
+		t.Errorf("monkey should be a, is %s", monkey())
 	}
 
 	zebra := GetAsStringArray("zebras/zebra", []string{})
@@ -106,10 +107,10 @@ func TestGet(t *testing.T) {
 	}
 
 	err = parseAndSetConfig(`
-  {
-    "monkey": "3"
-  }
-  `)
+	{
+		"monkey": "3"
+	}
+	`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,6 +132,53 @@ func TestGet(t *testing.T) {
 	GetAsInt("elephant", -1)()
 	GetAsBool("hot", false)()
 
+	// perspective
+
+	// load data
+	pLoaded := make(map[string]interface{})
+	err = json.Unmarshal([]byte(`{
+		"monkey": "a",
+		"zebras": {
+			"zebra": ["black", "white"]
+		},
+		"elephant": 2,
+		"hot": true,
+		"cold": false
+	}`), &pLoaded)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create
+	p, err := NewPerspective(pLoaded)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	monkeyVal, ok := p.GetAsString("monkey")
+	if !ok || monkeyVal != "a" {
+		t.Errorf("[perspective] monkey should be a, is %+v", monkeyVal)
+	}
+
+	zebraVal, ok := p.GetAsStringArray("zebras/zebra")
+	if !ok || len(zebraVal) != 2 || zebraVal[0] != "black" || zebraVal[1] != "white" {
+		t.Errorf("[perspective] zebra should be [\"black\", \"white\"], is %+v", zebraVal)
+	}
+
+	elephantVal, ok := p.GetAsInt("elephant")
+	if !ok || elephantVal != 2 {
+		t.Errorf("[perspective] elephant should be 2, is %+v", elephantVal)
+	}
+
+	hotVal, ok := p.GetAsBool("hot")
+	if !ok || !hotVal {
+		t.Errorf("[perspective] hot should be true, is %+v", hotVal)
+	}
+
+	coldVal, ok := p.GetAsBool("cold")
+	if !ok || coldVal {
+		t.Errorf("[perspective] cold should be false, is %+v", coldVal)
+	}
 }
 
 func TestReleaseLevel(t *testing.T) {
@@ -236,11 +284,9 @@ func BenchmarkGetAsStringCached(b *testing.B) {
 	options = make(map[string]*Option)
 
 	// Setup
-	err := parseAndSetConfig(`
-  {
-    "monkey": "banana"
-  }
-  `)
+	err := parseAndSetConfig(`{
+		"monkey": "banana"
+	}`)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -257,11 +303,9 @@ func BenchmarkGetAsStringCached(b *testing.B) {
 
 func BenchmarkGetAsStringRefetch(b *testing.B) {
 	// Setup
-	err := parseAndSetConfig(`
-  {
-    "monkey": "banana"
-  }
-  `)
+	err := parseAndSetConfig(`{
+		"monkey": "banana"
+	}`)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -271,38 +315,34 @@ func BenchmarkGetAsStringRefetch(b *testing.B) {
 
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
-		findStringValue("monkey", "no banana")
+		getValueCache("monkey", nil, OptTypeString)
 	}
 }
 
 func BenchmarkGetAsIntCached(b *testing.B) {
 	// Setup
-	err := parseAndSetConfig(`
-  {
-    "monkey": 1
-  }
-  `)
+	err := parseAndSetConfig(`{
+		"elephant": 1
+	}`)
 	if err != nil {
 		b.Fatal(err)
 	}
-	monkey := GetAsInt("monkey", -1)
+	elephant := GetAsInt("elephant", -1)
 
 	// Reset timer for precise results
 	b.ResetTimer()
 
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
-		monkey()
+		elephant()
 	}
 }
 
 func BenchmarkGetAsIntRefetch(b *testing.B) {
 	// Setup
-	err := parseAndSetConfig(`
-  {
-    "monkey": 1
-  }
-  `)
+	err := parseAndSetConfig(`{
+		"elephant": 1
+	}`)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -312,6 +352,6 @@ func BenchmarkGetAsIntRefetch(b *testing.B) {
 
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
-		findIntValue("monkey", 1)
+		getValueCache("elephant", nil, OptTypeInt)
 	}
 }

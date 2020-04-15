@@ -50,6 +50,10 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error fetching url (%s): %s", downloadURL, resp.Status)
+	}
+
 	// download and write file
 	n, err := io.Copy(atomicFile, resp.Body)
 	if err != nil {
@@ -95,6 +99,10 @@ func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, 
 		return nil, fmt.Errorf("error fetching url (%s): %s", downloadURL, err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error fetching url (%s): %s", downloadURL, resp.Status)
+	}
 
 	// download and write file
 	buf := bytes.NewBuffer(make([]byte, 0, resp.ContentLength))

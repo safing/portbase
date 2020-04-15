@@ -89,7 +89,7 @@ func (tracer *ContextTracer) Submit() {
 
 	if !started.IsSet() {
 		// a bit resource intense, but keeps logs before logging started.
-		// FIXME: create option to disable logging
+		// TODO: create option to disable logging
 		go func() {
 			<-startedSignal
 			tracer.Submit()

@@ -15,14 +15,59 @@ type (
 	BoolOption func() bool
 )
 
+func getValueCache(name string, option *Option, requestedType uint8) (*Option, *valueCache) {
+	// get option
+	if option == nil {
+		var ok bool
+		optionsLock.RLock()
+		option, ok = options[name]
+		optionsLock.RUnlock()
+		if !ok {
+			log.Errorf("config: request for unregistered option: %s", name)
+			return nil, nil
+		}
+	}
+
+	// check type
+	if requestedType != option.OptType {
+		log.Errorf("config: bad type: requested %s as %s, but is %s", name, getTypeName(requestedType), getTypeName(option.OptType))
+		return option, nil
+	}
+
+	// lock option
+	option.Lock()
+	defer option.Unlock()
+
+	// check release level
+	if option.ReleaseLevel <= getReleaseLevel() && option.activeValue != nil {
+		return option, option.activeValue
+	}
+
+	if option.activeDefaultValue != nil {
+		return option, option.activeDefaultValue
+	}
+
+	return option, option.activeFallbackValue
+}
+
 // GetAsString returns a function that returns the wanted string with high performance.
 func GetAsString(name string, fallback string) StringOption {
 	valid := getValidityFlag()
-	value := findStringValue(name, fallback)
+	option, valueCache := getValueCache(name, nil, OptTypeString)
+	value := fallback
+	if valueCache != nil {
+		value = valueCache.stringVal
+	}
+
 	return func() string {
 		if !valid.IsSet() {
 			valid = getValidityFlag()
-			value = findStringValue(name, fallback)
+			option, valueCache = getValueCache(name, option, OptTypeString)
+			if valueCache != nil {
+				value = valueCache.stringVal
+			} else {
+				value = fallback
+			}
 		}
 		return value
 	}
@@ -31,11 +76,21 @@ func GetAsString(name string, fallback string) StringOption {
 // GetAsStringArray returns a function that returns the wanted string with high performance.
 func GetAsStringArray(name string, fallback []string) StringArrayOption {
 	valid := getValidityFlag()
-	value := findStringArrayValue(name, fallback)
+	option, valueCache := getValueCache(name, nil, OptTypeStringArray)
+	value := fallback
+	if valueCache != nil {
+		value = valueCache.stringArrayVal
+	}
+
 	return func() []string {
 		if !valid.IsSet() {
 			valid = getValidityFlag()
-			value = findStringArrayValue(name, fallback)
+			option, valueCache = getValueCache(name, option, OptTypeStringArray)
+			if valueCache != nil {
+				value = valueCache.stringArrayVal
+			} else {
+				value = fallback
+			}
 		}
 		return value
 	}
@@ -44,11 +99,21 @@ func GetAsStringArray(name string, fallback []string) StringArrayOption {
 // GetAsInt returns a function that returns the wanted int with high performance.
 func GetAsInt(name string, fallback int64) IntOption {
 	valid := getValidityFlag()
-	value := findIntValue(name, fallback)
+	option, valueCache := getValueCache(name, nil, OptTypeInt)
+	value := fallback
+	if valueCache != nil {
+		value = valueCache.intVal
+	}
+
 	return func() int64 {
 		if !valid.IsSet() {
 			valid = getValidityFlag()
-			value = findIntValue(name, fallback)
+			option, valueCache = getValueCache(name, option, OptTypeInt)
+			if valueCache != nil {
+				value = valueCache.intVal
+			} else {
+				value = fallback
+			}
 		}
 		return value
 	}
@@ -57,18 +122,28 @@ func GetAsInt(name string, fallback int64) IntOption {
 // GetAsBool returns a function that returns the wanted int with high performance.
 func GetAsBool(name string, fallback bool) BoolOption {
 	valid := getValidityFlag()
-	value := findBoolValue(name, fallback)
+	option, valueCache := getValueCache(name, nil, OptTypeBool)
+	value := fallback
+	if valueCache != nil {
+		value = valueCache.boolVal
+	}
+
 	return func() bool {
 		if !valid.IsSet() {
 			valid = getValidityFlag()
-			value = findBoolValue(name, fallback)
+			option, valueCache = getValueCache(name, option, OptTypeBool)
+			if valueCache != nil {
+				value = valueCache.boolVal
+			} else {
+				value = fallback
+			}
 		}
 		return value
 	}
 }
 
-// findValue find the correct value in the user or default config.
-func findValue(key string) interface{} {
+/*
+func getAndFindValue(key string) interface{} {
 	optionsLock.RLock()
 	option, ok := options[key]
 	optionsLock.RUnlock()
@@ -77,6 +152,13 @@ func findValue(key string) interface{} {
 		return nil
 	}
 
+	return option.findValue()
+}
+*/
+
+/*
+// findValue finds the preferred value in the user or default config.
+func (option *Option) findValue() interface{} {
 	// lock option
 	option.Lock()
 	defer option.Unlock()
@@ -91,88 +173,4 @@ func findValue(key string) interface{} {
 
 	return option.DefaultValue
 }
-
-// findStringValue validates and returns the value with the given key.
-func findStringValue(key string, fallback string) (value string) {
-	result := findValue(key)
-	if result == nil {
-		return fallback
-	}
-	v, ok := result.(string)
-	if ok {
-		return v
-	}
-	return fallback
-}
-
-// findStringArrayValue validates and returns the value with the given key.
-func findStringArrayValue(key string, fallback []string) (value []string) {
-	result := findValue(key)
-	if result == nil {
-		return fallback
-	}
-
-	v, ok := result.([]interface{})
-	if ok {
-		new := make([]string, len(v))
-		for i, val := range v {
-			s, ok := val.(string)
-			if ok {
-				new[i] = s
-			} else {
-				return fallback
-			}
-		}
-		return new
-	}
-
-	return fallback
-}
-
-// findIntValue validates and returns the value with the given key.
-func findIntValue(key string, fallback int64) (value int64) {
-	result := findValue(key)
-	if result == nil {
-		return fallback
-	}
-	switch v := result.(type) {
-	case int:
-		return int64(v)
-	case int8:
-		return int64(v)
-	case int16:
-		return int64(v)
-	case int32:
-		return int64(v)
-	case int64:
-		return v
-	case uint:
-		return int64(v)
-	case uint8:
-		return int64(v)
-	case uint16:
-		return int64(v)
-	case uint32:
-		return int64(v)
-	case uint64:
-		return int64(v)
-	case float32:
-		return int64(v)
-	case float64:
-		return int64(v)
-	}
-	return fallback
-}
-
-// findBoolValue validates and returns the value with the given key.
-func findBoolValue(key string, fallback bool) (value bool) {
-	result := findValue(key)
-	if result == nil {
-		return fallback
-	}
-	v, ok := result.(bool)
-	if ok {
-		return v
-	}
-	return fallback
-}
+*/

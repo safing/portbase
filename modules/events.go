@@ -17,7 +17,9 @@ type eventHook struct {
 
 // TriggerEvent executes all hook functions registered to the specified event.
 func (m *Module) TriggerEvent(event string, data interface{}) {
-	go m.processEventTrigger(event, data)
+	if m.OnlineSoon() {
+		go m.processEventTrigger(event, data)
+	}
 }
 
 func (m *Module) processEventTrigger(event string, data interface{}) {
@@ -31,18 +33,35 @@ func (m *Module) processEventTrigger(event string, data interface{}) {
 	}
 
 	for _, hook := range hooks {
-		if !hook.hookingModule.ShutdownInProgress() {
+		if hook.hookingModule.OnlineSoon() {
 			go m.runEventHook(hook, event, data)
 		}
 	}
 }
 
 func (m *Module) runEventHook(hook *eventHook, event string, data interface{}) {
-	if !hook.hookingModule.Started.IsSet() {
+	// check if source module is ready for handling
+	if m.Status() != StatusOnline {
 		// target module has not yet fully started, wait until start is complete
 		select {
-		case <-startCompleteSignal:
-		case <-shutdownSignal:
+		case <-m.StartCompleted():
+			// continue with hook execution
+		case <-hook.hookingModule.Stopping():
+			return
+		case <-m.Stopping():
+			return
+		}
+	}
+
+	// check if destionation module is ready for handling
+	if hook.hookingModule.Status() != StatusOnline {
+		// target module has not yet fully started, wait until start is complete
+		select {
+		case <-hook.hookingModule.StartCompleted():
+			// continue with hook execution
+		case <-hook.hookingModule.Stopping():
+			return
+		case <-m.Stopping():
 			return
 		}
 	}
@@ -69,7 +88,7 @@ func (m *Module) RegisterEvent(event string) {
 	}
 }
 
-// RegisterEventHook registers a hook function with (another) modules' event. Whenever a hook is triggered and the receiving module has not yet fully started, hook execution will be delayed until all modules completed starting.
+// RegisterEventHook registers a hook function with (another) modules' event. Whenever a hook is triggered and the receiving module has not yet fully started, hook execution will be delayed until the modules completed starting.
 func (m *Module) RegisterEventHook(module string, event string, description string, fn func(context.Context, interface{}) error) error {
 	// get target module
 	var eventModule *Module
@@ -77,9 +96,7 @@ func (m *Module) RegisterEventHook(module string, event string, description stri
 		eventModule = m
 	} else {
 		var ok bool
-		modulesLock.RLock()
 		eventModule, ok = modules[module]
-		modulesLock.RUnlock()
 		if !ok {
 			return fmt.Errorf(`module "%s" does not exist`, module)
 		}

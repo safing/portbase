@@ -172,7 +172,7 @@ func microTaskScheduler() {
 
 microTaskManageLoop:
 	for {
-		if shutdownSignalClosed.IsSet() {
+		if shutdownFlag.IsSet() {
 			close(mediumPriorityClearance)
 			close(lowPriorityClearance)
 			return
