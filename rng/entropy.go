@@ -1,17 +1,20 @@
 package rng
 
 import (
+	"context"
 	"encoding/binary"
 
 	"github.com/tevino/abool"
 
-	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/container"
 )
 
+const (
+	minFeedEntropy = 256
+)
+
 var (
-	rngFeeder      = make(chan []byte)
-	minFeedEntropy config.IntOption
+	rngFeeder = make(chan []byte)
 )
 
 // The Feeder is used to feed entropy to the RNG.
@@ -34,7 +37,7 @@ func NewFeeder() *Feeder {
 		needsEntropy: abool.NewBool(true),
 		buffer:       container.New(),
 	}
-	go new.run()
+	module.StartServiceWorker("feeder", 0, new.run)
 	return new
 }
 
@@ -87,7 +90,7 @@ func (f *Feeder) CloseFeeder() {
 	f.input <- nil
 }
 
-func (f *Feeder) run() {
+func (f *Feeder) run(ctx context.Context) error {
 	defer f.needsEntropy.UnSet()
 
 	for {
@@ -97,23 +100,26 @@ func (f *Feeder) run() {
 		for {
 			select {
 			case newEntropy := <-f.input:
-				if newEntropy != nil {
-					f.buffer.Append(newEntropy.data)
-					f.entropy += int64(newEntropy.entropy)
-					if f.entropy >= minFeedEntropy() {
-						break gather
-					}
+				// check if feed has been closed
+				if newEntropy == nil {
+					return nil
 				}
-			case <-shutdownSignal:
-				return
+				// append to buffer
+				f.buffer.Append(newEntropy.data)
+				f.entropy += int64(newEntropy.entropy)
+				if f.entropy >= minFeedEntropy {
+					break gather
+				}
+			case <-ctx.Done():
+				return nil
 			}
 		}
 		// feed
 		f.needsEntropy.UnSet()
 		select {
 		case rngFeeder <- f.buffer.CompileData():
-		case <-shutdownSignal:
-			return
+		case <-ctx.Done():
+			return nil
 		}
 		f.buffer = container.New()
 	}

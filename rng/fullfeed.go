@@ -1,29 +1,27 @@
 package rng
 
 import (
+	"context"
 	"time"
-)
-
-var (
-	fullFeedDuration = 100 * time.Millisecond
 )
 
 func getFullFeedDuration() time.Duration {
 
 	// full feed every 5x time of reseedAfterSeconds
-	secsUntilFullFeed := reseedAfterSeconds() * 5
+	secsUntilFullFeed := reseedAfterSeconds * 5
 
-	// full feed at most once per minute
-	if secsUntilFullFeed < 60 {
-		secsUntilFullFeed = 60
+	// full feed at most once every ten minutes
+	if secsUntilFullFeed < 600 {
+		secsUntilFullFeed = 600
 	}
 
-	return time.Duration(secsUntilFullFeed * int64(time.Second))
+	return time.Duration(secsUntilFullFeed) * time.Second
 }
 
-func fullFeeder() {
-	for {
+func fullFeeder(ctx context.Context) error {
+	fullFeedDuration := getFullFeedDuration()
 
+	for {
 		select {
 		case <-time.After(fullFeedDuration):
 
@@ -39,11 +37,8 @@ func fullFeeder() {
 			}
 			rngLock.Unlock()
 
-		case <-shutdownSignal:
-			return
+		case <-ctx.Done():
+			return nil
 		}
-
-		fullFeedDuration = getFullFeedDuration()
-
 	}
 }
