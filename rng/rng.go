@@ -25,7 +25,7 @@ var (
 )
 
 func init() {
-	module = modules.Register("random", nil, start, nil)
+	module = modules.Register("rng", nil, start, nil)
 }
 
 func newCipher(key []byte) (cipher.Block, error) {

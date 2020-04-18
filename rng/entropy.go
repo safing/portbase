@@ -85,9 +85,9 @@ func (f *Feeder) SupplyEntropyAsIntIfNeeded(n int64, entropy int) {
 	}
 }
 
-// CloseFeeder stops the feed processing - the responsible goroutine exits.
+// CloseFeeder stops the feed processing - the responsible goroutine exits. The input channel is closed and the feeder may not be used anymore in any way.
 func (f *Feeder) CloseFeeder() {
-	f.input <- nil
+	close(f.input)
 }
 
 func (f *Feeder) run(ctx context.Context) error {
