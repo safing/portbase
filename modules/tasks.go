@@ -63,9 +63,6 @@ const (
 
 // NewTask creates a new task with a descriptive name (non-unique), a optional deadline, and the task function to be executed. You must call one of Queue, Prioritize, StartASAP, Schedule or Repeat in order to have the Task executed.
 func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Task {
-	m.Lock()
-	defer m.Unlock()
-
 	if m == nil {
 		log.Errorf(`modules: cannot create task "%s" with nil module`, name)
 		return &Task{
@@ -74,6 +71,10 @@ func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Ta
 			canceled: true,
 		}
 	}
+
+	m.Lock()
+	defer m.Unlock()
+
 	if m.Ctx == nil || !m.OnlineSoon() {
 		log.Errorf(`modules: tasks should only be started when the module is online or starting`)
 		return &Task{
