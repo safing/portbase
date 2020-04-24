@@ -168,3 +168,84 @@ func TestScheduledTaskWaiting(t *testing.T) {
 	}
 
 }
+
+func TestRequeueingTask(t *testing.T) {
+	blockWg := &sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
+
+	// block task execution
+	blockWg.Add(1) // mark done at beginning
+	wg.Add(2)      // mark done at end
+	block := qtModule.NewTask("TestRequeueingTask:block", func(ctx context.Context, t *Task) error {
+		blockWg.Done()
+		time.Sleep(100 * time.Millisecond)
+		wg.Done()
+		return nil
+	}).StartASAP()
+	// make sure first task has started
+	blockWg.Wait()
+	// fmt.Printf("%s: %+v\n", time.Now(), block)
+
+	// schedule again while executing
+	blockWg.Add(1) // mark done at beginning
+	block.StartASAP()
+	// fmt.Printf("%s: %+v\n", time.Now(), block)
+
+	// test task
+	wg.Add(1)
+	task := qtModule.NewTask("TestRequeueingTask:test", func(ctx context.Context, t *Task) error {
+		wg.Done()
+		return nil
+	}).Schedule(time.Now().Add(2 * time.Second))
+
+	// reschedule
+	task.Schedule(time.Now().Add(1 * time.Second))
+	task.Queue()
+	task.Prioritize()
+	task.StartASAP()
+	wg.Wait()
+	time.Sleep(100 * time.Millisecond) // let tasks finalize execution
+
+	// do it again
+
+	// block task execution (while first block task is still running!)
+	blockWg.Add(1) // mark done at beginning
+	wg.Add(1)      // mark done at end
+	block.StartASAP()
+	blockWg.Wait()
+	// reschedule
+	wg.Add(1)
+	task.Schedule(time.Now().Add(1 * time.Second))
+	task.Queue()
+	task.Prioritize()
+	task.StartASAP()
+	wg.Wait()
+}
+
+func TestQueueSuccession(t *testing.T) {
+	var cnt int
+	wg := &sync.WaitGroup{}
+	wg.Add(10)
+
+	tt := qtModule.NewTask("TestRequeueingTask:test", func(ctx context.Context, task *Task) error {
+		time.Sleep(10 * time.Millisecond)
+		wg.Done()
+		cnt++
+		fmt.Printf("completed succession %d\n", cnt)
+		switch cnt {
+		case 1, 4, 6:
+			task.Queue()
+		case 2, 5, 8:
+			task.StartASAP()
+		case 3, 7, 9:
+			task.Schedule(time.Now().Add(10 * time.Millisecond))
+		}
+		return nil
+	})
+	// fmt.Printf("%+v\n", tt)
+	tt.StartASAP()
+	// time.Sleep(100 * time.Millisecond)
+	// fmt.Printf("%+v\n", tt)
+
+	wg.Wait()
+}
