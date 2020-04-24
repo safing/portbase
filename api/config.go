@@ -37,6 +37,7 @@ func registerConfig() error {
 		Name:            "API Address",
 		Key:             "api/listenAddress",
 		Description:     "Define on which IP and port the API should listen on.",
+		Order:           128,
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		ReleaseLevel:    config.ReleaseLevelStable,
