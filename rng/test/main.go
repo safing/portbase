@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -10,12 +11,159 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strconv"
 	"time"
 
+	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/rng"
+	"github.com/safing/portbase/run"
 )
 
-func noise() {
+var (
+	module *modules.Module
+
+	outputFile *os.File
+	outputSize uint64 = 1000000
+)
+
+func init() {
+	module = modules.Register("main", prep, start, nil, "rng")
+}
+
+func main() {
+	runtime.GOMAXPROCS(1)
+	os.Exit(run.Run())
+}
+
+func prep() error {
+	if len(os.Args) < 3 {
+		fmt.Printf("usage: ./%s {fortuna|tickfeeder} <file> [output size in MB]", os.Args[0])
+		return modules.ErrCleanExit
+	}
+
+	switch os.Args[1] {
+	case "fortuna":
+	case "tickfeeder":
+	default:
+		return fmt.Errorf("usage: %s {fortuna|tickfeeder}", os.Args[0])
+	}
+
+	if len(os.Args) > 3 {
+		n, err := strconv.ParseUint(os.Args[3], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse output size: %s", err)
+		}
+		outputSize = n * 1000000
+	}
+
+	var err error
+	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0660)
+	if err != nil {
+		return fmt.Errorf("failed to open output file: %s", err)
+	}
+
+	return nil
+}
+
+//nolint:gocognit
+func start() error {
+	// generates 1MB and writes to stdout
+
+	log.Infof("writing %dMB to stdout, a \".\" will be printed at every 1024 bytes.", outputSize/1000000)
+
+	switch os.Args[1] {
+	case "fortuna":
+		module.StartWorker("fortuna", fortuna)
+
+	case "tickfeeder":
+		module.StartWorker("noise", noise)
+		module.StartWorker("tickfeeder", tickfeeder)
+
+	default:
+		return fmt.Errorf("usage: ./%s {fortuna|tickfeeder}", os.Args[0])
+	}
+
+	return nil
+}
+
+func fortuna(_ context.Context) error {
+	var bytesWritten uint64
+
+	for {
+		if module.IsStopping() {
+			return nil
+		}
+
+		b, err := rng.Bytes(64)
+		if err != nil {
+			return err
+		}
+		_, err = outputFile.Write(b)
+		if err != nil {
+			return err
+		}
+
+		bytesWritten += 64
+		if bytesWritten%1024 == 0 {
+			os.Stderr.WriteString(".")
+		}
+		if bytesWritten%65536 == 0 {
+			fmt.Fprintf(os.Stderr, "\n%d bytes written\n", bytesWritten)
+		}
+		if bytesWritten >= outputSize {
+			os.Stderr.WriteString("\n")
+			break
+		}
+	}
+
+	go modules.Shutdown() //nolint:errcheck
+	return nil
+}
+
+func tickfeeder(ctx context.Context) error {
+	var bytesWritten uint64
+	var value int64
+	var pushes int
+
+	for {
+		if module.IsStopping() {
+			return nil
+		}
+
+		time.Sleep(10 * time.Nanosecond)
+
+		value = (value << 1) | (time.Now().UnixNano() % 2)
+		pushes++
+
+		if pushes >= 64 {
+			b := make([]byte, 8)
+			binary.LittleEndian.PutUint64(b, uint64(value))
+			_, err := outputFile.Write(b)
+			if err != nil {
+				return err
+			}
+			bytesWritten += 8
+			if bytesWritten%1024 == 0 {
+				os.Stderr.WriteString(".")
+			}
+			if bytesWritten%65536 == 0 {
+				fmt.Fprintf(os.Stderr, "\n%d bytes written\n", bytesWritten)
+			}
+			pushes = 0
+		}
+
+		if bytesWritten >= outputSize {
+			os.Stderr.WriteString("\n")
+			break
+		}
+	}
+
+	go modules.Shutdown() //nolint:errcheck
+	return nil
+}
+
+func noise(ctx context.Context) error {
 	// do some aes ctr for noise
 
 	key, _ := hex.DecodeString("6368616e676520746869732070617373")
@@ -33,93 +181,11 @@ func noise() {
 
 	stream := cipher.NewCTR(block, iv)
 	for {
-		stream.XORKeyStream(data, data)
-	}
-
-}
-
-//nolint:gocognit
-func main() {
-	// generates 1MB and writes to stdout
-
-	runtime.GOMAXPROCS(1)
-
-	if len(os.Args) < 2 {
-		fmt.Printf("usage: ./%s {fortuna|tickfeeder}\n", os.Args[0])
-		os.Exit(1)
-	}
-
-	os.Stderr.WriteString("writing 1MB to stdout, a \".\" will be printed at every 1024 bytes.\n")
-
-	var bytesWritten int
-
-	switch os.Args[1] {
-	case "fortuna":
-
-		err := rng.Start()
-		if err != nil {
-			panic(err)
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			stream.XORKeyStream(data, data)
 		}
-
-		for {
-			b, err := rng.Bytes(64)
-			if err != nil {
-				panic(err)
-			}
-			os.Stdout.Write(b)
-
-			bytesWritten += 64
-			if bytesWritten%1024 == 0 {
-				os.Stderr.WriteString(".")
-			}
-			if bytesWritten%65536 == 0 {
-				fmt.Fprintf(os.Stderr, "\n%d bytes written\n", bytesWritten)
-			}
-			if bytesWritten >= 1000000 {
-				os.Stderr.WriteString("\n")
-				break
-			}
-		}
-
-		os.Exit(0)
-	case "tickfeeder":
-
-		go noise()
-
-		var value int64
-		var pushes int
-
-		for {
-			time.Sleep(10 * time.Nanosecond)
-
-			value = (value << 1) | (time.Now().UnixNano() % 2)
-			pushes++
-
-			if pushes >= 64 {
-				b := make([]byte, 8)
-				binary.LittleEndian.PutUint64(b, uint64(value))
-				// fmt.Fprintf(os.Stderr, "write: %d\n", value)
-				os.Stdout.Write(b)
-				bytesWritten += 8
-				if bytesWritten%1024 == 0 {
-					os.Stderr.WriteString(".")
-				}
-				if bytesWritten%65536 == 0 {
-					fmt.Fprintf(os.Stderr, "\n%d bytes written\n", bytesWritten)
-				}
-				pushes = 0
-			}
-
-			if bytesWritten >= 1000000 {
-				os.Stderr.WriteString("\n")
-				break
-			}
-		}
-
-		os.Exit(0)
-	default:
-		fmt.Printf("usage: %s {fortuna|tickfeeder}\n", os.Args[0])
-		os.Exit(1)
 	}
-
 }
