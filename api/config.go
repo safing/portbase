@@ -7,6 +7,11 @@ import (
 	"github.com/safing/portbase/log"
 )
 
+// Config Keys
+const (
+	CfgDefaultListenAddressKey = "api/listenAddress"
+)
+
 var (
 	listenAddressFlag    string
 	listenAddressConfig  config.StringOption
@@ -35,7 +40,7 @@ func getDefaultListenAddress() string {
 func registerConfig() error {
 	err := config.Register(&config.Option{
 		Name:            "API Address",
-		Key:             "api/listenAddress",
+		Key:             CfgDefaultListenAddressKey,
 		Description:     "Define on which IP and port the API should listen on.",
 		Order:           128,
 		OptType:         config.OptTypeString,
