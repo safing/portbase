@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -162,7 +163,7 @@ func TestDatabaseSystem(t *testing.T) {
 	testDatabase(t, "fstree")
 	testDatabase(t, "hashmap")
 
-	err = MaintainRecordStates()
+	err = MaintainRecordStates(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}

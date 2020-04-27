@@ -1,7 +1,10 @@
 package database
 
 import (
+	"context"
 	"time"
+
+	"github.com/tevino/abool"
 
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
@@ -9,8 +12,10 @@ import (
 
 // Maintain runs the Maintain method on all storages.
 func Maintain() (err error) {
-	controllers := duplicateControllers()
-	for _, c := range controllers {
+	// copy, as we might use the very long
+	all := duplicateControllers()
+
+	for _, c := range all {
 		err = c.Maintain()
 		if err != nil {
 			return
@@ -21,7 +26,9 @@ func Maintain() (err error) {
 
 // MaintainThorough runs the MaintainThorough method on all storages.
 func MaintainThorough() (err error) {
+	// copy, as we might use the very long
 	all := duplicateControllers()
+
 	for _, c := range all {
 		err = c.MaintainThorough()
 		if err != nil {
@@ -32,12 +39,32 @@ func MaintainThorough() (err error) {
 }
 
 // MaintainRecordStates runs record state lifecycle maintenance on all storages.
-func MaintainRecordStates() error {
+func MaintainRecordStates(ctx context.Context) error { //nolint:gocognit
+	// TODO: Put this in the storage interface to correctly maintain on all storages.
+	// Storages might check for deletion and expiry in the query interface and not return anything here.
+
+	// listen for ctx cancel
+	stop := abool.New()
+	doneCh := make(chan struct{}) // for goroutine cleanup
+	defer close(doneCh)
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-doneCh:
+		}
+		stop.Set()
+	}()
+
+	// copy, as we might use the very long
 	all := duplicateControllers()
+
 	now := time.Now().Unix()
 	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour).Unix()
 
 	for _, c := range all {
+		if stop.IsSet() {
+			return nil
+		}
 
 		if c.ReadOnly() || c.Injected() {
 			continue
@@ -56,16 +83,31 @@ func MaintainRecordStates() error {
 		var toDelete []record.Record
 		var toExpire []record.Record
 
-		for r := range it.Next {
-			switch {
-			case r.Meta().Deleted < thirtyDaysAgo:
-				toDelete = append(toDelete, r)
-			case r.Meta().Expires < now:
-				toExpire = append(toExpire, r)
+	queryLoop:
+		for {
+			select {
+			case r := <-it.Next:
+				if r == nil {
+					break queryLoop
+				}
+
+				meta := r.Meta()
+				switch {
+				case meta.Deleted > 0 && meta.Deleted < thirtyDaysAgo:
+					toDelete = append(toDelete, r)
+				case meta.Expires > 0 && meta.Expires < now:
+					toExpire = append(toExpire, r)
+				}
+			case <-ctx.Done():
+				it.Cancel()
+				break queryLoop
 			}
 		}
 		if it.Err() != nil {
 			return err
+		}
+		if stop.IsSet() {
+			return nil
 		}
 
 		for _, r := range toDelete {
@@ -73,12 +115,19 @@ func MaintainRecordStates() error {
 			if err != nil {
 				return err
 			}
+			if stop.IsSet() {
+				return nil
+			}
 		}
+
 		for _, r := range toExpire {
 			r.Meta().Delete()
 			err := c.Put(r)
 			if err != nil {
 				return err
+			}
+			if stop.IsSet() {
+				return nil
 			}
 		}
 
@@ -87,9 +136,10 @@ func MaintainRecordStates() error {
 }
 
 func duplicateControllers() (all []*Controller) {
-	controllersLock.Lock()
-	defer controllersLock.Unlock()
+	controllersLock.RLock()
+	defer controllersLock.RUnlock()
 
+	all = make([]*Controller, len(controllers))
 	for _, c := range controllers {
 		all = append(all, c)
 	}
