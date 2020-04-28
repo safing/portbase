@@ -2,8 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"path"
 	"strings"
 
 	"github.com/safing/portbase/log"
@@ -72,70 +72,124 @@ func JSONToMap(jsonData []byte) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	flatten(loaded, loaded, "")
-	return loaded, nil
+	return Flatten(loaded), nil
 }
 
-func flatten(rootMap, subMap map[string]interface{}, subKey string) {
+// Flatten returns a flattened copy of the given hierarchical config.
+func Flatten(config map[string]interface{}) (flattenedConfig map[string]interface{}) {
+	flattenedConfig = make(map[string]interface{})
+	flattenMap(flattenedConfig, config, "")
+	return flattenedConfig
+}
+
+func flattenMap(rootMap, subMap map[string]interface{}, subKey string) {
 	for key, entry := range subMap {
 
 		// get next level key
-		subbedKey := key
-		if subKey != "" {
-			subbedKey = fmt.Sprintf("%s/%s", subKey, key)
-		}
+		subbedKey := path.Join(subKey, key)
 
 		// check for next subMap
 		nextSub, ok := entry.(map[string]interface{})
 		if ok {
-			flatten(rootMap, nextSub, subbedKey)
-			delete(rootMap, key)
-		} else if subKey != "" {
+			flattenMap(rootMap, nextSub, subbedKey)
+		} else {
 			// only set if not on root level
 			rootMap[subbedKey] = entry
 		}
 	}
 }
 
-// MapToJSON expands a flattened map and returns it as json. The map is altered in the process.
-func MapToJSON(values map[string]interface{}) ([]byte, error) {
-	expand(values)
-	return json.MarshalIndent(values, "", "  ")
+// MapToJSON expands a flattened map and returns it as json.
+func MapToJSON(config map[string]interface{}) ([]byte, error) {
+	return json.MarshalIndent(Expand(config), "", "  ")
 }
 
-// expand expands a flattened map.
-func expand(mapData map[string]interface{}) {
-	var newMaps []map[string]interface{}
-	for key, entry := range mapData {
-		if strings.Contains(key, "/") {
-			parts := strings.SplitN(key, "/", 2)
-			if len(parts) == 2 {
+// Expand returns a hierarchical copy of the given flattened config.
+func Expand(flattenedConfig map[string]interface{}) (config map[string]interface{}) {
+	config = make(map[string]interface{})
+	for key, entry := range flattenedConfig {
+		PutValueIntoHierarchicalConfig(config, key, entry)
+	}
+	return config
+}
 
-				// get subMap
-				var subMap map[string]interface{}
-				v, ok := mapData[parts[0]]
+// PutValueIntoHierarchicalConfig injects a configuration entry into an hierarchical config map. Conflicting entries will be replaced.
+func PutValueIntoHierarchicalConfig(config map[string]interface{}, key string, value interface{}) {
+	parts := strings.Split(key, "/")
+
+	// create/check maps for all parts except the last one
+	subMap := config
+	for i := 0; i < len(parts)-1; i++ {
+		var nextSubMap map[string]interface{}
+		// get value
+		value, ok := subMap[parts[i]]
+		if !ok {
+			// create new map and assign it
+			nextSubMap = make(map[string]interface{})
+			subMap[parts[i]] = nextSubMap
+		} else {
+			nextSubMap, ok = value.(map[string]interface{})
+			if !ok {
+				// create new map and assign it
+				nextSubMap = make(map[string]interface{})
+				subMap[parts[i]] = nextSubMap
+			}
+		}
+
+		// assign for next parts loop
+		subMap = nextSubMap
+	}
+
+	// assign value to last submap
+	subMap[parts[len(parts)-1]] = value
+}
+
+// CleanFlattenedConfig removes all inexistent configuration options from the given flattened config map.
+func CleanFlattenedConfig(flattenedConfig map[string]interface{}) {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	for key := range flattenedConfig {
+		_, ok := options[key]
+		if !ok {
+			delete(flattenedConfig, key)
+		}
+	}
+}
+
+// CleanHierarchicalConfig removes all inexistent configuration options from the given hierarchical config map.
+func CleanHierarchicalConfig(config map[string]interface{}) {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	cleanSubMap(config, "")
+}
+
+func cleanSubMap(subMap map[string]interface{}, subKey string) (empty bool) {
+	var foundValid int
+	for key, value := range subMap {
+		value, ok := value.(map[string]interface{})
+		if ok {
+			// we found another section
+			isEmpty := cleanSubMap(value, path.Join(subKey, key))
+			if isEmpty {
+				delete(subMap, key)
+			} else {
+				foundValid++
+			}
+		} else {
+			// we found an option value
+			if strings.Contains(key, "/") {
+				delete(subMap, key)
+			} else {
+				_, ok := options[path.Join(subKey, key)]
 				if ok {
-					subMap, ok = v.(map[string]interface{})
-					if !ok {
-						subMap = make(map[string]interface{})
-						newMaps = append(newMaps, subMap)
-						mapData[parts[0]] = subMap
-					}
+					foundValid++
 				} else {
-					subMap = make(map[string]interface{})
-					newMaps = append(newMaps, subMap)
-					mapData[parts[0]] = subMap
+					delete(subMap, key)
 				}
-
-				// set entry
-				subMap[parts[1]] = entry
-				// delete entry from
-				delete(mapData, key)
-
 			}
 		}
 	}
-	for _, entry := range newMaps {
-		expand(entry)
-	}
+	return foundValid == 0
 }
