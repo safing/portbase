@@ -139,7 +139,7 @@ func duplicateControllers() (all []*Controller) {
 	controllersLock.RLock()
 	defer controllersLock.RUnlock()
 
-	all = make([]*Controller, len(controllers))
+	all = make([]*Controller, 0, len(controllers))
 	for _, c := range controllers {
 		all = append(all, c)
 	}
