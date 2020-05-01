@@ -117,8 +117,8 @@ if [[ $install -eq 1 ]]; then
   echo "installing dependencies..."
   echo "$ go get -u golang.org/x/lint/golint"
   go get -u golang.org/x/lint/golint
-  echo "$ go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
-  go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+  echo "$ curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.25.1"
+  curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.25.1
   exit 0
 fi
 
@@ -139,11 +139,11 @@ if [[ $(which golint) == "" ]]; then
 fi
 if [[ $(which golangci-lint) == "" ]]; then
   echo "golangci-lint command not found"
-  echo "install locally with: go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
-  echo "or run: ./test install all"
-  echo ""
-  echo "hint: install for CI with: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin vX.Y.Z"
+  echo "install with: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin vX.Y.Z"
   echo "don't forget to specify the version you want"
+  echo "or run: ./test install"
+  echo ""
+  echo "alternatively, install the current dev version with: go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
   exit 1
 fi
 
