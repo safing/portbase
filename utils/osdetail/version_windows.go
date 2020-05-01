@@ -2,20 +2,18 @@ package osdetail
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/hashicorp/go-version"
-	versionCmp "github.com/hashicorp/go-version"
 	"github.com/shirou/gopsutil/host"
 )
 
 var (
-	versionRe = regexp.MustCompile(`[0-9\.]+`)
+	// versionRe = regexp.MustCompile(`[0-9\.]+`)
 
 	windowsNTVersion       string
-	windowsNTVersionForCmp *versionCmp.Version
+	windowsNTVersionForCmp *version.Version
 
 	fetching sync.Mutex
 	fetched  bool
@@ -49,13 +47,13 @@ func WindowsNTVersion() (string, error) {
 }
 
 // IsAtLeastWindowsNTVersion returns whether the current WindowsNT version is at least the given version or newer.
-func IsAtLeastWindowsNTVersion(version string) (bool, error) {
+func IsAtLeastWindowsNTVersion(v string) (bool, error) {
 	_, err := WindowsNTVersion()
 	if err != nil {
 		return false, err
 	}
 
-	versionForCmp, err := versionCmp.NewVersion(version)
+	versionForCmp, err := version.NewVersion(v)
 	if err != nil {
 		return false, err
 	}
@@ -74,9 +72,7 @@ func IsAtLeastWindowsNTVersionWithDefault(v string, defaultValue bool) bool {
 
 // IsAtLeastWindowsVersion returns whether the current Windows version is at least the given version or newer.
 func IsAtLeastWindowsVersion(v string) (bool, error) {
-	var (
-		NTVersion string
-	)
+	var NTVersion string
 	switch v {
 	case "7":
 		NTVersion = "6.1"
