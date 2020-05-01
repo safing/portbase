@@ -119,20 +119,26 @@ func PutValueIntoHierarchicalConfig(config map[string]interface{}, key string, v
 
 	// create/check maps for all parts except the last one
 	subMap := config
-	for i := 0; i < len(parts)-1; i++ {
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			// do not process the last part,
+			// which is not a map, but the value key itself
+			break
+		}
+
 		var nextSubMap map[string]interface{}
 		// get value
-		value, ok := subMap[parts[i]]
+		value, ok := subMap[part]
 		if !ok {
 			// create new map and assign it
 			nextSubMap = make(map[string]interface{})
-			subMap[parts[i]] = nextSubMap
+			subMap[part] = nextSubMap
 		} else {
 			nextSubMap, ok = value.(map[string]interface{})
 			if !ok {
 				// create new map and assign it
 				nextSubMap = make(map[string]interface{})
-				subMap[parts[i]] = nextSubMap
+				subMap[part] = nextSubMap
 			}
 		}
 
@@ -177,17 +183,18 @@ func cleanSubMap(subMap map[string]interface{}, subKey string) (empty bool) {
 			} else {
 				foundValid++
 			}
+			continue
+		}
+
+		// we found an option value
+		if strings.Contains(key, "/") {
+			delete(subMap, key)
 		} else {
-			// we found an option value
-			if strings.Contains(key, "/") {
-				delete(subMap, key)
+			_, ok := options[path.Join(subKey, key)]
+			if ok {
+				foundValid++
 			} else {
-				_, ok := options[path.Join(subKey, key)]
-				if ok {
-					foundValid++
-				} else {
-					delete(subMap, key)
-				}
+				delete(subMap, key)
 			}
 		}
 	}
