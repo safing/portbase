@@ -3,6 +3,7 @@ package rng
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"sync"
@@ -47,6 +48,15 @@ func start() error {
 	if rng == nil {
 		return errors.New("failed to initialize rng")
 	}
+
+	// explicitly add randomness
+	osEntropy := make([]byte, minFeedEntropy/8)
+	_, err := rand.Read(osEntropy)
+	if err != nil {
+		return fmt.Errorf("could not read entropy from os: %s", err)
+	}
+	rng.Reseed(osEntropy)
+
 	rngReady = true
 
 	// random source: OS

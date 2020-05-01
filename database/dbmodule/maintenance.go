@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/safing/portbase/database"
+	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 )
 
@@ -15,13 +16,16 @@ func startMaintenanceTasks() {
 }
 
 func maintainBasic(ctx context.Context, task *modules.Task) error {
+	log.Infof("database: running Maintain")
 	return database.Maintain()
 }
 
 func maintainThorough(ctx context.Context, task *modules.Task) error {
+	log.Infof("database: running MaintainThorough")
 	return database.MaintainThorough()
 }
 
 func maintainRecords(ctx context.Context, task *modules.Task) error {
-	return database.MaintainRecordStates()
+	log.Infof("database: running MaintainRecordStates")
+	return database.MaintainRecordStates(ctx)
 }

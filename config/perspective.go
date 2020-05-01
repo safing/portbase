@@ -19,7 +19,7 @@ type perspectiveOption struct {
 // NewPerspective parses the given config and returns it as a new perspective.
 func NewPerspective(config map[string]interface{}) (*Perspective, error) {
 	// flatten config structure
-	flatten(config, config, "")
+	config = Flatten(config)
 
 	perspective := &Perspective{
 		config: make(map[string]*perspectiveOption),
