@@ -12,9 +12,8 @@ function help {
   echo ""
   echo "commands:"
   echo "  <none>        run baseline tests"
-  echo "  all           run all tests"
-  echo "  install       install deps for running baseline tests"
-  echo "  install all   install deps for running all tests"
+  echo "  full          run full tests (ie. not short)"
+  echo "  install       install deps for running tests"
   echo ""
   echo "options:"
   echo "  --scripted    dont jump console lines (still use colors)"
@@ -97,7 +96,7 @@ while true; do
     install=1
     shift 1
     ;;
-  "all")
+  "full")
     fullTestFlags=""
     shift 1
     ;;
