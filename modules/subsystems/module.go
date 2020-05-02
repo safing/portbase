@@ -101,6 +101,8 @@ func SetDatabaseKeySpace(keySpace string) {
 }
 
 func printGraph() {
+	fmt.Println("subsystems dependency graph:")
+
 	// unmark subsystems module
 	module.Disable()
 	// mark roots
@@ -110,6 +112,15 @@ func printGraph() {
 	// print
 	for _, sub := range subsystems {
 		printModuleGraph("", sub.module, true)
+	}
+
+	fmt.Println("\nsubsystem module groups:")
+	_ = start() // no errors for what we need here
+	for _, sub := range subsystems {
+		fmt.Printf("├── %s\n", sub.Name)
+		for _, mod := range sub.Modules[1:] {
+			fmt.Printf("│   ├── %s\n", mod.Name)
+		}
 	}
 }
 
