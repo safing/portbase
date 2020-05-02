@@ -18,12 +18,12 @@ type Task struct {
 	module *Module
 	taskFn func(context.Context, *Task) error
 
-	queued    bool
 	canceled  bool
 	executing bool
+	overtime  bool // locked by scheduleLock
 
 	// these are populated at task creation
-	// ctx is canceled when task is shutdown -> all tasks become canceled
+	// ctx is canceled when module is shutdown -> all tasks become canceled
 	ctx       context.Context
 	cancelCtx func()
 
@@ -63,9 +63,6 @@ const (
 
 // NewTask creates a new task with a descriptive name (non-unique), a optional deadline, and the task function to be executed. You must call one of Queue, Prioritize, StartASAP, Schedule or Repeat in order to have the Task executed.
 func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Task {
-	m.Lock()
-	defer m.Unlock()
-
 	if m == nil {
 		log.Errorf(`modules: cannot create task "%s" with nil module`, name)
 		return &Task{
@@ -74,6 +71,10 @@ func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Ta
 			canceled: true,
 		}
 	}
+
+	m.Lock()
+	defer m.Unlock()
+
 	if m.Ctx == nil || !m.OnlineSoon() {
 		log.Errorf(`modules: tasks should only be started when the module is online or starting`)
 		return &Task{
@@ -109,10 +110,9 @@ func (t *Task) prepForQueueing() (ok bool) {
 		return false
 	}
 
-	t.queued = true
 	if t.maxDelay != 0 {
 		t.executeAt = time.Now().Add(t.maxDelay)
-		t.addToSchedule()
+		t.addToSchedule(true)
 	}
 
 	return true
@@ -128,11 +128,11 @@ func notifyQueue() {
 // Queue queues the Task for execution.
 func (t *Task) Queue() *Task {
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	if !t.prepForQueueing() {
-		t.lock.Unlock()
 		return t
 	}
-	t.lock.Unlock()
 
 	if t.queueElement == nil {
 		queuesLock.Lock()
@@ -147,11 +147,11 @@ func (t *Task) Queue() *Task {
 // Prioritize puts the task in the prioritized queue.
 func (t *Task) Prioritize() *Task {
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	if !t.prepForQueueing() {
-		t.lock.Unlock()
 		return t
 	}
-	t.lock.Unlock()
 
 	if t.prioritizedQueueElement == nil {
 		queuesLock.Lock()
@@ -166,11 +166,11 @@ func (t *Task) Prioritize() *Task {
 // StartASAP schedules the task to be executed next.
 func (t *Task) StartASAP() *Task {
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	if !t.prepForQueueing() {
-		t.lock.Unlock()
 		return t
 	}
-	t.lock.Unlock()
 
 	queuesLock.Lock()
 	if t.prioritizedQueueElement == nil {
@@ -187,17 +187,19 @@ func (t *Task) StartASAP() *Task {
 // MaxDelay sets a maximum delay within the task should be executed from being queued. Scheduled tasks are queued when they are triggered. The default delay is 3 minutes.
 func (t *Task) MaxDelay(maxDelay time.Duration) *Task {
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	t.maxDelay = maxDelay
-	t.lock.Unlock()
 	return t
 }
 
 // Schedule schedules the task for execution at the given time.
 func (t *Task) Schedule(executeAt time.Time) *Task {
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	t.executeAt = executeAt
-	t.addToSchedule()
-	t.lock.Unlock()
+	t.addToSchedule(false)
 	return t
 }
 
@@ -209,22 +211,23 @@ func (t *Task) Repeat(interval time.Duration) *Task {
 	}
 
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	t.repeat = interval
 	t.executeAt = time.Now().Add(t.repeat)
-	t.addToSchedule()
-	t.lock.Unlock()
-
+	t.addToSchedule(false)
 	return t
 }
 
 // Cancel cancels the current and any future execution of the Task. This is not reversible by any other functions.
 func (t *Task) Cancel() {
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	t.canceled = true
 	if t.cancelCtx != nil {
 		t.cancelCtx()
 	}
-	t.lock.Unlock()
 }
 
 func (t *Task) removeFromQueues() {
@@ -233,30 +236,28 @@ func (t *Task) removeFromQueues() {
 		queuesLock.Lock()
 		taskQueue.Remove(t.queueElement)
 		queuesLock.Unlock()
-		t.lock.Lock()
 		t.queueElement = nil
-		t.lock.Unlock()
 	}
 	if t.prioritizedQueueElement != nil {
 		queuesLock.Lock()
 		prioritizedTaskQueue.Remove(t.prioritizedQueueElement)
 		queuesLock.Unlock()
-		t.lock.Lock()
 		t.prioritizedQueueElement = nil
-		t.lock.Unlock()
 	}
 	if t.scheduleListElement != nil {
 		scheduleLock.Lock()
 		taskSchedule.Remove(t.scheduleListElement)
+		t.overtime = false
 		scheduleLock.Unlock()
-		t.lock.Lock()
 		t.scheduleListElement = nil
-		t.lock.Unlock()
 	}
 }
 
 func (t *Task) runWithLocking() {
 	t.lock.Lock()
+
+	// we will not attempt execution, remove from queues
+	t.removeFromQueues()
 
 	// check if task is already executing
 	if t.executing {
@@ -265,21 +266,22 @@ func (t *Task) runWithLocking() {
 	}
 
 	// check if task is active
+	// - has not been cancelled
+	// - module is online (soon)
 	if !t.isActive() {
-		t.removeFromQueues()
 		t.lock.Unlock()
 		return
 	}
 
 	// check if module was stopped
 	select {
-	case <-t.ctx.Done(): // check if module is stopped
-		t.removeFromQueues()
+	case <-t.ctx.Done():
 		t.lock.Unlock()
 		return
 	default:
 	}
 
+	// enter executing state
 	t.executing = true
 	t.lock.Unlock()
 
@@ -295,8 +297,9 @@ func (t *Task) runWithLocking() {
 			// wait
 			<-t.module.StartCompleted()
 		} else {
+			// abort, module will not come online
 			t.lock.Lock()
-			t.removeFromQueues()
+			t.executing = false
 			t.lock.Unlock()
 			return
 		}
@@ -335,22 +338,23 @@ func (t *Task) executeWithLocking() {
 		atomic.AddInt32(t.module.taskCnt, -1)
 		t.module.waitGroup.Done()
 
-		// reset
 		t.lock.Lock()
+
 		// reset state
 		t.executing = false
-		t.queued = false
+
 		// repeat?
 		if t.isActive() && t.repeat != 0 {
 			t.executeAt = time.Now().Add(t.repeat)
-			t.addToSchedule()
+			t.addToSchedule(false)
 		}
-		t.lock.Unlock()
 
 		// notify that we finished
-		if t.cancelCtx != nil {
-			t.cancelCtx()
-		}
+		t.cancelCtx()
+		// refresh context
+		t.ctx, t.cancelCtx = context.WithCancel(t.module.Ctx)
+
+		t.lock.Unlock()
 	}()
 
 	// run
@@ -360,13 +364,7 @@ func (t *Task) executeWithLocking() {
 	}
 }
 
-func (t *Task) getExecuteAtWithLocking() time.Time {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	return t.executeAt
-}
-
-func (t *Task) addToSchedule() {
+func (t *Task) addToSchedule(overtime bool) {
 	if !t.isActive() {
 		return
 	}
@@ -374,6 +372,11 @@ func (t *Task) addToSchedule() {
 	scheduleLock.Lock()
 	defer scheduleLock.Unlock()
 	// defer printTaskList(taskSchedule) // for debugging
+
+	if overtime {
+		// do not set to false
+		t.overtime = true
+	}
 
 	// notify scheduler
 	defer func() {
@@ -391,7 +394,7 @@ func (t *Task) addToSchedule() {
 			continue
 		}
 		// compare
-		if t.executeAt.Before(eVal.getExecuteAtWithLocking()) {
+		if t.executeAt.Before(eVal.executeAt) {
 			// insert/move task
 			if t.scheduleListElement == nil {
 				t.scheduleListElement = taskSchedule.InsertBefore(t, e)
@@ -488,18 +491,28 @@ func taskScheduleHandler() {
 			return
 		case <-recalculateNextScheduledTask:
 		case <-waitUntilNextScheduledTask():
-			// get first task in schedule
 			scheduleLock.Lock()
+
+			// get first task in schedule
 			e := taskSchedule.Front()
-			scheduleLock.Unlock()
+			if e == nil {
+				scheduleLock.Unlock()
+				continue
+			}
 			t := e.Value.(*Task)
 
 			// process Task
-			if t.queued {
+			if t.overtime {
 				// already queued and maxDelay reached
+				t.overtime = false
+				scheduleLock.Unlock()
+
 				t.runWithLocking()
 			} else {
 				// place in front of prioritized queue
+				t.overtime = true
+				scheduleLock.Unlock()
+
 				t.StartASAP()
 			}
 		}
@@ -512,10 +525,10 @@ func printTaskList(*list.List) { //nolint:unused,deadcode // for debugging, NOT 
 		t, ok := e.Value.(*Task)
 		if ok {
 			fmt.Printf(
-				"%s:%s qu=%v ca=%v exec=%v at=%s rep=%s delay=%s\n",
+				"%s:%s over=%v canc=%v exec=%v exat=%s rep=%s delay=%s\n",
 				t.module.Name,
 				t.name,
-				t.queued,
+				t.overtime,
 				t.canceled,
 				t.executing,
 				t.executeAt,

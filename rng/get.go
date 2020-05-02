@@ -6,19 +6,19 @@ import (
 	"io"
 	"math"
 	"time"
+)
 
-	"github.com/safing/portbase/config"
+const (
+	reseedAfterSeconds = 600     // ten minutes
+	reseedAfterBytes   = 1048576 // one megabyte
 )
 
 var (
 	// Reader provides a global instance to read from the RNG.
 	Reader io.Reader
 
-	rngBytesRead int64
+	rngBytesRead uint64
 	rngLastFeed  = time.Now()
-
-	reseedAfterSeconds config.IntOption
-	reseedAfterBytes   config.IntOption
 )
 
 // reader provides an io.Reader interface
@@ -32,8 +32,8 @@ func checkEntropy() (err error) {
 	if !rngReady {
 		return errors.New("RNG is not ready yet")
 	}
-	if rngBytesRead > reseedAfterBytes() ||
-		int64(time.Since(rngLastFeed).Seconds()) > reseedAfterSeconds() {
+	if rngBytesRead > reseedAfterBytes ||
+		int(time.Since(rngLastFeed).Seconds()) > reseedAfterSeconds {
 		select {
 		case r := <-rngFeeder:
 			rng.Reseed(r)

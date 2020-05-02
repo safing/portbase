@@ -387,6 +387,7 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 			} else {
 				// sub feed ended
 				api.send(opID, dbMsgTypeDone, "", nil)
+				return
 			}
 		}
 	}

@@ -42,6 +42,7 @@ type Option struct {
 	Key         string // in path format: category/sub/key
 	Description string
 	Help        string
+	Order       int
 
 	OptType        uint8
 	ExpertiseLevel uint8

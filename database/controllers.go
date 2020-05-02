@@ -67,7 +67,7 @@ func InjectDatabase(name string, storageInt storage.Interface) (*Controller, err
 
 	_, ok := controllers[name]
 	if ok {
-		return nil, errors.New(`database "%s" already loaded`)
+		return nil, fmt.Errorf(`database "%s" already loaded`, name)
 	}
 
 	registryLock.Lock()

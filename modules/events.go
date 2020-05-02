@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/safing/portbase/log"
@@ -37,6 +38,38 @@ func (m *Module) processEventTrigger(event string, data interface{}) {
 			go m.runEventHook(hook, event, data)
 		}
 	}
+}
+
+// InjectEvent triggers an event from a foreign module and executes all hook functions registered to that event.
+func (m *Module) InjectEvent(sourceEventName, targetModuleName, targetEventName string, data interface{}) error {
+	if !m.OnlineSoon() {
+		return errors.New("module not yet started")
+	}
+
+	if !modulesLocked.IsSet() {
+		return errors.New("module system not yet started")
+	}
+
+	targetModule, ok := modules[targetModuleName]
+	if !ok {
+		return fmt.Errorf(`module "%s" does not exist`, targetModuleName)
+	}
+
+	targetModule.eventHooksLock.RLock()
+	defer targetModule.eventHooksLock.RUnlock()
+
+	targetHooks, ok := targetModule.eventHooks[targetEventName]
+	if !ok {
+		return fmt.Errorf(`module "%s" has no event named "%s"`, targetModuleName, targetEventName)
+	}
+
+	for _, hook := range targetHooks {
+		if hook.hookingModule.OnlineSoon() {
+			go m.runEventHook(hook, sourceEventName, data)
+		}
+	}
+
+	return nil
 }
 
 func (m *Module) runEventHook(hook *eventHook, event string, data interface{}) {

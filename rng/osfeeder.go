@@ -1,35 +1,36 @@
 package rng
 
 import (
+	"context"
 	"crypto/rand"
-	"time"
-
-	"github.com/safing/portbase/log"
+	"fmt"
 )
 
-func osFeeder() {
+func osFeeder(ctx context.Context) error {
+
+	entropyBytes := minFeedEntropy / 8
 	feeder := NewFeeder()
+	defer feeder.CloseFeeder()
+
 	for {
-
-		// get feed entropy
-		minEntropyBytes := int(minFeedEntropy())/8 + 1
-		if minEntropyBytes < 32 {
-			minEntropyBytes = 64
-		}
-
-		// get entropy
-		osEntropy := make([]byte, minEntropyBytes)
+		// gather
+		osEntropy := make([]byte, entropyBytes)
 		n, err := rand.Read(osEntropy)
 		if err != nil {
-			log.Errorf("could not read entropy from os: %s", err)
-			time.Sleep(10 * time.Second)
+			return fmt.Errorf("could not read entropy from os: %s", err)
 		}
-		if n != minEntropyBytes {
-			log.Errorf("could not read enough entropy from os: got only %d bytes instead of %d", n, minEntropyBytes)
-			time.Sleep(10 * time.Second)
+		if n != entropyBytes {
+			return fmt.Errorf("could not read enough entropy from os: got only %d bytes instead of %d", n, entropyBytes)
 		}
 
 		// feed
-		feeder.SupplyEntropy(osEntropy, minEntropyBytes*8)
+		select {
+		case feeder.input <- &entropyData{
+			data:    osEntropy,
+			entropy: entropyBytes * 8,
+		}:
+		case <-ctx.Done():
+			return nil
+		}
 	}
 }
