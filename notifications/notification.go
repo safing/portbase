@@ -67,6 +67,48 @@ func Get(id string) *Notification {
 	return nil
 }
 
+// NotifyInfo is a helper method for quickly showing a info
+// notification. The notification is already shown. If id is
+// an empty string a new UUIDv4 will be generated.
+func NotifyInfo(id, msg string, actions ...Action) *Notification {
+	return notify(Info, id, msg, actions...)
+}
+
+// NotifyWarn is a helper method for quickly showing a warning
+// notification. The notification is already shown. If id is
+// an empty string a new UUIDv4 will be generated.
+func NotifyWarn(id, msg string, actions ...Action) *Notification {
+	return notify(Warning, id, msg, actions...)
+}
+
+// NotifyPrompt is a helper method for quickly showing a prompt
+// notification. The notification is already shown. If id is
+// an empty string a new UUIDv4 will be generated.
+func NotifyPrompt(id, msg string, actions ...Action) *Notification {
+	return notify(Prompt, id, msg, actions...)
+}
+
+func notify(nType uint8, id string, msg string, actions ...Action) *Notification {
+	acts := make([]*Action, len(actions))
+	for idx := range actions {
+		a := actions[idx]
+		acts[idx] = &a
+	}
+
+	if id == "" {
+		id = uuid.NewV4().String()
+	}
+
+	n := Notification{
+		ID:               id,
+		Message:          msg,
+		Type:             nType,
+		AvailableActions: acts,
+	}
+
+	return n.Save()
+}
+
 // Save saves the notification and returns it.
 func (n *Notification) Save() *Notification {
 	notsLock.Lock()

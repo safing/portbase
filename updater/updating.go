@@ -77,7 +77,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 		res.Lock()
 
 		// check if we want to download
-		if res.ActiveVersion != nil || // resource is currently being used
+		if res.inUse() ||
 			res.available() || // resource was used in the past
 			utils.StringInSlice(reg.MandatoryUpdates, res.Identifier) { // resource is mandatory
 
@@ -111,6 +111,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 		for tries := 0; tries < 3; tries++ {
 			err = reg.fetchFile(rv, tries)
 			if err == nil {
+				rv.Available = true
 				break
 			}
 		}
