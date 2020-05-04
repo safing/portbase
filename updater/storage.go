@@ -80,7 +80,7 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 // registry is marked as online.
 func (reg *ResourceRegistry) LoadIndexes() error {
 	var firstErr error
-	for _, idx := range reg.indexes {
+	for _, idx := range reg.getIndexes() {
 		err := reg.loadIndexFile(idx)
 		if err != nil && reg.Online {
 			// try to download the index file if a local disk version
