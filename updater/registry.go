@@ -20,6 +20,7 @@ type ResourceRegistry struct {
 	Name       string
 	storageDir *utils.DirStructure
 	tmpDir     *utils.DirStructure
+	indexes    []Index
 
 	resources        map[string]*Resource
 	UpdateURLs       []string
@@ -28,6 +29,14 @@ type ResourceRegistry struct {
 	Beta    bool
 	DevMode bool
 	Online  bool
+}
+
+// AddIndex adds a new index to the resource registry.
+func (reg *ResourceRegistry) AddIndex(idx Index) {
+	reg.Lock()
+	defer reg.Unlock()
+
+	reg.indexes = append(reg.indexes, idx)
 }
 
 // Initialize initializes a raw registry struct and makes it ready for usage.
