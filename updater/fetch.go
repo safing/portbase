@@ -25,7 +25,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	// create URL
 	downloadURL, err := joinURLandPath(reg.UpdateURLs[tries%len(reg.UpdateURLs)], rv.versionedPath())
 	if err != nil {
-		return fmt.Errorf("error build url (%s + %s): %s", reg.UpdateURLs[tries%len(reg.UpdateURLs)], rv.versionedPath(), err)
+		return fmt.Errorf("error build url (%s + %s): %w", reg.UpdateURLs[tries%len(reg.UpdateURLs)], rv.versionedPath(), err)
 	}
 
 	// check destination dir
@@ -39,14 +39,14 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	// open file for writing
 	atomicFile, err := renameio.TempFile(reg.tmpDir.Path, rv.storagePath())
 	if err != nil {
-		return fmt.Errorf("could not create temp file for download: %s", err)
+		return fmt.Errorf("could not create temp file for download: %w", err)
 	}
 	defer atomicFile.Cleanup() //nolint:errcheck // ignore error for now, tmp dir will be cleaned later again anyway
 
 	// start file download
 	resp, err := http.Get(downloadURL) //nolint:gosec // url is variable on purpose
 	if err != nil {
-		return fmt.Errorf("error fetching url (%s): %s", downloadURL, err)
+		return fmt.Errorf("error fetching url (%s): %w", downloadURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -57,7 +57,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	// download and write file
 	n, err := io.Copy(atomicFile, resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed downloading %s: %s", downloadURL, err)
+		return fmt.Errorf("failed downloading %s: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
 		return fmt.Errorf("download unfinished, written %d out of %d bytes", n, resp.ContentLength)
@@ -66,7 +66,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	// finalize file
 	err = atomicFile.CloseAtomicallyReplace()
 	if err != nil {
-		return fmt.Errorf("%s: failed to finalize file %s: %s", reg.Name, rv.storagePath(), err)
+		return fmt.Errorf("%s: failed to finalize file %s: %w", reg.Name, rv.storagePath(), err)
 	}
 	// set permissions
 	if !onWindows {
@@ -90,13 +90,13 @@ func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, 
 	// create URL
 	downloadURL, err := joinURLandPath(reg.UpdateURLs[tries%len(reg.UpdateURLs)], downloadPath)
 	if err != nil {
-		return nil, fmt.Errorf("error build url (%s + %s): %s", reg.UpdateURLs[tries%len(reg.UpdateURLs)], downloadPath, err)
+		return nil, fmt.Errorf("error build url (%s + %s): %w", reg.UpdateURLs[tries%len(reg.UpdateURLs)], downloadPath, err)
 	}
 
 	// start file download
 	resp, err := http.Get(downloadURL) //nolint:gosec // url is variable on purpose
 	if err != nil {
-		return nil, fmt.Errorf("error fetching url (%s): %s", downloadURL, err)
+		return nil, fmt.Errorf("error fetching url (%s): %w", downloadURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -108,7 +108,7 @@ func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, 
 	buf := bytes.NewBuffer(make([]byte, 0, resp.ContentLength))
 	n, err := io.Copy(buf, resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed downloading %s: %s", downloadURL, err)
+		return nil, fmt.Errorf("failed downloading %s: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
 		return nil, fmt.Errorf("download unfinished, written %d out of %d bytes", n, resp.ContentLength)
