@@ -2,6 +2,7 @@
 package hashmap
 
 import (
+	"context"
 	"reflect"
 	"sync"
 	"testing"
@@ -130,11 +131,11 @@ func TestHashMap(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.Maintain()
+	err = db.Maintain(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.MaintainThorough()
+	err = db.MaintainThorough(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}

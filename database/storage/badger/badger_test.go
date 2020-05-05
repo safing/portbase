@@ -2,6 +2,7 @@
 package badger
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -116,11 +117,11 @@ func TestBadger(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.Maintain()
+	err = db.Maintain(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.MaintainThorough()
+	err = db.MaintainThorough(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
