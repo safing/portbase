@@ -121,11 +121,5 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	}
 	log.Infof("%s: finished downloading updates", reg.Name)
 
-	// remove tmp folder after we are finished
-	err = os.RemoveAll(reg.tmpDir.Path)
-	if err != nil {
-		log.Tracef("%s: failed to remove tmp dir %s after downloading updates: %s", reg.Name, reg.tmpDir.Path, err)
-	}
-
 	return nil
 }
