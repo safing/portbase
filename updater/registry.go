@@ -57,6 +57,18 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	reg.tmpDir = storageDir.ChildDir("tmp", 0700)
 	reg.resources = make(map[string]*Resource)
 
+	// remove tmp dir to delete old entries
+	err = reg.Cleanup()
+	if err != nil {
+		log.Warningf("%s: failed to remove tmp dir: %s", reg.Name, err)
+	}
+
+	// (re-)create tmp dir
+	reg.tmpDir.Ensure()
+	if err != nil {
+		log.Warningf("%s: failed to create tmp dir: %s", reg.Name, err)
+	}
+
 	return nil
 }
 
