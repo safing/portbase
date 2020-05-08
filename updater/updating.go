@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/safing/portbase/utils"
@@ -56,7 +55,10 @@ func (reg *ResourceRegistry) downloadIndex(idx Index) error {
 	}
 
 	// add resources to registry
-	_ = reg.AddResources(new, false, idx.Stable, idx.Beta)
+	err = reg.AddResources(new, false, idx.Stable, idx.Beta)
+	if err != nil {
+		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
+	}
 
 	// save index
 	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644)
@@ -120,12 +122,6 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 		}
 	}
 	log.Infof("%s: finished downloading updates", reg.Name)
-
-	// remove tmp folder after we are finished
-	err = os.RemoveAll(reg.tmpDir.Path)
-	if err != nil {
-		log.Tracef("%s: failed to remove tmp dir %s after downloading updates: %s", reg.Name, reg.tmpDir.Path, err)
-	}
 
 	return nil
 }

@@ -82,7 +82,9 @@ func (reg *ResourceRegistry) LoadIndexes() error {
 	var firstErr error
 	for _, idx := range reg.getIndexes() {
 		err := reg.loadIndexFile(idx)
-		if err != nil && reg.Online {
+		if err == nil {
+			log.Debugf("%s: loaded index %s", reg.Name, idx.Path)
+		} else if reg.Online {
 			// try to download the index file if a local disk version
 			// does not exist or we don't have permission to read it.
 			if os.IsNotExist(err) || os.IsPermission(err) {
