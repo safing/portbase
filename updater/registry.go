@@ -64,7 +64,7 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	}
 
 	// (re-)create tmp dir
-	reg.tmpDir.Ensure()
+	err = reg.tmpDir.Ensure()
 	if err != nil {
 		log.Warningf("%s: failed to create tmp dir: %s", reg.Name, err)
 	}
