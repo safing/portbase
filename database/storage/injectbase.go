@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/safing/portbase/database/iterator"
 	"github.com/safing/portbase/database/query"
@@ -54,12 +56,17 @@ func (i *InjectBase) Injected() bool {
 }
 
 // Maintain runs a light maintenance operation on the database.
-func (i *InjectBase) Maintain() error {
+func (i *InjectBase) Maintain(ctx context.Context) error {
 	return nil
 }
 
 // MaintainThorough runs a thorough maintenance operation on the database.
-func (i *InjectBase) MaintainThorough() error {
+func (i *InjectBase) MaintainThorough(ctx context.Context) error {
+	return nil
+}
+
+// MaintainRecordStates maintains records states in the database.
+func (i *InjectBase) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
 	return nil
 }
 

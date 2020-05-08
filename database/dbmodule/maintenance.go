@@ -17,12 +17,12 @@ func startMaintenanceTasks() {
 
 func maintainBasic(ctx context.Context, task *modules.Task) error {
 	log.Infof("database: running Maintain")
-	return database.Maintain()
+	return database.Maintain(ctx)
 }
 
 func maintainThorough(ctx context.Context, task *modules.Task) error {
 	log.Infof("database: running MaintainThorough")
-	return database.MaintainThorough()
+	return database.MaintainThorough(ctx)
 }
 
 func maintainRecords(ctx context.Context, task *modules.Task) error {

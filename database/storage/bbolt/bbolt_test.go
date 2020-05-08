@@ -2,11 +2,13 @@
 package bbolt
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
@@ -144,11 +146,15 @@ func TestBBolt(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.Maintain()
+	err = db.Maintain(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.MaintainThorough()
+	err = db.MaintainThorough(context.TODO())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = db.MaintainRecordStates(context.TODO(), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

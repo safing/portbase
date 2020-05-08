@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/safing/portbase/utils"
@@ -13,53 +12,61 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-// UpdateIndexes downloads the current update indexes.
+// UpdateIndexes downloads all indexes and returns the first error encountered.
 func (reg *ResourceRegistry) UpdateIndexes() error {
-	err := reg.downloadIndex("stable.json", true, false)
-	if err != nil {
-		return err
+	var firstErr error
+
+	for _, idx := range reg.getIndexes() {
+		if err := reg.downloadIndex(idx); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
 	}
 
-	return reg.downloadIndex("beta.json", false, true)
+	return firstErr
 }
 
-func (reg *ResourceRegistry) downloadIndex(name string, stableRelease, betaRelease bool) error {
+func (reg *ResourceRegistry) downloadIndex(idx Index) error {
 	var err error
 	var data []byte
 
 	// download new index
 	for tries := 0; tries < 3; tries++ {
-		data, err = reg.fetchData(name, tries)
+		data, err = reg.fetchData(idx.Path, tries)
 		if err == nil {
 			break
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("failed to download index %s: %s", name, err)
+		return fmt.Errorf("failed to download index %s: %w", idx.Path, err)
 	}
 
 	// parse
 	new := make(map[string]string)
 	err = json.Unmarshal(data, &new)
 	if err != nil {
-		return fmt.Errorf("failed to parse index %s: %s", name, err)
+		return fmt.Errorf("failed to parse index %s: %w", idx.Path, err)
 	}
 
 	// check for content
 	if len(new) == 0 {
-		return fmt.Errorf("index %s is empty", name)
+		return fmt.Errorf("index %s is empty", idx.Path)
 	}
 
 	// add resources to registry
-	_ = reg.AddResources(new, false, stableRelease, betaRelease)
-
-	// save index
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, name), data, 0644)
+	err = reg.AddResources(new, false, idx.Stable, idx.Beta)
 	if err != nil {
-		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, name, err)
+		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
 	}
 
-	log.Infof("%s: updated index %s", reg.Name, name)
+	// save index
+	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644)
+	if err != nil {
+		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
+	}
+
+	log.Infof("%s: updated index %s", reg.Name, idx.Path)
 	return nil
 }
 
@@ -72,7 +79,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 		res.Lock()
 
 		// check if we want to download
-		if res.ActiveVersion != nil || // resource is currently being used
+		if res.inUse() ||
 			res.available() || // resource was used in the past
 			utils.StringInSlice(reg.MandatoryUpdates, res.Identifier) { // resource is mandatory
 
@@ -97,7 +104,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	// check download dir
 	err := reg.tmpDir.Ensure()
 	if err != nil {
-		return fmt.Errorf("could not prepare tmp directory for download: %s", err)
+		return fmt.Errorf("could not prepare tmp directory for download: %w", err)
 	}
 
 	// download updates
@@ -106,6 +113,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 		for tries := 0; tries < 3; tries++ {
 			err = reg.fetchFile(rv, tries)
 			if err == nil {
+				rv.Available = true
 				break
 			}
 		}
@@ -114,12 +122,6 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 		}
 	}
 	log.Infof("%s: finished downloading updates", reg.Name)
-
-	// remove tmp folder after we are finished
-	err = os.RemoveAll(reg.tmpDir.Path)
-	if err != nil {
-		log.Tracef("%s: failed to remove tmp dir %s after downloading updates: %s", reg.Name, reg.tmpDir.Path, err)
-	}
 
 	return nil
 }

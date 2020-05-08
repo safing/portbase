@@ -19,37 +19,90 @@ type Resource struct {
 	registry *ResourceRegistry
 	notifier *notifier
 
+	// Identifier is the unique identifier for that resource.
+	// It forms a file path using a forward-slash as the
+	// path separator.
 	Identifier string
-	Versions   []*ResourceVersion
 
-	ActiveVersion   *ResourceVersion
+	// Versions holds all available resource versions.
+	Versions []*ResourceVersion
+
+	// ActiveVersion is the last version of the resource
+	// that someone requested using GetFile().
+	ActiveVersion *ResourceVersion
+
+	// SelectedVersion is newest, selectable version of
+	// that resource that is available. A version
+	// is selectable if it's not blacklisted by the user.
+	// Note that it's not guaranteed that the selected version
+	// is available locally. In that case, GetFile will attempt
+	// to download the latest version from the updates servers
+	// specified in the resource registry.
 	SelectedVersion *ResourceVersion
-	ForceDownload   bool
 }
 
 // ResourceVersion represents a single version of a resource.
 type ResourceVersion struct {
 	resource *Resource
 
+	// VersionNumber is the string representation of the resource
+	// version.
 	VersionNumber string
 	semVer        *semver.Version
-	Available     bool
+
+	// Available indicates if this version is available locally.
+	Available bool
+
+	// StableRelease indicates that this version is part of
+	// a stable release index file.
 	StableRelease bool
-	BetaRelease   bool
-	Blacklisted   bool
+
+	// BetaRelease indicates that this version is part of
+	// a beta release index file.
+	BetaRelease bool
+
+	// Blacklisted may be set to true if this version should
+	// be skipped and not used. This is useful if the version
+	// is known to be broken.
+	Blacklisted bool
 }
 
-// Len is the number of elements in the collection. (sort.Interface for Versions)
+func (rv *ResourceVersion) String() string {
+	return rv.VersionNumber
+}
+
+// isSelectable returns true if the version represented by rv is selectable.
+// A version is selectable if it's not blacklisted and either already locally
+// available or ready to be downloaded.
+func (rv *ResourceVersion) isSelectable() bool {
+	return !rv.Blacklisted && (rv.Available || rv.resource.registry.Online)
+}
+
+// isBetaVersionNumber checks if rv is marked as a beta version by checking
+// the version string. It does not honor the BetaRelease field of rv!
+func (rv *ResourceVersion) isBetaVersionNumber() bool {
+	// "b" suffix check if for backwards compatibility
+	// new versions should use the pre-release suffix as
+	// declared by https://semver.org
+	// i.e. 1.2.3-beta
+	return strings.HasSuffix(rv.VersionNumber, "b") || strings.Contains(rv.semVer.Prerelease(), "beta")
+}
+
+// Len is the number of elements in the collection.
+// It implements sort.Interface for ResourceVersion.
 func (res *Resource) Len() int {
 	return len(res.Versions)
 }
 
-// Less reports whether the element with index i should sort before the element with index j. (sort.Interface for Versions)
+// Less reports whether the element with index i should
+// sort before the element with index j.
+// It implements sort.Interface for ResourceVersions.
 func (res *Resource) Less(i, j int) bool {
 	return res.Versions[i].semVer.GreaterThan(res.Versions[j].semVer)
 }
 
-// Swap swaps the elements with indexes i and j. (sort.Interface for Versions)
+// Swap swaps the elements with indexes i and j.
+// It implements sort.Interface for ResourceVersions.
 func (res *Resource) Swap(i, j int) {
 	res.Versions[i], res.Versions[j] = res.Versions[j], res.Versions[i]
 }
@@ -62,6 +115,20 @@ func (res *Resource) available() bool {
 		}
 	}
 	return false
+}
+
+// inUse returns true if the resource is currently in use.
+func (res *Resource) inUse() bool {
+	return res.ActiveVersion != nil
+}
+
+// AnyVersionAvailable returns true if any version of
+// res is locally available.
+func (res *Resource) AnyVersionAvailable() bool {
+	res.Lock()
+	defer res.Unlock()
+
+	return res.available()
 }
 
 func (reg *ResourceRegistry) newResource(identifier string) *Resource {
@@ -154,18 +221,24 @@ func (res *Resource) GetFile() *File {
 	}
 }
 
-//nolint:gocognit // function already kept as simlpe as possible
+//nolint:gocognit // function already kept as simple as possible
 func (res *Resource) selectVersion() {
 	sort.Sort(res)
 
 	// export after we finish
 	defer func() {
-		if res.ActiveVersion != nil && // resource has already been used
+		log.Debugf("updater: selected version %s for resource %s", res.SelectedVersion, res.Identifier)
+
+		if res.inUse() &&
 			res.SelectedVersion != res.ActiveVersion && // new selected version does not match previously selected version
 			res.notifier != nil {
+
 			res.notifier.markAsUpgradeable()
 			res.notifier = nil
+
+			log.Debugf("updater: active version of %s is %s, update available", res.Identifier, res.ActiveVersion.VersionNumber)
 		}
+
 	}()
 
 	if len(res.Versions) == 0 {
@@ -190,7 +263,7 @@ func (res *Resource) selectVersion() {
 	if res.registry.Beta {
 		for _, rv := range res.Versions {
 			if rv.BetaRelease {
-				if !rv.Blacklisted && (rv.Available || rv.resource.registry.Online) {
+				if rv.isSelectable() {
 					res.SelectedVersion = rv
 					return
 				}
@@ -202,7 +275,7 @@ func (res *Resource) selectVersion() {
 	// 3) Stable release
 	for _, rv := range res.Versions {
 		if rv.StableRelease {
-			if !rv.Blacklisted && (rv.Available || rv.resource.registry.Online) {
+			if rv.isSelectable() {
 				res.SelectedVersion = rv
 				return
 			}
@@ -212,7 +285,7 @@ func (res *Resource) selectVersion() {
 
 	// 4) Latest stable release
 	for _, rv := range res.Versions {
-		if !strings.HasSuffix(rv.VersionNumber, "b") && !rv.Blacklisted && (rv.Available || rv.resource.registry.Online) {
+		if !rv.isBetaVersionNumber() && rv.isSelectable() {
 			res.SelectedVersion = rv
 			return
 		}
@@ -220,7 +293,7 @@ func (res *Resource) selectVersion() {
 
 	// 5) Latest of any type
 	for _, rv := range res.Versions {
-		if !rv.Blacklisted && (rv.Available || rv.resource.registry.Online) {
+		if rv.isSelectable() {
 			res.SelectedVersion = rv
 			return
 		}
@@ -228,6 +301,7 @@ func (res *Resource) selectVersion() {
 
 	// 6) Default to newest
 	res.SelectedVersion = res.Versions[0]
+	log.Warningf("updater: falling back to version %s for %s because we failed to find a selectable one", res.SelectedVersion, res.Identifier)
 }
 
 // Blacklist blacklists the specified version and selects a new version.
@@ -235,7 +309,7 @@ func (res *Resource) Blacklist(version string) error {
 	res.Lock()
 	defer res.Unlock()
 
-	// count already blacklisted entries
+	// count available and valid versions
 	valid := 0
 	for _, rv := range res.Versions {
 		if rv.VersionNumber == "0" {
@@ -262,7 +336,11 @@ func (res *Resource) Blacklist(version string) error {
 	return errors.New("could not find version")
 }
 
-// Purge deletes old updates, retaining a certain amount, specified by the keep parameter. Will at least keep 2 updates per resource. After purging, new versions will be selected.
+// Purge deletes old updates, retaining a certain amount, specified by
+// the keep parameter. Purge will always keep at least 2 versions so
+// specifying a smaller keep value will have no effect. Note that
+// blacklisted versions are not counted for the keep parameter.
+// After purging a new version will be selected.
 func (res *Resource) Purge(keep int) {
 	res.Lock()
 	defer res.Unlock()

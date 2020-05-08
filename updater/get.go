@@ -37,7 +37,7 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 	// check download dir
 	err := reg.tmpDir.Ensure()
 	if err != nil {
-		return nil, fmt.Errorf("could not prepare tmp directory for download: %s", err)
+		return nil, fmt.Errorf("could not prepare tmp directory for download: %w", err)
 	}
 
 	// download file

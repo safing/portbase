@@ -1,6 +1,7 @@
 package hashmap
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -146,12 +147,44 @@ func (hm *HashMap) Injected() bool {
 }
 
 // Maintain runs a light maintenance operation on the database.
-func (hm *HashMap) Maintain() error {
+func (hm *HashMap) Maintain(_ context.Context) error {
 	return nil
 }
 
 // MaintainThorough runs a thorough maintenance operation on the database.
-func (hm *HashMap) MaintainThorough() (err error) {
+func (hm *HashMap) MaintainThorough(_ context.Context) error {
+	return nil
+}
+
+// MaintainRecordStates maintains records states in the database.
+func (hm *HashMap) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+	hm.dbLock.Lock()
+	defer hm.dbLock.Unlock()
+
+	now := time.Now().Unix()
+	purgeThreshold := purgeDeletedBefore.Unix()
+
+	for key, record := range hm.db {
+		meta := record.Meta()
+		switch {
+		case meta.Deleted > 0 && meta.Deleted < purgeThreshold:
+			// delete from storage
+			delete(hm.db, key)
+		case meta.Expires > 0 && meta.Expires < now:
+			// mark as deleted
+			record.Lock()
+			meta.Deleted = meta.Expires
+			record.Unlock()
+		}
+
+		// check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+	}
+
 	return nil
 }
 

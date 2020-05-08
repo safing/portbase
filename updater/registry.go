@@ -20,6 +20,7 @@ type ResourceRegistry struct {
 	Name       string
 	storageDir *utils.DirStructure
 	tmpDir     *utils.DirStructure
+	indexes    []Index
 
 	resources        map[string]*Resource
 	UpdateURLs       []string
@@ -28,6 +29,14 @@ type ResourceRegistry struct {
 	Beta    bool
 	DevMode bool
 	Online  bool
+}
+
+// AddIndex adds a new index to the resource registry.
+func (reg *ResourceRegistry) AddIndex(idx Index) {
+	reg.Lock()
+	defer reg.Unlock()
+
+	reg.indexes = append(reg.indexes, idx)
 }
 
 // Initialize initializes a raw registry struct and makes it ready for usage.
@@ -47,6 +56,18 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	reg.storageDir = storageDir
 	reg.tmpDir = storageDir.ChildDir("tmp", 0700)
 	reg.resources = make(map[string]*Resource)
+
+	// remove tmp dir to delete old entries
+	err = reg.Cleanup()
+	if err != nil {
+		log.Warningf("%s: failed to remove tmp dir: %s", reg.Name, err)
+	}
+
+	// (re-)create tmp dir
+	err = reg.tmpDir.Ensure()
+	if err != nil {
+		log.Warningf("%s: failed to create tmp dir: %s", reg.Name, err)
+	}
 
 	return nil
 }

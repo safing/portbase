@@ -13,7 +13,11 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
-// ScanStorage scans root within the storage dir and adds found resources to the registry. If an error occurred, it is logged and the last error is returned. Everything that was found despite errors is added to the registry anyway. Leave root empty to scan the full storage dir.
+// ScanStorage scans root within the storage dir and adds found
+// resources to the registry. If an error occurred, it is logged
+// and the last error is returned. Everything that was found
+// despite errors is added to the registry anyway. Leave root
+// empty to scan the full storage dir.
 func (reg *ResourceRegistry) ScanStorage(root string) error {
 	var lastError error
 
@@ -34,7 +38,7 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 	// walk fs
 	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			lastError = fmt.Errorf("%s: could not read %s: %s", reg.Name, path, err)
+			lastError = fmt.Errorf("%s: could not read %s: %w", reg.Name, path, err)
 			log.Warning(lastError.Error())
 			return nil
 		}
@@ -42,7 +46,7 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 		// get relative path to storage
 		relativePath, err := filepath.Rel(reg.storageDir.Path, path)
 		if err != nil {
-			lastError = fmt.Errorf("%s: could not get relative path of %s: %s", reg.Name, path, err)
+			lastError = fmt.Errorf("%s: could not get relative path of %s: %w", reg.Name, path, err)
 			log.Warning(lastError.Error())
 			return nil
 		}
@@ -62,7 +66,7 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 		// save
 		err = reg.AddResource(identifier, version, true, false, false)
 		if err != nil {
-			lastError = fmt.Errorf("%s: could not get add resource %s v%s: %s", reg.Name, identifier, version, err)
+			lastError = fmt.Errorf("%s: could not get add resource %s v%s: %w", reg.Name, identifier, version, err)
 			log.Warning(lastError.Error())
 		}
 		return nil
@@ -71,29 +75,42 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 	return lastError
 }
 
-// LoadIndexes loads the current release indexes from disk and will fetch a new version if not available and online.
+// LoadIndexes loads the current release indexes from disk
+// or will fetch a new version if not available and the
+// registry is marked as online.
 func (reg *ResourceRegistry) LoadIndexes() error {
-	err := reg.loadIndexFile("stable.json", true, false)
-	if err != nil {
-		err = reg.downloadIndex("stable.json", true, false)
-		if err != nil {
-			return err
+	var firstErr error
+	for _, idx := range reg.getIndexes() {
+		err := reg.loadIndexFile(idx)
+		if err == nil {
+			log.Debugf("%s: loaded index %s", reg.Name, idx.Path)
+		} else if reg.Online {
+			// try to download the index file if a local disk version
+			// does not exist or we don't have permission to read it.
+			if os.IsNotExist(err) || os.IsPermission(err) {
+				err = reg.downloadIndex(idx)
+			}
+		}
+
+		if err != nil && firstErr == nil {
+			firstErr = err
 		}
 	}
 
-	err = reg.loadIndexFile("beta.json", false, true)
-	if err != nil {
-		err = reg.downloadIndex("beta.json", false, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return firstErr
 }
 
-func (reg *ResourceRegistry) loadIndexFile(name string, stableRelease, betaRelease bool) error {
-	data, err := ioutil.ReadFile(filepath.Join(reg.storageDir.Path, name))
+func (reg *ResourceRegistry) getIndexes() []Index {
+	reg.RLock()
+	defer reg.RUnlock()
+	indexes := make([]Index, len(reg.indexes))
+	copy(indexes, reg.indexes)
+	return indexes
+}
+
+func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
+	path := filepath.FromSlash(idx.Path)
+	data, err := ioutil.ReadFile(filepath.Join(reg.storageDir.Path, path))
 	if err != nil {
 		return err
 	}
@@ -105,26 +122,26 @@ func (reg *ResourceRegistry) loadIndexFile(name string, stableRelease, betaRelea
 	}
 
 	if len(releases) == 0 {
-		return fmt.Errorf("%s is empty", name)
+		return fmt.Errorf("%s is empty", path)
 	}
 
-	err = reg.AddResources(releases, false, stableRelease, betaRelease)
+	err = reg.AddResources(releases, false, idx.Stable, idx.Beta)
 	if err != nil {
 		log.Warningf("%s: failed to add resource: %s", reg.Name, err)
 	}
 	return nil
 }
 
-// CreateSymlinks creates a directory structure with unversions symlinks to the given updates list.
+// CreateSymlinks creates a directory structure with unversioned symlinks to the given updates list.
 func (reg *ResourceRegistry) CreateSymlinks(symlinkRoot *utils.DirStructure) error {
 	err := os.RemoveAll(symlinkRoot.Path)
 	if err != nil {
-		return fmt.Errorf("failed to wipe symlink root: %s", err)
+		return fmt.Errorf("failed to wipe symlink root: %w", err)
 	}
 
 	err = symlinkRoot.Ensure()
 	if err != nil {
-		return fmt.Errorf("failed to create symlink root: %s", err)
+		return fmt.Errorf("failed to create symlink root: %w", err)
 	}
 
 	reg.RLock()
@@ -141,17 +158,17 @@ func (reg *ResourceRegistry) CreateSymlinks(symlinkRoot *utils.DirStructure) err
 
 		err = symlinkRoot.EnsureAbsPath(linkPathDir)
 		if err != nil {
-			return fmt.Errorf("failed to create dir for link: %s", err)
+			return fmt.Errorf("failed to create dir for link: %w", err)
 		}
 
 		relativeTargetPath, err := filepath.Rel(linkPathDir, targetPath)
 		if err != nil {
-			return fmt.Errorf("failed to get relative target path: %s", err)
+			return fmt.Errorf("failed to get relative target path: %w", err)
 		}
 
 		err = os.Symlink(relativeTargetPath, linkPath)
 		if err != nil {
-			return fmt.Errorf("failed to link %s: %s", res.Identifier, err)
+			return fmt.Errorf("failed to link %s: %w", res.Identifier, err)
 		}
 	}
 

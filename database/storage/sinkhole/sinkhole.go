@@ -1,7 +1,9 @@
 package sinkhole
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/safing/portbase/database/iterator"
 	"github.com/safing/portbase/database/query"
@@ -77,12 +79,17 @@ func (s *Sinkhole) Injected() bool {
 }
 
 // Maintain runs a light maintenance operation on the database.
-func (s *Sinkhole) Maintain() error {
+func (s *Sinkhole) Maintain(ctx context.Context) error {
 	return nil
 }
 
 // MaintainThorough runs a thorough maintenance operation on the database.
-func (s *Sinkhole) MaintainThorough() (err error) {
+func (s *Sinkhole) MaintainThorough(ctx context.Context) error {
+	return nil
+}
+
+// MaintainRecordStates maintains records states in the database.
+func (s *Sinkhole) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
 	return nil
 }
 

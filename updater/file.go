@@ -1,5 +1,7 @@
 package updater
 
+import "github.com/safing/portbase/log"
+
 // File represents a file from the update system.
 type File struct {
 	resource      *Resource
@@ -36,6 +38,7 @@ func (file *File) markActiveWithLocking() {
 
 	// update last used version
 	if file.resource.ActiveVersion != file.version {
+		log.Debugf("updater: setting active version of resource %s from %s to %s", file.resource.Identifier, file.resource.ActiveVersion, file.version.VersionNumber)
 		file.resource.ActiveVersion = file.version
 	}
 }

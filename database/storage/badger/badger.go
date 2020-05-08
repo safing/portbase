@@ -1,6 +1,7 @@
 package badger
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -193,16 +194,22 @@ func (b *Badger) Injected() bool {
 }
 
 // Maintain runs a light maintenance operation on the database.
-func (b *Badger) Maintain() error {
+func (b *Badger) Maintain(_ context.Context) error {
 	_ = b.db.RunValueLogGC(0.7)
 	return nil
 }
 
 // MaintainThorough runs a thorough maintenance operation on the database.
-func (b *Badger) MaintainThorough() (err error) {
+func (b *Badger) MaintainThorough(_ context.Context) (err error) {
 	for err == nil {
 		err = b.db.RunValueLogGC(0.7)
 	}
+	return nil
+}
+
+// MaintainRecordStates maintains records states in the database.
+func (b *Badger) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+	// TODO: implement MaintainRecordStates
 	return nil
 }
 
