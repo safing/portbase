@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"context"
+	"time"
+
 	"github.com/safing/portbase/database/iterator"
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
@@ -15,8 +18,9 @@ type Interface interface {
 
 	ReadOnly() bool
 	Injected() bool
-	Maintain() error
-	MaintainThorough() error
+	Maintain(ctx context.Context) error
+	MaintainThorough(ctx context.Context) error
+	MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error
 	Shutdown() error
 }
 

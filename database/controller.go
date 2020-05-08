@@ -1,8 +1,10 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/tevino/abool"
 
@@ -226,7 +228,7 @@ func (c *Controller) readUnlockerAfterQuery(it *iterator.Iterator) {
 }
 
 // Maintain runs the Maintain method on the storage.
-func (c *Controller) Maintain() error {
+func (c *Controller) Maintain(ctx context.Context) error {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
 
@@ -234,11 +236,11 @@ func (c *Controller) Maintain() error {
 		return nil
 	}
 
-	return c.storage.Maintain()
+	return c.storage.Maintain(ctx)
 }
 
 // MaintainThorough runs the MaintainThorough method on the storage.
-func (c *Controller) MaintainThorough() error {
+func (c *Controller) MaintainThorough(ctx context.Context) error {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
 
@@ -246,7 +248,19 @@ func (c *Controller) MaintainThorough() error {
 		return nil
 	}
 
-	return c.storage.MaintainThorough()
+	return c.storage.MaintainThorough(ctx)
+}
+
+// MaintainRecordStates runs the record state lifecycle maintenance on the storage.
+func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		return nil
+	}
+
+	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
 }
 
 // Shutdown shuts down the storage.

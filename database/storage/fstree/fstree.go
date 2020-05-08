@@ -5,6 +5,7 @@ It is primarily meant for easy testing or storing big files that can easily be a
 package fstree
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -255,12 +256,18 @@ func (fst *FSTree) Injected() bool {
 }
 
 // Maintain runs a light maintenance operation on the database.
-func (fst *FSTree) Maintain() error {
+func (fst *FSTree) Maintain(_ context.Context) error {
 	return nil
 }
 
 // MaintainThorough runs a thorough maintenance operation on the database.
-func (fst *FSTree) MaintainThorough() error {
+func (fst *FSTree) MaintainThorough(_ context.Context) error {
+	return nil
+}
+
+// MaintainRecordStates maintains records states in the database.
+func (fst *FSTree) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+	// TODO: implement MaintainRecordStates
 	return nil
 }
 

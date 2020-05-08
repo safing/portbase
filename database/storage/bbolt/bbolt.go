@@ -2,6 +2,7 @@ package bbolt
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -235,13 +236,67 @@ func (b *BBolt) Injected() bool {
 }
 
 // Maintain runs a light maintenance operation on the database.
-func (b *BBolt) Maintain() error {
+func (b *BBolt) Maintain(_ context.Context) error {
 	return nil
 }
 
 // MaintainThorough runs a thorough maintenance operation on the database.
-func (b *BBolt) MaintainThorough() (err error) {
+func (b *BBolt) MaintainThorough(_ context.Context) error {
 	return nil
+}
+
+// MaintainRecordStates maintains records states in the database.
+func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+	now := time.Now().Unix()
+	purgeThreshold := purgeDeletedBefore.Unix()
+
+	return b.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		// Create a cursor for iteration.
+		c := bucket.Cursor()
+		for key, value := c.First(); key != nil; key, value = c.Next() {
+			// wrap value
+			wrapper, err := record.NewRawWrapper(b.name, string(key), value)
+			if err != nil {
+				return err
+			}
+
+			// check if we need to do maintenance
+			meta := wrapper.Meta()
+			switch {
+			case meta.Deleted > 0 && meta.Deleted < purgeThreshold:
+				// delete from storage
+				err = c.Delete()
+				if err != nil {
+					return err
+				}
+			case meta.Expires > 0 && meta.Expires < now:
+				// mark as deleted
+				meta.Deleted = meta.Expires
+				deleted, err := wrapper.MarshalRecord(wrapper)
+				if err != nil {
+					return err
+				}
+				err = bucket.Put(key, deleted)
+				if err != nil {
+					return err
+				}
+
+				// reposition cursor
+				c.Seek(key)
+			}
+
+			time.Sleep(100 * time.Millisecond)
+
+			// check if context is cancelled
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+		}
+		return nil
+	})
 }
 
 // Shutdown shuts down the database.

@@ -3,20 +3,15 @@ package database
 import (
 	"context"
 	"time"
-
-	"github.com/tevino/abool"
-
-	"github.com/safing/portbase/database/query"
-	"github.com/safing/portbase/database/record"
 )
 
 // Maintain runs the Maintain method on all storages.
-func Maintain() (err error) {
+func Maintain(ctx context.Context) (err error) {
 	// copy, as we might use the very long
 	all := duplicateControllers()
 
 	for _, c := range all {
-		err = c.Maintain()
+		err = c.Maintain(ctx)
 		if err != nil {
 			return
 		}
@@ -25,12 +20,12 @@ func Maintain() (err error) {
 }
 
 // MaintainThorough runs the MaintainThorough method on all storages.
-func MaintainThorough() (err error) {
+func MaintainThorough(ctx context.Context) (err error) {
 	// copy, as we might use the very long
 	all := duplicateControllers()
 
 	for _, c := range all {
-		err = c.MaintainThorough()
+		err = c.MaintainThorough(ctx)
 		if err != nil {
 			return
 		}
@@ -39,100 +34,21 @@ func MaintainThorough() (err error) {
 }
 
 // MaintainRecordStates runs record state lifecycle maintenance on all storages.
-func MaintainRecordStates(ctx context.Context) error { //nolint:gocognit
-	// TODO: Put this in the storage interface to correctly maintain on all storages.
-	// Storages might check for deletion and expiry in the query interface and not return anything here.
-
-	// listen for ctx cancel
-	stop := abool.New()
-	doneCh := make(chan struct{}) // for goroutine cleanup
-	defer close(doneCh)
-	go func() {
-		select {
-		case <-ctx.Done():
-		case <-doneCh:
-		}
-		stop.Set()
-	}()
+func MaintainRecordStates(ctx context.Context) (err error) {
+	// delete immediately for now
+	// TODO: increase purge threshold when starting to sync DBs
+	purgeDeletedBefore := time.Now().UTC()
 
 	// copy, as we might use the very long
 	all := duplicateControllers()
 
-	now := time.Now().Unix()
-	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour).Unix()
-
 	for _, c := range all {
-		if stop.IsSet() {
-			return nil
-		}
-
-		if c.ReadOnly() || c.Injected() {
-			continue
-		}
-
-		q, err := query.New("").Check()
+		err = c.MaintainRecordStates(ctx, purgeDeletedBefore)
 		if err != nil {
-			return err
+			return
 		}
-
-		it, err := c.Query(q, true, true)
-		if err != nil {
-			return err
-		}
-
-		var toDelete []record.Record
-		var toExpire []record.Record
-
-	queryLoop:
-		for {
-			select {
-			case r := <-it.Next:
-				if r == nil {
-					break queryLoop
-				}
-
-				meta := r.Meta()
-				switch {
-				case meta.Deleted > 0 && meta.Deleted < thirtyDaysAgo:
-					toDelete = append(toDelete, r)
-				case meta.Expires > 0 && meta.Expires < now:
-					toExpire = append(toExpire, r)
-				}
-			case <-ctx.Done():
-				it.Cancel()
-				break queryLoop
-			}
-		}
-		if it.Err() != nil {
-			return err
-		}
-		if stop.IsSet() {
-			return nil
-		}
-
-		for _, r := range toDelete {
-			err := c.storage.Delete(r.DatabaseKey())
-			if err != nil {
-				return err
-			}
-			if stop.IsSet() {
-				return nil
-			}
-		}
-
-		for _, r := range toExpire {
-			r.Meta().Delete()
-			err := c.Put(r)
-			if err != nil {
-				return err
-			}
-			if stop.IsSet() {
-				return nil
-			}
-		}
-
 	}
-	return nil
+	return
 }
 
 func duplicateControllers() (all []*Controller) {

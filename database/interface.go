@@ -181,7 +181,7 @@ func (i *Interface) Put(r record.Record) (err error) {
 			return err
 		}
 	} else {
-		db, err = getController(r.DatabaseKey())
+		db, err = getController(r.DatabaseName())
 		if err != nil {
 			return err
 		}

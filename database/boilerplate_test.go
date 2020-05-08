@@ -16,7 +16,10 @@ type Example struct {
 }
 
 var (
-	exampleDB = NewInterface(nil)
+	exampleDB = NewInterface(&Options{
+		Internal: true,
+		Local:    true,
+	})
 )
 
 // GetExample gets an Example from the database.
