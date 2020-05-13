@@ -1,6 +1,13 @@
 package updater
 
-import "github.com/safing/portbase/log"
+import (
+	"io"
+	"os"
+	"strings"
+
+	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils"
+)
 
 // File represents a file from the update system.
 type File struct {
@@ -41,4 +48,56 @@ func (file *File) markActiveWithLocking() {
 		log.Debugf("updater: setting active version of resource %s from %s to %s", file.resource.Identifier, file.resource.ActiveVersion, file.version.VersionNumber)
 		file.resource.ActiveVersion = file.version
 	}
+}
+
+// Unpacker describes the function that is passed to
+// File.Unpack. It receives a reader to the compressed/packed
+// file and should return a reader that provides
+// unpacked file contents. If the returned reader implements
+// io.Closer it's close method is invoked when an error
+// or io.EOF is returned from Read().
+type Unpacker func(io.Reader) (io.Reader, error)
+
+// Unpack returns the path to the unpacked version of file and
+// unpacks it on demand using unpacker.
+func (file *File) Unpack(suffix string, unpacker Unpacker) (string, error) {
+	path := strings.TrimSuffix(file.Path(), suffix)
+
+	if suffix == "" {
+		path += "-unpacked"
+	}
+
+	_, err := os.Stat(path)
+	if err == nil {
+		return path, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	f, err := os.Open(file.Path())
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	r, err := unpacker(f)
+	if err != nil {
+		return "", err
+	}
+
+	ioErr := utils.CreateAtomic(path, r, &utils.AtomicFileOptions{
+		TempDir: file.resource.registry.TmpDir().Path,
+	})
+
+	if c, ok := r.(io.Closer); ok {
+		if err := c.Close(); err != nil && ioErr == nil {
+			// if ioErr is already set we ignore the error from
+			// closing the unpacker.
+			ioErr = err
+		}
+	}
+
+	return path, ioErr
 }
