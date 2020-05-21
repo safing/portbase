@@ -286,8 +286,6 @@ func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore tim
 				c.Seek(key)
 			}
 
-			time.Sleep(100 * time.Millisecond)
-
 			// check if context is cancelled
 			select {
 			case <-ctx.Done():

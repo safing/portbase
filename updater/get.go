@@ -13,7 +13,8 @@ var (
 	ErrNotAvailableLocally = errors.New("the requested file is not available locally")
 )
 
-// GetFile returns the selected (mostly newest) file with the given identifier or an error, if it fails.
+// GetFile returns the selected (mostly newest) file with the given
+// identifier or an error, if it fails.
 func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 	reg.RLock()
 	res, ok := reg.resources[identifier]

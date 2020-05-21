@@ -62,7 +62,7 @@ signalLoop:
 		case sig := <-signalCh:
 			// only print and continue to wait if SIGUSR1
 			if sig == sigUSR1 {
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 2)
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
 				continue signalLoop
 			}
 
@@ -80,18 +80,18 @@ signalLoop:
 			if printStackOnExit {
 				fmt.Println("=== PRINTING TRACES ===")
 				fmt.Println("=== GOROUTINES ===")
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 				fmt.Println("=== BLOCKING ===")
-				_ = pprof.Lookup("block").WriteTo(os.Stdout, 2)
+				_ = pprof.Lookup("block").WriteTo(os.Stdout, 1)
 				fmt.Println("=== MUTEXES ===")
-				_ = pprof.Lookup("mutex").WriteTo(os.Stdout, 2)
+				_ = pprof.Lookup("mutex").WriteTo(os.Stdout, 1)
 				fmt.Println("=== END TRACES ===")
 			}
 
 			go func() {
 				time.Sleep(60 * time.Second)
 				fmt.Fprintln(os.Stderr, "===== TAKING TOO LONG FOR SHUTDOWN - PRINTING STACK TRACES =====")
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 2)
+				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
 				os.Exit(1)
 			}()
 
