@@ -6,7 +6,7 @@ import (
 
 // Errors
 var (
-	ErrNotFound         = errors.New("database entry could not be found")
+	ErrNotFound         = errors.New("database entry not found")
 	ErrPermissionDenied = errors.New("access to database record denied")
 	ErrReadOnly         = errors.New("database is read only")
 	ErrShuttingDown     = errors.New("database system is shutting down")
