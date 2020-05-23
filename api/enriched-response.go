@@ -54,7 +54,7 @@ func (lrw *LoggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 	return nil, nil, errors.New("response does not implement http.Hijacker")
 }
 
-// RequestLogger is a logging middleware
+// RequestLogger is a logging middleware.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Tracef("api request: %s ___ %s", r.RemoteAddr, r.RequestURI)
