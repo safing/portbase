@@ -82,7 +82,8 @@ func authMiddleware(next http.Handler) http.Handler {
 		grantAccess, err := authenticator(server, r)
 		if err != nil {
 			log.Warningf("api: authenticator failed: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			http.Error(w, "Bad Request: Could not identify client", http.StatusBadRequest)
+			return
 		}
 		if !grantAccess {
 			log.Warningf("api: denying api access to %s", r.RemoteAddr)

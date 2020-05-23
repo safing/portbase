@@ -4,5 +4,5 @@ import "errors"
 
 // Errors for storages
 var (
-	ErrNotFound = errors.New("storage entry could not be found")
+	ErrNotFound = errors.New("storage entry not found")
 )

@@ -123,6 +123,18 @@ func (n *Notification) Save() *Notification {
 	if n.GUID == "" {
 		n.GUID = uuid.NewV4().String()
 	}
+
+	// make ack notification if there are no defined actions
+	if len(n.AvailableActions) == 0 {
+		n.AvailableActions = []*Action{
+			{
+				ID:   "ack",
+				Text: "OK",
+			},
+		}
+		n.actionFunction = noOpAction
+	}
+
 	// check key
 	if n.DatabaseKey() == "" {
 		n.SetKey(fmt.Sprintf("notifications:all/%s", n.ID))
@@ -172,23 +184,6 @@ func (n *Notification) SetActionFunction(fn func(*Notification)) *Notification {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	n.actionFunction = fn
-	return n
-}
-
-// MakeAck sets a default "OK" action and a no-op action function.
-func (n *Notification) MakeAck() *Notification {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-
-	n.AvailableActions = []*Action{
-		{
-			ID:   "ack",
-			Text: "OK",
-		},
-	}
-	n.Type = Info
-	n.actionFunction = noOpAction
-
 	return n
 }
 
