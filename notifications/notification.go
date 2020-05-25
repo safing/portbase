@@ -9,7 +9,7 @@ import (
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 )
 
 // Notification types
