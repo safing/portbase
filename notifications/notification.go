@@ -8,8 +8,7 @@ import (
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
-
-	uuid "github.com/satori/go.uuid"
+	"github.com/safing/portbase/utils"
 )
 
 // Notification types
@@ -96,7 +95,7 @@ func notify(nType uint8, id string, msg string, actions ...Action) *Notification
 	}
 
 	if id == "" {
-		id = uuid.NewV4().String()
+		id = utils.DerivedInstanceUUID(msg).String()
 	}
 
 	n := Notification{
@@ -121,7 +120,7 @@ func (n *Notification) Save() *Notification {
 		n.Created = time.Now().Unix()
 	}
 	if n.GUID == "" {
-		n.GUID = uuid.NewV4().String()
+		n.GUID = utils.RandomUUID(n.ID).String()
 	}
 
 	// make ack notification if there are no defined actions
