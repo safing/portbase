@@ -85,7 +85,13 @@ func FullVersion() string {
 
 // CheckVersion checks if the metadata is ok.
 func CheckVersion() error {
-	if !strings.HasSuffix(os.Args[0], ".test") {
+	switch {
+	case strings.HasSuffix(os.Args[0], ".test"):
+		return nil // testing on linux/darwin
+	case strings.HasSuffix(os.Args[0], ".test.exe"):
+		return nil // testing on windows
+	default:
+		// check version information
 		if name == "[NAME]" {
 			return errors.New("must call SetInfo() before calling CheckVersion()")
 		}
@@ -100,5 +106,6 @@ func CheckVersion() error {
 			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
 		}
 	}
+
 	return nil
 }
