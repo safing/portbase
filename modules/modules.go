@@ -19,6 +19,9 @@ var (
 	// lock modules when starting
 	modulesLocked = abool.New()
 
+	moduleStartTimeout = 2 * time.Minute
+	moduleStopTimeout  = 1 * time.Minute
+
 	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
 	ErrCleanExit = errors.New("clean exit requested")
 )
@@ -117,7 +120,7 @@ func (m *Module) prep(reports chan *report) {
 			// execute function
 			err = m.runCtrlFnWithTimeout(
 				"prep module",
-				10*time.Second,
+				moduleStartTimeout,
 				m.prepFn,
 			)
 		}
@@ -173,7 +176,7 @@ func (m *Module) start(reports chan *report) {
 			// execute function
 			err = m.runCtrlFnWithTimeout(
 				"start module",
-				10*time.Second,
+				moduleStartTimeout,
 				m.startFn,
 			)
 		}
@@ -248,7 +251,7 @@ func (m *Module) stopAllTasks(reports chan *report) {
 	// wait for results
 	select {
 	case <-done:
-	case <-time.After(30 * time.Second):
+	case <-time.After(moduleStopTimeout):
 		log.Warningf(
 			"%s: timed out while waiting for stopfn/workers/tasks to finish: stopFn=%v workers=%d tasks=%d microtasks=%d, continuing shutdown...",
 			m.Name,
