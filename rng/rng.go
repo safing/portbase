@@ -1,6 +1,7 @@
 package rng
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -49,14 +50,22 @@ func start() error {
 		return errors.New("failed to initialize rng")
 	}
 
-	// explicitly add randomness
-	osEntropy := make([]byte, minFeedEntropy/8)
-	_, err := rand.Read(osEntropy)
-	if err != nil {
-		return fmt.Errorf("could not read entropy from os: %s", err)
-	}
-	rng.Reseed(osEntropy)
+	// add another (async) OS rng seed
+	module.StartWorker("initial rng feed", func(_ context.Context) error {
+		// get entropy from OS
+		osEntropy := make([]byte, minFeedEntropy/8)
+		_, err := rand.Read(osEntropy)
+		if err != nil {
+			return fmt.Errorf("could not read entropy from os: %s", err)
+		}
+		// feed
+		rngLock.Lock()
+		rng.Reseed(osEntropy)
+		rngLock.Unlock()
+		return nil
+	})
 
+	// mark as ready
 	rngReady = true
 
 	// random source: OS
