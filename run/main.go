@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -34,6 +35,10 @@ func Run() int {
 	if err != nil {
 		if err == modules.ErrCleanExit {
 			return 0
+		}
+
+		if printStackOnExit {
+			printStackTo(os.Stdout)
 		}
 
 		_ = modules.Shutdown()
@@ -78,20 +83,13 @@ signalLoop:
 			}()
 
 			if printStackOnExit {
-				fmt.Println("=== PRINTING TRACES ===")
-				fmt.Println("=== GOROUTINES ===")
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-				fmt.Println("=== BLOCKING ===")
-				_ = pprof.Lookup("block").WriteTo(os.Stdout, 1)
-				fmt.Println("=== MUTEXES ===")
-				_ = pprof.Lookup("mutex").WriteTo(os.Stdout, 1)
-				fmt.Println("=== END TRACES ===")
+				printStackTo(os.Stdout)
 			}
 
 			go func() {
-				time.Sleep(60 * time.Second)
-				fmt.Fprintln(os.Stderr, "===== TAKING TOO LONG FOR SHUTDOWN - PRINTING STACK TRACES =====")
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+				time.Sleep(3 * time.Minute)
+				fmt.Fprintln(os.Stderr, "===== TAKING TOO LONG FOR SHUTDOWN =====")
+				printStackTo(os.Stderr)
 				os.Exit(1)
 			}()
 
@@ -123,4 +121,15 @@ func inputSignals(signalCh chan os.Signal) {
 			signalCh <- sigUSR1
 		}
 	}
+}
+
+func printStackTo(writer io.Writer) {
+	fmt.Fprintln(writer, "=== PRINTING TRACES ===")
+	fmt.Fprintln(writer, "=== GOROUTINES ===")
+	_ = pprof.Lookup("goroutine").WriteTo(writer, 1)
+	fmt.Fprintln(writer, "=== BLOCKING ===")
+	_ = pprof.Lookup("block").WriteTo(writer, 1)
+	fmt.Fprintln(writer, "=== MUTEXES ===")
+	_ = pprof.Lookup("mutex").WriteTo(writer, 1)
+	fmt.Fprintln(writer, "=== END TRACES ===")
 }
