@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -16,6 +17,10 @@ var (
 
 	authFnLock sync.Mutex
 	authFn     Authenticator
+
+	// ErrAPIAccessDeniedMessage should be returned by Authenticator functions in
+	// order to signify a blocked request, including a error message for the user.
+	ErrAPIAccessDeniedMessage = errors.New("")
 )
 
 const (
@@ -28,7 +33,7 @@ const (
 )
 
 // Authenticator is a function that can be set as the authenticator for the API endpoint. If none is set, all requests will be allowed.
-type Authenticator func(s *http.Server, r *http.Request) (grantAccess bool, err error)
+type Authenticator func(s *http.Server, r *http.Request) (err error)
 
 // SetAuthenticator sets an authenticator function for the API endpoint. If none is set, all requests will be allowed.
 func SetAuthenticator(fn Authenticator) error {
@@ -79,15 +84,15 @@ func authMiddleware(next http.Handler) http.Handler {
 		}
 
 		// get auth decision
-		grantAccess, err := authenticator(server, r)
+		err = authenticator(server, r)
 		if err != nil {
-			log.Warningf("api: authenticator failed: %s", err)
-			http.Error(w, "Bad Request: Could not identify client", http.StatusBadRequest)
-			return
-		}
-		if !grantAccess {
-			log.Warningf("api: denying api access to %s", r.RemoteAddr)
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			if errors.Is(err, ErrAPIAccessDeniedMessage) {
+				log.Warningf("api: denying api access to %s", r.RemoteAddr)
+				http.Error(w, err.Error(), http.StatusForbidden)
+			} else {
+				log.Warningf("api: authenticator failed: %s", err)
+				http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
+			}
 			return
 		}
 
