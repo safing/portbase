@@ -48,7 +48,7 @@ func (lrw *LoggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 		if err != nil {
 			return nil, nil, err
 		}
-		log.Infof("api request: %s HIJ %s", lrw.Request.RemoteAddr, lrw.Request.RequestURI)
+		log.Tracer(lrw.Request.Context()).Infof("api request: %s HIJ %s", lrw.Request.RemoteAddr, lrw.Request.RequestURI)
 		return c, b, nil
 	}
 	return nil, nil, errors.New("response does not implement http.Hijacker")
@@ -57,12 +57,12 @@ func (lrw *LoggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 // RequestLogger is a logging middleware.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Tracef("api request: %s ___ %s", r.RemoteAddr, r.RequestURI)
+		log.Tracer(r.Context()).Tracef("api request: %s ___ %s", r.RemoteAddr, r.RequestURI)
 		lrw := NewLoggingResponseWriter(w, r)
 		next.ServeHTTP(lrw, r)
 		if lrw.Status != 0 {
 			// request may have been hijacked
-			log.Infof("api request: %s %d %s", lrw.Request.RemoteAddr, lrw.Status, lrw.Request.RequestURI)
+			log.Tracer(r.Context()).Infof("api request: %s %d %s", lrw.Request.RemoteAddr, lrw.Status, lrw.Request.RequestURI)
 		}
 	})
 }
