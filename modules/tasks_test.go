@@ -15,7 +15,7 @@ func init() {
 	go taskScheduleHandler()
 
 	go func() {
-		<-time.After(10 * time.Second)
+		<-time.After(30 * time.Second)
 		fmt.Fprintln(os.Stderr, "taking too long")
 		_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 2)
 		os.Exit(1)

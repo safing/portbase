@@ -74,11 +74,19 @@ signalLoop:
 			fmt.Println(" <INTERRUPT>")
 			log.Warning("main: program was interrupted, shutting down.")
 
+			forceCnt := 5
 			// catch signals during shutdown
 			go func() {
 				for {
 					<-signalCh
-					fmt.Println(" <INTERRUPT> again, but already shutting down")
+					forceCnt--
+					if forceCnt > 0 {
+						fmt.Printf(" <INTERRUPT> again, but already shutting down. %d more to force.\n", forceCnt)
+					} else {
+						fmt.Fprintln(os.Stderr, "===== FORCED EXIT =====")
+						printStackTo(os.Stderr)
+						os.Exit(1)
+					}
 				}
 			}()
 
