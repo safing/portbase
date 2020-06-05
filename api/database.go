@@ -127,8 +127,14 @@ func (api *DatabaseAPI) handler() {
 		if err != nil {
 			if !api.shuttingDown.IsSet() {
 				api.shutdown()
-				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					log.Warningf("api: websocket write error: %s", err)
+				if websocket.IsCloseError(err,
+					websocket.CloseNormalClosure,
+					websocket.CloseGoingAway,
+					websocket.CloseAbnormalClosure,
+				) {
+					log.Infof("api: websocket connection to %s closed", api.conn.RemoteAddr())
+				} else {
+					log.Warningf("api: websocket read error from %s: %s", api.conn.RemoteAddr(), err)
 				}
 			}
 			return
@@ -204,8 +210,14 @@ func (api *DatabaseAPI) writer() {
 		if err != nil {
 			if !api.shuttingDown.IsSet() {
 				api.shutdown()
-				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					log.Warningf("api: websocket write error: %s", err)
+				if websocket.IsCloseError(err,
+					websocket.CloseNormalClosure,
+					websocket.CloseGoingAway,
+					websocket.CloseAbnormalClosure,
+				) {
+					log.Infof("api: websocket connection to %s closed", api.conn.RemoteAddr())
+				} else {
+					log.Warningf("api: websocket write error to %s: %s", api.conn.RemoteAddr(), err)
 				}
 			}
 			return

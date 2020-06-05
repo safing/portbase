@@ -19,6 +19,8 @@ var (
 	middlewareHandler = &mwHandler{
 		final: mainMux,
 		handlers: []Middleware{
+			ModuleWorker,
+			LogTracer,
 			RequestLogger,
 			authMiddleware,
 		},
