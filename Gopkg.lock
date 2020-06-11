@@ -157,6 +157,14 @@
   version = "v0.9.1"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = ""
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:90da107a52bdacf25384ae6fc2889df9cf3c956ecde1561825b13ba70a8283b5"
   name = "github.com/seehuhn/fortuna"
   packages = ["."]
@@ -202,6 +210,14 @@
   pruneopts = ""
   revision = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab"
   version = "v1.0.5"
+
+[[projects]]
+  digest = "1:83fd2513b9f6ae0997bf646db6b74e9e00131e31002116fda597175f25add42d"
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  pruneopts = ""
+  revision = "f654a9112bbeac49ca2cd45bfbe11533c4666cf8"
+  version = "v1.6.1"
 
 [[projects]]
   branch = "master"
@@ -310,6 +326,14 @@
   revision = "d165be301fb1e13390ad453281ded24385fd8ebc"
   version = "v1.23.0"
 
+[[projects]]
+  branch = "v3"
+  digest = "1:0aa137e32b369fbb8c0f4d579e653c72e3431b6cc8cb3c19d6a21a14209031fd"
+  name = "gopkg.in/yaml.v3"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a5ece683394c3b88d90572e44d36c93aea492c2c"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -326,6 +350,7 @@
     "github.com/seehuhn/fortuna",
     "github.com/shirou/gopsutil/host",
     "github.com/spf13/cobra",
+    "github.com/stretchr/testify/assert",
     "github.com/tevino/abool",
     "github.com/tidwall/gjson",
     "github.com/tidwall/sjson",
