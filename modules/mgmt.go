@@ -30,9 +30,14 @@ func (m *Module) SetEnabled(enable bool) (changed bool) {
 	return m.Disable()
 }
 
-// Enabled returns wether or not the module is currently enabled.
+// Enabled returns whether or not the module is currently enabled.
 func (m *Module) Enabled() bool {
 	return m.enabled.IsSet()
+}
+
+// EnabledAsDependency returns whether or not the module is currently enabled as a dependency.
+func (m *Module) EnabledAsDependency() bool {
+	return m.enabledAsDependency.IsSet()
 }
 
 // EnableModuleManagement enables the module management functionality within modules. The supplied notify function will be called whenever the status of a module changes. The affected module will be in the parameter. You will need to manually enable modules, else nothing will start.

@@ -63,7 +63,7 @@ func statusFromModule(module *modules.Module) *ModuleStatus {
 	status := &ModuleStatus{
 		Name:    module.Name,
 		module:  module,
-		Enabled: module.Enabled(),
+		Enabled: module.Enabled() || module.EnabledAsDependency(),
 		Status:  module.Status(),
 	}
 	status.FailureStatus, status.FailureID, status.FailureMsg = module.FailureStatus()
@@ -73,7 +73,7 @@ func statusFromModule(module *modules.Module) *ModuleStatus {
 
 func compareAndUpdateStatus(module *modules.Module, status *ModuleStatus) (changed bool) {
 	// check if enabled
-	enabled := module.Enabled()
+	enabled := module.Enabled() || module.EnabledAsDependency()
 	if status.Enabled != enabled {
 		status.Enabled = enabled
 		changed = true
@@ -101,16 +101,10 @@ func compareAndUpdateStatus(module *modules.Module, status *ModuleStatus) (chang
 
 func (sub *Subsystem) makeSummary() {
 	// find worst failing module
-	worstFailing := &ModuleStatus{}
+	sub.FailureStatus = 0
 	for _, depStatus := range sub.Modules {
-		if depStatus.FailureStatus > worstFailing.FailureStatus {
-			worstFailing = depStatus
+		if depStatus.FailureStatus > sub.FailureStatus {
+			sub.FailureStatus = depStatus.FailureStatus
 		}
-	}
-
-	if worstFailing != nil {
-		sub.FailureStatus = worstFailing.FailureStatus
-	} else {
-		sub.FailureStatus = 0
 	}
 }
