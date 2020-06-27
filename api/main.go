@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/safing/portbase/modules"
 )
@@ -13,7 +14,7 @@ var (
 
 // API Errors
 var (
-	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set")
+	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set (or must be set earlier)")
 )
 
 func init() {
@@ -30,6 +31,14 @@ func prep() error {
 func start() error {
 	logFlagOverrides()
 	go Serve()
+
+	// start api auth token cleaner
+	authFnLock.Lock()
+	defer authFnLock.Unlock()
+	if authFn == nil {
+		module.NewTask("clean api auth tokens", cleanAuthTokens).Repeat(time.Minute)
+	}
+
 	return nil
 }
 
