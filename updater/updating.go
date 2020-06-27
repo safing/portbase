@@ -60,6 +60,12 @@ func (reg *ResourceRegistry) downloadIndex(idx Index) error {
 		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
 	}
 
+	// check if dest dir exists
+	err = reg.storageDir.EnsureRelPath(filepath.Dir(idx.Path))
+	if err != nil {
+		log.Warningf("%s: failed to ensure directory for updated index %s: %s", reg.Name, idx.Path, err)
+	}
+
 	// save index
 	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644)
 	if err != nil {
