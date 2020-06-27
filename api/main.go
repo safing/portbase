@@ -35,7 +35,7 @@ func start() error {
 	// start api auth token cleaner
 	authFnLock.Lock()
 	defer authFnLock.Unlock()
-	if authFn == nil {
+	if authFn != nil {
 		module.NewTask("clean api auth tokens", cleanAuthTokens).Repeat(time.Minute)
 	}
 
