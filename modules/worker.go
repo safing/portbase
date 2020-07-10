@@ -10,7 +10,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-// Worker Default Configuration
+// Worker Default Configuration.
 const (
 	DefaultBackoffDuration = 2 * time.Second
 )

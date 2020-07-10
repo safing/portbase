@@ -9,7 +9,7 @@ import (
 	"github.com/tevino/abool"
 )
 
-// Release Level constants
+// Release Level constants.
 const (
 	ReleaseLevelStable       uint8 = 0
 	ReleaseLevelBeta         uint8 = 1

@@ -13,7 +13,7 @@ var (
 	_ = time.Now()
 )
 
-// GenCodeSize returns the size of the gencode marshalled byte slice
+// GenCodeSize returns the size of the gencode marshalled byte slice.
 func (m *Meta) GenCodeSize() (s int) {
 	s += 34
 	return

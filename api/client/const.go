@@ -1,6 +1,6 @@
 package client
 
-// message types
+// message types.
 const (
 	msgRequestGet    = "get"
 	msgRequestQuery  = "query"

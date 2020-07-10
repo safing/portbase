@@ -31,7 +31,7 @@ func init() {
 
 // test waiting
 
-// globals
+// globals.
 var (
 	qtWg            sync.WaitGroup
 	qtOutputChannel chan string
@@ -44,7 +44,7 @@ func init() {
 	qtModule.status = StatusOnline
 }
 
-// functions
+// functions.
 func queuedTaskTester(s string) {
 	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(qtSleepDuration * 2)
@@ -63,7 +63,7 @@ func prioritizedTaskTester(s string) {
 	}).Prioritize()
 }
 
-// test
+// test.
 func TestQueuedTask(t *testing.T) {
 	// skip
 	if testing.Short() {
@@ -109,7 +109,7 @@ func TestQueuedTask(t *testing.T) {
 
 // test scheduled tasks
 
-// globals
+// globals.
 var (
 	stWg            sync.WaitGroup
 	stOutputChannel chan string
@@ -117,7 +117,7 @@ var (
 	stWaitCh        chan bool
 )
 
-// functions
+// functions.
 func scheduledTaskTester(s string, sched time.Time) {
 	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(stSleepDuration)
@@ -127,7 +127,7 @@ func scheduledTaskTester(s string, sched time.Time) {
 	}).Schedule(sched)
 }
 
-// test
+// test.
 func TestScheduledTaskWaiting(t *testing.T) {
 	// skip
 	if testing.Short() {

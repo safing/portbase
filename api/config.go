@@ -7,7 +7,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-// Config Keys
+// Config Keys.
 const (
 	CfgDefaultListenAddressKey = "api/listenAddress"
 )

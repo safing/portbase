@@ -38,7 +38,7 @@ func (file *File) Blacklist() error {
 	return file.resource.Blacklist(file.version.VersionNumber)
 }
 
-// used marks the file as active
+// used marks the file as active.
 func (file *File) markActiveWithLocking() {
 	file.resource.Lock()
 	defer file.resource.Unlock()

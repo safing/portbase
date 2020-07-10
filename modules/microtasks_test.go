@@ -18,7 +18,7 @@ func init() {
 	go microTaskScheduler()
 }
 
-// test waiting
+// test waiting.
 func TestMicroTaskWaiting(t *testing.T) {
 	// skip
 	if testing.Short() {
@@ -111,14 +111,14 @@ func TestMicroTaskWaiting(t *testing.T) {
 
 // test ordering
 
-// globals
+// globals.
 var (
 	mtoWaitGroup     sync.WaitGroup
 	mtoOutputChannel chan string
 	mtoWaitCh        chan struct{}
 )
 
-// functions
+// functions.
 func mediumPrioTaskTester() {
 	defer mtoWaitGroup.Done()
 	<-mtoWaitCh
@@ -139,7 +139,7 @@ func lowPrioTaskTester() {
 	})
 }
 
-// test
+// test.
 func TestMicroTaskOrdering(t *testing.T) {
 	// skip
 	if testing.Short() {

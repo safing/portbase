@@ -79,7 +79,7 @@ func NewWrapper(key string, meta *Meta, format uint8, data []byte) (*Wrapper, er
 	}, nil
 }
 
-// Marshal marshals the object, without the database key or metadata
+// Marshal marshals the object, without the database key or metadata.
 func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 	if w.Meta() == nil {
 		return nil, errors.New("missing meta")

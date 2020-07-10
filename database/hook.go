@@ -5,7 +5,7 @@ import (
 	"github.com/safing/portbase/database/record"
 )
 
-// Hook describes a hook
+// Hook describes a hook.
 type Hook interface {
 	UsesPreGet() bool
 	PreGet(dbKey string) error

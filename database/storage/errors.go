@@ -2,7 +2,7 @@ package storage
 
 import "errors"
 
-// Errors for storages
+// Errors for storages.
 var (
 	ErrNotFound = errors.New("storage entry not found")
 )
