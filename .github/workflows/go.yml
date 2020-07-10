@@ -1,0 +1,59 @@
+name: Go
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+jobs:
+  lint:
+    name: Linter
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v1
+      with:
+        version: v1.26
+
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+
+    - name: Run go vet
+      run: go vet ./...
+
+    - name: Install golint
+      run: GOBIN=. go get -u golang.org/x/lint/golint
+
+    - name: Run golint
+      run: ./golint -set_exit_status -min_confidence 1.0 ./...
+   
+    - name: Run gofmt
+      run: bash -c "test -z $(gofmt -s -l .)"
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.14
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+
+    - name: Test
+      run: go test -race -v ./...
+
