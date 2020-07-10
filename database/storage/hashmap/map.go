@@ -24,6 +24,8 @@ func init() {
 	_ = storage.Register("hashmap", NewHashMap)
 }
 
+var errTimeout = errors.New("query timeout")
+
 // NewHashMap creates a hashmap database.
 func NewHashMap(name, location string) (storage.Interface, error) {
 	return &HashMap{
@@ -87,7 +89,7 @@ func (hm *HashMap) Delete(key string) error {
 func (hm *HashMap) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	queryIter := iterator.New()
@@ -126,7 +128,7 @@ mapLoop:
 				break mapLoop
 			case queryIter.Next <- record:
 			case <-time.After(1 * time.Second):
-				err = errors.New("query timeout")
+				err = errTimeout
 				break mapLoop
 			}
 		}
