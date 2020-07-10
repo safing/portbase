@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -30,35 +29,36 @@ func InitializeWithPath(dirPath string) error {
 
 // Initialize initializes the database at the specified location using a dir structure.
 func Initialize(dirStructureRoot *utils.DirStructure) error {
-	if initialized.SetToIf(false, true) {
-		rootStructure = dirStructureRoot
-
-		// ensure root and databases dirs
-		databasesStructure = rootStructure.ChildDir(databasesSubDir, 0o700)
-		err := databasesStructure.Ensure()
-		if err != nil {
-			return fmt.Errorf("could not create/open database directory (%s): %s", rootStructure.Path, err)
-		}
-
-		if registryPersistence.IsSet() {
-			err = loadRegistry()
-			if err != nil {
-				return fmt.Errorf("could not load database registry (%s): %s", filepath.Join(rootStructure.Path, registryFileName), err)
-			}
-		}
-
-		return nil
+	if !initialized.SetToIf(false, true) {
+		return ErrInitialized
 	}
-	return errors.New("database already initialized")
+
+	rootStructure = dirStructureRoot
+
+	// ensure root and databases dirs
+	databasesStructure = rootStructure.ChildDir(databasesSubDir, 0o700)
+	err := databasesStructure.Ensure()
+	if err != nil {
+		return fmt.Errorf("could not create/open database directory (%s): %w", rootStructure.Path, err)
+	}
+
+	if registryPersistence.IsSet() {
+		err = loadRegistry()
+		if err != nil {
+			return fmt.Errorf("could not load database registry (%s): %w", filepath.Join(rootStructure.Path, registryFileName), err)
+		}
+	}
+
+	return nil
 }
 
 // Shutdown shuts down the whole database system.
 func Shutdown() (err error) {
-	if shuttingDown.SetToIf(false, true) {
-		close(shutdownSignal)
-	} else {
+	if !shuttingDown.SetToIf(false, true) {
 		return
 	}
+
+	close(shutdownSignal)
 
 	controllersLock.RLock()
 	defer controllersLock.RUnlock()
@@ -78,7 +78,7 @@ func getLocation(name, storageType string) (string, error) {
 	// check location
 	err := location.Ensure()
 	if err != nil {
-		return "", fmt.Errorf(`failed to create/check database dir "%s": %s`, location.Path, err)
+		return "", fmt.Errorf(`failed to create/check database dir "%s": %w`, location.Path, err)
 	}
 	return location.Path, nil
 }

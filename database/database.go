@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"time"
 )
 
@@ -18,7 +17,7 @@ type Database struct {
 
 // MigrateTo migrates the database to another storage type.
 func (db *Database) MigrateTo(newStorageType string) error {
-	return errors.New("not implemented yet") // TODO
+	return ErrNotImplemented
 }
 
 // Loaded updates the LastLoaded timestamp.

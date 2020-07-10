@@ -2,7 +2,6 @@ package database
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -34,7 +33,7 @@ var (
 // updated and the effective object will be returned.
 func Register(new *Database) (*Database, error) {
 	if !initialized.IsSet() {
-		return nil, errors.New("database not initialized")
+		return nil, ErrNotInitialized
 	}
 
 	registryLock.Lock()
@@ -56,7 +55,7 @@ func Register(new *Database) (*Database, error) {
 	} else {
 		// register new database
 		if !nameConstraint.MatchString(new.Name) {
-			return nil, errors.New("database name must only contain alphanumeric and `_-` characters and must be at least 4 characters long")
+			return nil, ErrInvalidName
 		}
 
 		now := time.Now().Round(time.Second)
@@ -90,7 +89,7 @@ func getDatabase(name string) (*Database, error) {
 
 	registeredDB, ok := registry[name]
 	if !ok {
-		return nil, fmt.Errorf(`database "%s" not registered`, name)
+		return nil, fmt.Errorf("%s: %w", name, ErrNotRegistered)
 	}
 	if time.Now().Add(-24 * time.Hour).After(registeredDB.LastLoaded) {
 		writeRegistrySoon.Set()
