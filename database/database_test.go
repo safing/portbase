@@ -119,7 +119,7 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 		}
 
 		// test maintenance
-		if testRecordMaintenance {
+		if testRecordMaintenance { //nolint:nestif
 			now := time.Now().UTC()
 			nowUnix := now.Unix()
 

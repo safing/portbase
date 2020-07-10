@@ -12,6 +12,7 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/golangci/golangci-lint v1.28.2 // indirect
 	github.com/google/renameio v0.1.0
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/websocket v1.4.2
@@ -29,4 +30,5 @@ require (
 	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
+	mvdan.cc/gofumpt v0.0.0-20200709182408-4fd085cb6d5f // indirect
 )

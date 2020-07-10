@@ -43,23 +43,21 @@ func init() {
 func NewFSTree(name, location string) (storage.Interface, error) {
 	basePath, err := filepath.Abs(location)
 	if err != nil {
-		return nil, fmt.Errorf("fstree: failed to validate path %s: %s", location, err)
+		return nil, fmt.Errorf("fstree: failed to validate path %s: %w", location, err)
 	}
 
 	file, err := os.Stat(basePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(basePath, defaultDirMode)
-			if err != nil {
-				return nil, fmt.Errorf("fstree: failed to create directory %s: %s", basePath, err)
-			}
-		} else {
-			return nil, fmt.Errorf("fstree: failed to stat path %s: %s", basePath, err)
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("fstree: failed to stat path %s: %w", basePath, err)
 		}
-	} else {
-		if !file.IsDir() {
-			return nil, fmt.Errorf("fstree: provided database path (%s) is a file", basePath)
+
+		err = os.MkdirAll(basePath, defaultDirMode)
+		if err != nil {
+			return nil, fmt.Errorf("fstree: failed to create directory %s: %w", basePath, err)
 		}
+	} else if !file.IsDir() {
+		return nil, fmt.Errorf("fstree: provided database path (%s) is a file", basePath)
 	}
 
 	return &FSTree{
