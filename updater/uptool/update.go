@@ -35,7 +35,7 @@ func update(cmd *cobra.Command, args []string) error {
 	fmt.Println("beta:")
 	fmt.Println(string(data))
 	// write index
-	err = ioutil.WriteFile(filepath.Join(registry.StorageDir().Dir, "beta.json"), data, 0755)
+  err = ioutil.WriteFile(filepath.Join(registry.StorageDir().Dir, "beta.json"), data, 0644) //nolint:nosec // 0644 is intended
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func update(cmd *cobra.Command, args []string) error {
 	fmt.Println("\nstable:")
 	fmt.Println(string(data))
 	// write index
-	err = ioutil.WriteFile(filepath.Join(registry.StorageDir().Dir, "stable.json"), data, 0755)
+  err = ioutil.WriteFile(filepath.Join(registry.StorageDir().Dir, "stable.json"), data, 0644) //nolint:nosec // 0644 is intended
 	if err != nil {
 		return err
 	}

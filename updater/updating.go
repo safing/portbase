@@ -67,7 +67,7 @@ func (reg *ResourceRegistry) downloadIndex(idx Index) error {
 	}
 
 	// save index
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644)
+  err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644) //nolint:gosec // 0644 is intended
 	if err != nil {
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}
