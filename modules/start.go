@@ -11,23 +11,29 @@ import (
 	"github.com/safing/portbase/log"
 )
 
+// ErrModuleSystemStarted indicates that the module system has already
+// been started.
+var ErrModuleSystemStarted = errors.New("module system already started")
+
 var (
 	initialStartCompleted = abool.NewBool(false)
 	globalPrepFn          func() error
 )
 
-// SetGlobalPrepFn sets a global prep function that is run before all modules. This can be used to pre-initialize modules, such as setting the data root or database path.
-// SetGlobalPrepFn sets a global prep function that is run before all modules.
+// SetGlobalPrepFn sets a global prep function that is run before
+// all modules. This can be used to pre-initialize modules, such as
+// setting the data root or database path.
 func SetGlobalPrepFn(fn func() error) {
 	if globalPrepFn == nil {
 		globalPrepFn = fn
 	}
 }
 
-// Start starts all modules in the correct order. In case of an error, it will automatically shutdown again.
+// Start starts all modules in the correct order. In case of an error,
+// it will automatically shutdown again.
 func Start() error {
 	if !modulesLocked.SetToIf(false, true) {
-		return errors.New("module system already started")
+		return ErrModuleSystemStarted
 	}
 
 	// lock mgmt
@@ -133,17 +139,7 @@ func prepareModules() error {
 			}
 		}
 
-		if reportCnt < execCnt {
-			// wait for reports
-			rep = <-reports
-			if rep.err != nil {
-				if rep.err == ErrCleanExit {
-					return rep.err
-				}
-				return fmt.Errorf("failed to prep module %s: %s", rep.module.Name, rep.err)
-			}
-			reportCnt++
-		} else {
+		if reportCnt >= execCnt {
 			// finished
 			if waiting > 0 {
 				// check for dep loop
@@ -151,6 +147,15 @@ func prepareModules() error {
 			}
 			return nil
 		}
+
+		rep = <-reports
+		if rep.err != nil {
+			if rep.err == ErrCleanExit {
+				return rep.err
+			}
+			return fmt.Errorf("failed to prep module %s: %w", rep.module.Name, rep.err)
+		}
+		reportCnt++
 
 	}
 }
@@ -176,15 +181,7 @@ func startModules() error {
 			}
 		}
 
-		if reportCnt < execCnt {
-			// wait for reports
-			rep = <-reports
-			if rep.err != nil {
-				return fmt.Errorf("modules: could not start module %s: %s", rep.module.Name, rep.err)
-			}
-			reportCnt++
-			log.Infof("modules: started %s", rep.module.Name)
-		} else {
+		if reportCnt >= execCnt {
 			// finished
 			if waiting > 0 {
 				// check for dep loop
@@ -193,5 +190,13 @@ func startModules() error {
 			// return last error
 			return nil
 		}
+
+		// wait for reports
+		rep = <-reports
+		if rep.err != nil {
+			return fmt.Errorf("modules: could not start module %s: %w", rep.module.Name, rep.err)
+		}
+		reportCnt++
+		log.Infof("modules: started %s", rep.module.Name)
 	}
 }

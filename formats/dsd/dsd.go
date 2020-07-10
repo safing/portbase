@@ -33,8 +33,8 @@ const (
 )
 
 var (
-  errNoMoreSpace = errors.New("dsd: no more space left after reading dsd type")
-  errNotImplemented = errors.New("dsd: this type is not yet implemented")
+	errNoMoreSpace    = errors.New("dsd: no more space left after reading dsd type")
+	errNotImplemented = errors.New("dsd: this type is not yet implemented")
 )
 
 // Load loads an dsd structured data blob into the given interface.
