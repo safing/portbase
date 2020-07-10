@@ -218,7 +218,7 @@ func (c *Container) SetError(err error) {
 func (c *Container) CheckError() {
 	if len(c.compartments[c.offset]) > 0 && c.compartments[c.offset][0] == 0x00 {
 		c.compartments[c.offset] = c.compartments[c.offset][1:]
-		c.err = fmt.Errorf(string(c.CompileData()))
+		c.err = fmt.Errorf(string(c.CompileData())) // nolint:goerr113
 		c.compartments = nil
 	}
 }

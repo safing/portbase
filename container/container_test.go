@@ -88,7 +88,7 @@ func TestContainerErrorHandling(t *testing.T) {
 		t.Error("should not have error")
 	}
 
-	c1.SetError(fmt.Errorf("test error"))
+	c1.SetError(fmt.Errorf("test error")) // nolint:goerr113
 
 	if !c1.HasError() {
 		t.Error("should have error")
