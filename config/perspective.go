@@ -55,7 +55,7 @@ optionsLoop:
 
 	if firstErr != nil {
 		if errCnt > 0 {
-			return perspective, fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+			return perspective, fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
 		}
 		return perspective, firstErr
 	}
