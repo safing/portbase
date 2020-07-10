@@ -14,6 +14,8 @@ import (
 	"github.com/safing/portbase/database/storage"
 )
 
+var errInvalidStoragePutReturn = errors.New("storage returned nil record after successful put operation")
+
 // A Controller takes care of all the extra database logic.
 type Controller struct {
 	storage storage.Interface
@@ -73,7 +75,7 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	r, err := c.storage.Get(key)
 	if err != nil {
 		// replace not found error
-		if err == storage.ErrNotFound {
+		if errors.Is(err, storage.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -127,7 +129,7 @@ func (c *Controller) Put(r record.Record) (err error) {
 		return err
 	}
 	if r == nil {
-		return errors.New("storage returned nil record after successful put operation")
+		return errInvalidStoragePutReturn
 	}
 
 	// process subscriptions

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -160,7 +161,7 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 
 			// check status individually
 			_, err = dbController.storage.Get("A")
-			if err != storage.ErrNotFound {
+			if !errors.Is(err, storage.ErrNotFound) {
 				t.Errorf("A should be deleted and purged, err=%s", err)
 			}
 			B1, err := dbController.storage.Get("B")
@@ -188,13 +189,13 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 			B2, err := dbController.storage.Get("B")
 			if err == nil {
 				t.Errorf("B should be deleted and purged, meta: %+v", B2.Meta())
-			} else if err != storage.ErrNotFound {
+			} else if !errors.Is(err, storage.ErrNotFound) {
 				t.Errorf("B should be deleted and purged, err=%s", err)
 			}
 			C2, err := dbController.storage.Get("C")
 			if err == nil {
 				t.Errorf("C should be deleted and purged, meta: %+v", C2.Meta())
-			} else if err != storage.ErrNotFound {
+			} else if !errors.Is(err, storage.ErrNotFound) {
 				t.Errorf("C should be deleted and purged, err=%s", err)
 			}
 

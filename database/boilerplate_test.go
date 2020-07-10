@@ -41,7 +41,7 @@ func GetExample(key string) (*Example, error) {
 	// or adjust type
 	new, ok := r.(*Example)
 	if !ok {
-		return nil, fmt.Errorf("record not of type *Example, but %T", r)
+		return nil, fmt.Errorf("record not of type *Example, but %T", r) // nolint:goerr113
 	}
 	return new, nil
 }
