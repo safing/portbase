@@ -38,7 +38,7 @@ type Authenticator func(ctx context.Context, s *http.Server, r *http.Request) (e
 // SetAuthenticator sets an authenticator function for the API endpoint. If none is set, all requests will be permitted.
 func SetAuthenticator(fn Authenticator) error {
 	if module.Online() {
-		return ErrAuthenticationAlreadySet
+		return ErrAuthenticationImmutable
 	}
 
 	authFnLock.Lock()
