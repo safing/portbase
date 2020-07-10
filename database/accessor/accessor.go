@@ -11,7 +11,7 @@ type Accessor interface {
 	GetStringArray(key string) (value []string, ok bool)
 	GetInt(key string) (value int64, ok bool)
 	GetFloat(key string) (value float64, ok bool)
-	GetBool(key string) (value bool, ok bool)
+	GetBool(key string) (value, ok bool)
 	Exists(key string) bool
 
 	Set(key string, value interface{}) error

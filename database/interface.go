@@ -112,7 +112,7 @@ func (i *Interface) Get(key string) (record.Record, error) {
 	return r, err
 }
 
-func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
+func (i *Interface) getRecord(dbName, dbKey string, check, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
 	if dbName == "" {
 		dbName, dbKey = record.ParseKey(dbKey)
 	}
@@ -142,7 +142,7 @@ func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWri
 }
 
 // InsertValue inserts a value into a record.
-func (i *Interface) InsertValue(key string, attribute string, value interface{}) error {
+func (i *Interface) InsertValue(key, attribute string, value interface{}) error {
 	r, db, err := i.getRecord(getDBFromKey, key, true, true)
 	if err != nil {
 		return err

@@ -222,7 +222,7 @@ func (api *DatabaseAPI) writer() {
 	}
 }
 
-func (api *DatabaseAPI) send(opID []byte, msgType string, msgOrKey string, data []byte) {
+func (api *DatabaseAPI) send(opID []byte, msgType, msgOrKey string, data []byte) {
 	c := container.New(opID)
 	c.Append(dbAPISeperatorBytes)
 	c.Append([]byte(msgType))
@@ -486,7 +486,7 @@ func (api *DatabaseAPI) handleInsert(opID []byte, key string, data []byte) {
 	result := gjson.ParseBytes(data)
 	anythingPresent := false
 	var insertError error
-	result.ForEach(func(key gjson.Result, value gjson.Result) bool {
+	result.ForEach(func(key, value gjson.Result) bool {
 		anythingPresent = true
 		if !key.Exists() {
 			insertError = errors.New("values must be in a map")

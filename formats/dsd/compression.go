@@ -10,7 +10,7 @@ import (
 )
 
 // DumpAndCompress stores the interface as a dsd formatted data structure and compresses the resulting data.
-func DumpAndCompress(t interface{}, format uint8, compression uint8) ([]byte, error) {
+func DumpAndCompress(t interface{}, format, compression uint8) ([]byte, error) {
 	data, err := Dump(t, format)
 	if err != nil {
 		return nil, err

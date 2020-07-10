@@ -122,7 +122,7 @@ func (m *Module) RegisterEvent(event string) {
 }
 
 // RegisterEventHook registers a hook function with (another) modules' event. Whenever a hook is triggered and the receiving module has not yet fully started, hook execution will be delayed until the modules completed starting.
-func (m *Module) RegisterEventHook(module string, event string, description string, fn func(context.Context, interface{}) error) error {
+func (m *Module) RegisterEventHook(module, event, description string, fn func(context.Context, interface{}) error) error {
 	// get target module
 	var eventModule *Module
 	if module == m.Name {

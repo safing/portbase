@@ -90,7 +90,7 @@ func (ja *JSONBytesAccessor) GetFloat(key string) (value float64, ok bool) {
 }
 
 // GetBool returns the bool found by the given json key and whether it could be successfully extracted.
-func (ja *JSONBytesAccessor) GetBool(key string) (value bool, ok bool) {
+func (ja *JSONBytesAccessor) GetBool(key string) (value, ok bool) {
 	result := gjson.GetBytes(*ja.json, key)
 	switch {
 	case !result.Exists():

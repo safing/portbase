@@ -114,7 +114,7 @@ func (ja *JSONAccessor) GetFloat(key string) (value float64, ok bool) {
 }
 
 // GetBool returns the bool found by the given json key and whether it could be successfully extracted.
-func (ja *JSONAccessor) GetBool(key string) (value bool, ok bool) {
+func (ja *JSONAccessor) GetBool(key string) (value, ok bool) {
 	result := gjson.Get(*ja.json, key)
 	switch {
 	case !result.Exists():
