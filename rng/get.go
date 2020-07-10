@@ -21,7 +21,7 @@ var (
 	rngLastFeed  = time.Now()
 )
 
-// reader provides an io.Reader interface
+// reader provides an io.Reader interface.
 type reader struct{}
 
 func init() {
@@ -58,7 +58,7 @@ func Read(b []byte) (n int, err error) {
 	return copy(b, rng.PseudoRandomData(uint(len(b)))), nil
 }
 
-// Read implements the io.Reader interface
+// Read implements the io.Reader interface.
 func (r reader) Read(b []byte) (n int, err error) {
 	return Read(b)
 }

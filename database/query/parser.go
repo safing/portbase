@@ -336,7 +336,7 @@ func prepToken(text string) string {
 	return escapeReplacer.ReplaceAllString(strings.Trim(text, "\""), "$1")
 }
 
-// escapeString correctly escapes a snippet for printing
+// escapeString correctly escapes a snippet for printing.
 func escapeString(token string) string {
 	// check if token contains characters that need to be escaped
 	if strings.ContainsAny(token, "()\"\\\t\r\n ") {

@@ -11,7 +11,7 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
-// Notification types
+// Notification types.
 const (
 	Info    uint8 = 0
 	Warning uint8 = 1

@@ -227,7 +227,7 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 // - Record locking
 // - Hooks
 // - Subscriptions
-// - Caching
+// - Caching.
 func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	interfaceBatch := make(chan record.Record, 100)
 

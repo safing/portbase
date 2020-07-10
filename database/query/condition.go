@@ -13,7 +13,7 @@ type Condition interface {
 	string() string
 }
 
-// Operators
+// Operators.
 const (
 	Equals                  uint8 = iota // int
 	GreaterThan                          // int

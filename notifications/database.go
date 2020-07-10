@@ -24,7 +24,7 @@ var (
 	persistentBasePath string
 )
 
-// Storage interface errors
+// Storage interface errors.
 var (
 	ErrInvalidData = errors.New("invalid data, must be a notification object")
 	ErrInvalidPath = errors.New("invalid path")
