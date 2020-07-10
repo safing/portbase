@@ -143,19 +143,19 @@ func testParseError(t *testing.T, queryText, expectedErrorString string) {
 
 func TestParseErrors(t *testing.T) {
 	// syntax
-	testParseError(t, `query`, `unexpected end at position 5`)
-	testParseError(t, `query test: where`, `unexpected end at position 17`)
-	testParseError(t, `query test: where (`, `unexpected end at position 19`)
-	testParseError(t, `query test: where )`, `unknown clause ")" at position 19`)
-	testParseError(t, `query test: where not`, `unexpected end at position 21`)
-	testParseError(t, `query test: where banana`, `unexpected end at position 24`)
-	testParseError(t, `query test: where banana >`, `unexpected end at position 26`)
-	testParseError(t, `query test: where banana nope`, `unknown operator at position 26`)
-	testParseError(t, `query test: where banana exists or`, `unexpected end at position 34`)
-	testParseError(t, `query test: where banana exists and`, `unexpected end at position 35`)
-	testParseError(t, `query test: where banana exists and (`, `unexpected end at position 37`)
-	testParseError(t, `query test: where banana exists and banana is true or`, `you may not mix "and" and "or" (position: 52)`)
-	testParseError(t, `query test: where banana exists or banana is true and`, `you may not mix "and" and "or" (position: 51)`)
+	testParseError(t, `query`, `syntax error: position 5: unexpected end`)
+	testParseError(t, `query test: where`, `syntax error: position 17: unexpected end`)
+	testParseError(t, `query test: where (`, `syntax error: position 19: unexpected end`)
+	testParseError(t, `query test: where )`, `syntax error: ")" at position 19: unknown clause`)
+	testParseError(t, `query test: where not`, `syntax error: position 21: unexpected end`)
+	testParseError(t, `query test: where banana`, `syntax error: position 24: unexpected end`)
+	testParseError(t, `query test: where banana >`, `syntax error: position 26: unexpected end`)
+	testParseError(t, `query test: where banana nope`, `syntax error: "nope" at position 26: unknown operator`)
+	testParseError(t, `query test: where banana exists or`, `syntax error: position 34: unexpected end`)
+	testParseError(t, `query test: where banana exists and`, `syntax error: position 35: unexpected end`)
+	testParseError(t, `query test: where banana exists and (`, `syntax error: position 37: unexpected end`)
+	testParseError(t, `query test: where banana exists and banana is true or`, `syntax error: "or" at position 52: mix "and" and "or"`)
+	testParseError(t, `query test: where banana exists or banana is true and`, `syntax error: "and" at position 51: mix "and" and "or"`)
 	// testParseError(t, `query test: where banana exists and (`, ``)
 
 	// value parsing error

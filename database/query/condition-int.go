@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -83,7 +82,7 @@ func (c *intCondition) complies(acc accessor.Accessor) bool {
 
 func (c *intCondition) check() error {
 	if c.operator == errorPresent {
-		return errors.New(c.key)
+		return conditionKeyError(c.key)
 	}
 	return nil
 }

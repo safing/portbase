@@ -59,7 +59,7 @@ func (c *stringSliceCondition) complies(acc accessor.Accessor) bool {
 
 func (c *stringSliceCondition) check() error {
 	if c.operator == errorPresent {
-		return fmt.Errorf("could not parse \"%s\" to []string", c.key)
+		return fmt.Errorf("could not parse \"%w\" to []string", conditionKeyError(c.key))
 	}
 	return nil
 }

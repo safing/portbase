@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -53,7 +52,7 @@ func (c *regexCondition) complies(acc accessor.Accessor) bool {
 
 func (c *regexCondition) check() error {
 	if c.operator == errorPresent {
-		return errors.New(c.key)
+		return conditionKeyError(c.key)
 	}
 	return nil
 }
