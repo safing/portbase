@@ -7,6 +7,12 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
+// Common errors.
+var (
+	ErrAlreadyInitialized = errors.New("already initialized")
+	ErrNotSet             = errors.New("data root is not set")
+)
+
 var root *utils.DirStructure
 
 // Initialize initializes the data root directory.

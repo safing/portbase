@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
@@ -34,7 +33,7 @@ func init() {
 func prep() error {
 	SetDataRoot(dataroot.Root())
 	if dataRoot == nil {
-		return errors.New("data root is not set")
+		return dataroot.ErrNotSet
 	}
 
 	return nil

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"math"
 )
@@ -32,11 +31,11 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 	switch v := value.(type) {
 	case string:
 		if option.OptType != OptTypeString {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, newInvalidValueError(option.Key, fmt.Sprintf("%T", v), "expected type string")
 		}
 		if option.compiledRegex != nil {
 			if !option.compiledRegex.MatchString(v) {
-				return nil, fmt.Errorf("validation of option %s failed: string \"%s\" did not match validation regex for option", option.Key, v)
+				return nil, newInvalidValueError(option.Key, v, "validation regex failed")
 			}
 		}
 		return &valueCache{stringVal: v}, nil
@@ -45,7 +44,7 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 		for pos, entry := range v {
 			s, ok := entry.(string)
 			if !ok {
-				return nil, fmt.Errorf("validation of option %s failed: element %+v at index %d is not a string", option.Key, entry, pos)
+				return nil, newInvalidValueError(option.Key, fmt.Sprintf("element %+v ad index %d", entry, pos), "not a string")
 			}
 			vConverted[pos] = s
 		}
@@ -53,12 +52,12 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 		return validateValue(option, vConverted)
 	case []string:
 		if option.OptType != OptTypeStringArray {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, newInvalidValueError(option.Key, fmt.Sprintf("%T", v), "expected type []string")
 		}
 		if option.compiledRegex != nil {
 			for pos, entry := range v {
 				if !option.compiledRegex.MatchString(entry) {
-					return nil, fmt.Errorf("validation of option %s failed: string \"%s\" at index %d did not match validation regex", option.Key, entry, pos)
+					return nil, newInvalidValueError(option.Key, fmt.Sprintf("element %s ad index %d", entry, pos), "validation regex failed")
 				}
 			}
 		}
@@ -66,12 +65,12 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, float32, float64:
 		// uint64 is omitted, as it does not fit in a int64
 		if option.OptType != OptTypeInt {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, newInvalidValueError(option.Key, fmt.Sprintf("%T", v), "expected type int")
 		}
 		if option.compiledRegex != nil {
 			// we need to use %v here so we handle float and int correctly.
 			if !option.compiledRegex.MatchString(fmt.Sprintf("%v", v)) {
-				return nil, fmt.Errorf("validation of option %s failed: number \"%d\" did not match validation regex", option.Key, v)
+				return nil, newInvalidValueError(option.Key, v, "validation regex failed")
 			}
 		}
 		switch v := value.(type) {
@@ -98,22 +97,22 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 			if math.Remainder(float64(v), 1) == 0 {
 				return &valueCache{intVal: int64(v)}, nil
 			}
-			return nil, fmt.Errorf("failed to convert float32 to int64 for option %s, got value %+v", option.Key, v)
+			return nil, newInvalidValueError(option.Key, v, "failed to convert float32 to int64")
 		case float64:
 			// convert if float has no decimals
 			if math.Remainder(v, 1) == 0 {
 				return &valueCache{intVal: int64(v)}, nil
 			}
-			return nil, fmt.Errorf("failed to convert float64 to int64 for option %s, got value %+v", option.Key, v)
+			return nil, newInvalidValueError(option.Key, v, "failed to convert float64 to int64")
 		default:
-			return nil, errors.New("internal error")
+			return nil, ErrUnsupportedType
 		}
 	case bool:
 		if option.OptType != OptTypeBool {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, newInvalidValueError(option.Key, fmt.Sprintf("%T", v), "expected type bool")
 		}
 		return &valueCache{boolVal: v}, nil
 	default:
-		return nil, fmt.Errorf("invalid option value type for option %s: %T", option.Key, value)
+		return nil, newInvalidValueError(option.Key, fmt.Sprintf("%T", v), "invalid value")
 	}
 }

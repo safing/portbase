@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -9,12 +8,6 @@ import (
 )
 
 var (
-	// ErrInvalidJSON is returned by SetConfig and SetDefaultConfig if they receive invalid json.
-	ErrInvalidJSON = errors.New("json string invalid")
-
-	// ErrInvalidOptionType is returned by SetConfigOption and SetDefaultConfigOption if given an unsupported option type.
-	ErrInvalidOptionType = errors.New("invalid option value type")
-
 	validityFlag     = abool.NewBool(true)
 	validityFlagLock sync.RWMutex
 )
@@ -70,7 +63,7 @@ func setConfig(newValues map[string]interface{}) error {
 
 	if firstErr != nil {
 		if errCnt > 0 {
-			return fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+			return fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
 		}
 		return firstErr
 	}
@@ -108,7 +101,7 @@ func SetDefaultConfig(newValues map[string]interface{}) error {
 
 	if firstErr != nil {
 		if errCnt > 0 {
-			return fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+			return fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
 		}
 		return firstErr
 	}
@@ -126,7 +119,7 @@ func setConfigOption(key string, value interface{}, push bool) (err error) {
 	option, ok := options[key]
 	optionsLock.Unlock()
 	if !ok {
-		return fmt.Errorf("config option %s does not exist", key)
+		return fmt.Errorf("%s: %w", key, ErrUnknownOption)
 	}
 
 	option.Lock()
@@ -162,7 +155,7 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 	option, ok := options[key]
 	optionsLock.Unlock()
 	if !ok {
-		return fmt.Errorf("config option %s does not exist", key)
+		return fmt.Errorf("%s: %w", key, ErrUnknownOption)
 	}
 
 	option.Lock()
