@@ -1,8 +1,6 @@
 package accessor
 
 import (
-	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -22,10 +20,10 @@ func NewStructAccessor(object interface{}) *StructAccessor {
 func (sa *StructAccessor) Set(key string, value interface{}) error {
 	field := sa.object.FieldByName(key)
 	if !field.IsValid() {
-		return errors.New("struct field does not exist")
+		return ErrUnknownField
 	}
 	if !field.CanSet() {
-		return fmt.Errorf("field %s or struct is immutable", field.String())
+		return ErrImmutable
 	}
 
 	newVal := reflect.ValueOf(value)
@@ -37,50 +35,50 @@ func (sa *StructAccessor) Set(key string, value interface{}) error {
 	}
 
 	// handle special cases
-	switch field.Kind() {
+	switch field.Kind() { // nolint:exhaustive
 
 	// ints
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		var newInt int64
-		switch newVal.Kind() {
+		switch newVal.Kind() { // nolint:exhaustive
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			newInt = newVal.Int()
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			newInt = int64(newVal.Uint())
 		default:
-			return fmt.Errorf("tried to set field %s (%s) to a %s value", key, field.Kind().String(), newVal.Kind().String())
+			return newInvalidValueTypeError(key, field, newVal)
 		}
 		if field.OverflowInt(newInt) {
-			return fmt.Errorf("setting field %s (%s) to %d would overflow", key, field.Kind().String(), newInt)
+			return newOverflowError(key, field, newInt)
 		}
 		field.SetInt(newInt)
 
 		// uints
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		var newUint uint64
-		switch newVal.Kind() {
+		switch newVal.Kind() { // nolint:exhaustive
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			newUint = uint64(newVal.Int())
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			newUint = newVal.Uint()
 		default:
-			return fmt.Errorf("tried to set field %s (%s) to a %s value", key, field.Kind().String(), newVal.Kind().String())
+			return newInvalidValueTypeError(key, field, newVal)
 		}
 		if field.OverflowUint(newUint) {
-			return fmt.Errorf("setting field %s (%s) to %d would overflow", key, field.Kind().String(), newUint)
+			return newOverflowError(key, field, newUint)
 		}
 		field.SetUint(newUint)
 
 		// floats
 	case reflect.Float32, reflect.Float64:
-		switch newVal.Kind() {
+		switch newVal.Kind() { // nolint:exhaustive
 		case reflect.Float32, reflect.Float64:
 			field.SetFloat(newVal.Float())
 		default:
-			return fmt.Errorf("tried to set field %s (%s) to a %s value", key, field.Kind().String(), newVal.Kind().String())
+			return newInvalidValueTypeError(key, field, newVal)
 		}
 	default:
-		return fmt.Errorf("tried to set field %s (%s) to a %s value", key, field.Kind().String(), newVal.Kind().String())
+		return newInvalidValueTypeError(key, field, newVal)
 	}
 
 	return nil
@@ -124,7 +122,7 @@ func (sa *StructAccessor) GetInt(key string) (value int64, ok bool) {
 	if !field.IsValid() {
 		return 0, false
 	}
-	switch field.Kind() {
+	switch field.Kind() { // nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return field.Int(), true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -140,7 +138,7 @@ func (sa *StructAccessor) GetFloat(key string) (value float64, ok bool) {
 	if !field.IsValid() {
 		return 0, false
 	}
-	switch field.Kind() {
+	switch field.Kind() { // nolint:exhaustive
 	case reflect.Float32, reflect.Float64:
 		return field.Float(), true
 	default:
