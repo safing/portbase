@@ -1,4 +1,3 @@
-//nolint:unparam,maligned
 package badger
 
 import (
@@ -13,7 +12,7 @@ import (
 	"github.com/safing/portbase/database/record"
 )
 
-type TestRecord struct {
+type TestRecord struct { // nolint:maligned
 	record.Base
 	sync.Mutex
 	S    string

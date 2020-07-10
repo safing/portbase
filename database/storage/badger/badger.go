@@ -30,7 +30,7 @@ func NewBadger(name, location string) (storage.Interface, error) {
 	opts := badger.DefaultOptions(location)
 
 	db, err := badger.Open(opts)
-	if err == badger.ErrTruncateNeeded {
+	if errors.Is(err, badger.ErrTruncateNeeded) {
 		// clean up after crash
 		log.Warningf("database/storage: truncating corrupted value log of badger database %s: this may cause data loss", name)
 		opts.Truncate = true
@@ -54,7 +54,7 @@ func (b *Badger) Get(key string) (record.Record, error) {
 		var err error
 		item, err = txn.Get([]byte(key))
 		if err != nil {
-			if err == badger.ErrKeyNotFound {
+			if errors.Is(err, badger.ErrKeyNotFound) {
 				return storage.ErrNotFound
 			}
 			return err
@@ -102,7 +102,7 @@ func (b *Badger) Put(r record.Record) (record.Record, error) {
 func (b *Badger) Delete(key string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		err := txn.Delete([]byte(key))
-		if err != nil && err != badger.ErrKeyNotFound {
+		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 			return err
 		}
 		return nil
@@ -113,7 +113,7 @@ func (b *Badger) Delete(key string) error {
 func (b *Badger) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	queryIter := iterator.New()
@@ -171,7 +171,7 @@ func (b *Badger) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loc
 					case <-queryIter.Done:
 						return nil
 					case <-time.After(1 * time.Minute):
-						return errors.New("query timeout")
+						return storage.ErrQueryTimeout
 					}
 				}
 			}
