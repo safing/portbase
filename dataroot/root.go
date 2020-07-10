@@ -18,7 +18,7 @@ var root *utils.DirStructure
 // Initialize initializes the data root directory.
 func Initialize(rootDir string, perm os.FileMode) error {
 	if root != nil {
-		return errors.New("already initialized")
+		return ErrAlreadyInitialized
 	}
 
 	root = utils.NewDirStructure(rootDir, perm)
