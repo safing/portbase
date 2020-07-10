@@ -10,75 +10,71 @@ import (
 	"time"
 )
 
-// ContextTracerKey is the key used for the context key/value storage.
-type ContextTracerKey struct{}
+// tracerKey is the key used for the context key/value storage.
+type tracerKey struct{}
 
 // ContextTracer is attached to a context in order bind logs to a context.
 type ContextTracer struct {
-	sync.Mutex
+	m    sync.Mutex
 	logs []*logLine
 }
 
-var (
-	key = ContextTracerKey{}
-)
-
-// AddTracer adds a ContextTracer to the returned Context. Will return a nil ContextTracer if logging level is not set to trace. Will return a nil ContextTracer if one already exists. Will return a nil ContextTracer in case of an error. Will return a nil context if nil.
+// AddTracer adds a ContextTracer to the returned Context. Will return a nil ContextTracer if
+// logging level is not set to trace. Will return a nil ContextTracer if one already exists.
+// Will return a nil ContextTracer in case of an error. Will return a nil context if nil.
 func AddTracer(ctx context.Context) (context.Context, *ContextTracer) {
-	if ctx != nil && fastcheck(TraceLevel) {
-		// check pkg levels
-		if pkgLevelsActive.IsSet() {
-			// get file
-			_, file, _, ok := runtime.Caller(1)
-			if !ok {
-				// cannot get file, ignore
-				return ctx, nil
-			}
+	if ctx == nil || !fastcheck(TraceLevel) {
+		return ctx, nil
+	}
 
-			pathSegments := strings.Split(file, "/")
-			if len(pathSegments) < 2 {
-				// file too short for package levels
-				return ctx, nil
-			}
-			pkgLevelsLock.Lock()
-			severity, ok := pkgLevels[pathSegments[len(pathSegments)-2]]
-			pkgLevelsLock.Unlock()
-			if ok {
-				// check against package level
-				if TraceLevel < severity {
-					return ctx, nil
-				}
-			} else {
-				// no package level set, check against global level
-				if uint32(TraceLevel) < atomic.LoadUint32(logLevel) {
-					return ctx, nil
-				}
-			}
-		} else if uint32(TraceLevel) < atomic.LoadUint32(logLevel) {
-			// no package levels set, check against global level
+	activeLogLevel := atomic.LoadUint32(logLevel)
+
+	// check pkg levels
+	if pkgLevelsActive.IsSet() {
+		// get file
+		_, file, _, ok := runtime.Caller(1)
+		if !ok {
+			// cannot get file, ignore
 			return ctx, nil
 		}
 
-		// check for existing tracer
-		_, ok := ctx.Value(key).(*ContextTracer)
-		if !ok {
-			// add and return new tracer
-			tracer := &ContextTracer{}
-			return context.WithValue(ctx, key, tracer), tracer
+		pathSegments := strings.Split(file, "/")
+		if len(pathSegments) < 2 {
+			// file too short for package levels
+			return ctx, nil
 		}
+
+		pkgLevelsLock.Lock()
+		severity, ok := pkgLevels[pathSegments[len(pathSegments)-2]]
+		pkgLevelsLock.Unlock()
+
+		if ok && TraceLevel < severity {
+			return ctx, nil
+		}
+	}
+
+	if uint32(TraceLevel) < activeLogLevel {
+		// no package levels set, check against global level
+		return ctx, nil
+	}
+
+	// check for existing tracer
+	_, ok := ctx.Value(tracerKey{}).(*ContextTracer)
+	if !ok {
+		// add and return new tracer
+		tracer := &ContextTracer{}
+		return context.WithValue(ctx, tracerKey{}, tracer), tracer
 	}
 	return ctx, nil
 }
 
-// Tracer returns the ContextTracer previously added to the given Context.
+// Tracer returns the ContextTracer previously added to ctx or nil.
 func Tracer(ctx context.Context) *ContextTracer {
-	if ctx != nil {
-		tracer, ok := ctx.Value(key).(*ContextTracer)
-		if ok {
-			return tracer
-		}
+	if ctx == nil {
+		return nil
 	}
-	return nil
+	tracer, _ := ctx.Value(tracerKey{}).(*ContextTracer)
+	return tracer
 }
 
 // Submit collected logs on the context for further processing/outputting. Does nothing if called on a nil ContextTracer.
@@ -137,6 +133,13 @@ func (tracer *ContextTracer) Submit() {
 }
 
 func (tracer *ContextTracer) log(level Severity, msg string) {
+	if tracer == nil {
+		if fastcheck(level) {
+			log(level, msg, nil)
+		}
+		return
+	}
+
 	// get file and line
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
@@ -150,8 +153,8 @@ func (tracer *ContextTracer) log(level Severity, msg string) {
 		}
 	}
 
-	tracer.Lock()
-	defer tracer.Unlock()
+	tracer.m.Lock()
+	defer tracer.m.Unlock()
 	tracer.logs = append(tracer.logs, &logLine{
 		timestamp: time.Now(),
 		level:     level,
@@ -163,120 +166,60 @@ func (tracer *ContextTracer) log(level Severity, msg string) {
 
 // Trace is used to log tiny steps. Log traces to context if you can!
 func (tracer *ContextTracer) Trace(msg string) {
-	switch {
-	case tracer != nil:
-		tracer.log(TraceLevel, msg)
-	case fastcheck(TraceLevel):
-		log(TraceLevel, msg, nil)
-	}
+	tracer.log(TraceLevel, msg)
 }
 
 // Tracef is used to log tiny steps. Log traces to context if you can!
 func (tracer *ContextTracer) Tracef(format string, things ...interface{}) {
-	switch {
-	case tracer != nil:
-		tracer.log(TraceLevel, fmt.Sprintf(format, things...))
-	case fastcheck(TraceLevel):
-		log(TraceLevel, fmt.Sprintf(format, things...), nil)
-	}
+	tracer.Trace(fmt.Sprintf(format, things...))
 }
 
 // Debug is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func (tracer *ContextTracer) Debug(msg string) {
-	switch {
-	case tracer != nil:
-		tracer.log(DebugLevel, msg)
-	case fastcheck(DebugLevel):
-		log(DebugLevel, msg, nil)
-	}
+	tracer.log(DebugLevel, msg)
 }
 
 // Debugf is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func (tracer *ContextTracer) Debugf(format string, things ...interface{}) {
-	switch {
-	case tracer != nil:
-		tracer.log(DebugLevel, fmt.Sprintf(format, things...))
-	case fastcheck(DebugLevel):
-		log(DebugLevel, fmt.Sprintf(format, things...), nil)
-	}
+	tracer.Debug(fmt.Sprintf(format, things...))
 }
 
 // Info is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
 func (tracer *ContextTracer) Info(msg string) {
-	switch {
-	case tracer != nil:
-		tracer.log(InfoLevel, msg)
-	case fastcheck(InfoLevel):
-		log(InfoLevel, msg, nil)
-	}
+	tracer.log(InfoLevel, msg)
 }
 
 // Infof is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
 func (tracer *ContextTracer) Infof(format string, things ...interface{}) {
-	switch {
-	case tracer != nil:
-		tracer.log(InfoLevel, fmt.Sprintf(format, things...))
-	case fastcheck(InfoLevel):
-		log(InfoLevel, fmt.Sprintf(format, things...), nil)
-	}
+	tracer.Info(fmt.Sprintf(format, things...))
 }
 
 // Warning is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func (tracer *ContextTracer) Warning(msg string) {
-	switch {
-	case tracer != nil:
-		tracer.log(WarningLevel, msg)
-	case fastcheck(WarningLevel):
-		log(WarningLevel, msg, nil)
-	}
+	tracer.log(WarningLevel, msg)
 }
 
 // Warningf is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func (tracer *ContextTracer) Warningf(format string, things ...interface{}) {
-	switch {
-	case tracer != nil:
-		tracer.log(WarningLevel, fmt.Sprintf(format, things...))
-	case fastcheck(WarningLevel):
-		log(WarningLevel, fmt.Sprintf(format, things...), nil)
-	}
+	tracer.Warning(fmt.Sprintf(format, things...))
 }
 
 // Error is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational. Maybe User/Admin should be informed.
 func (tracer *ContextTracer) Error(msg string) {
-	switch {
-	case tracer != nil:
-		tracer.log(ErrorLevel, msg)
-	case fastcheck(ErrorLevel):
-		log(ErrorLevel, msg, nil)
-	}
+	tracer.log(ErrorLevel, msg)
 }
 
 // Errorf is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational.
 func (tracer *ContextTracer) Errorf(format string, things ...interface{}) {
-	switch {
-	case tracer != nil:
-		tracer.log(ErrorLevel, fmt.Sprintf(format, things...))
-	case fastcheck(ErrorLevel):
-		log(ErrorLevel, fmt.Sprintf(format, things...), nil)
-	}
+	tracer.Error(fmt.Sprintf(format, things...))
 }
 
 // Critical is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func (tracer *ContextTracer) Critical(msg string) {
-	switch {
-	case tracer != nil:
-		tracer.log(CriticalLevel, msg)
-	case fastcheck(CriticalLevel):
-		log(CriticalLevel, msg, nil)
-	}
+	tracer.log(CriticalLevel, msg)
 }
 
 // Criticalf is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func (tracer *ContextTracer) Criticalf(format string, things ...interface{}) {
-	switch {
-	case tracer != nil:
-		tracer.log(CriticalLevel, fmt.Sprintf(format, things...))
-	case fastcheck(CriticalLevel):
-		log(CriticalLevel, fmt.Sprintf(format, things...), nil)
-	}
+	tracer.Critical(fmt.Sprintf(format, things...))
 }
