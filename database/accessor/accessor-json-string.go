@@ -1,8 +1,6 @@
 package accessor
 
 import (
-	"fmt"
-
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -41,19 +39,19 @@ func checkJSONValueType(jsonValue gjson.Result, key string, value interface{}) e
 	switch value.(type) {
 	case string:
 		if jsonValue.Type != gjson.String {
-			return fmt.Errorf("tried to set field %s (%s) to a %T value", key, jsonValue.Type.String(), value)
+			return newInvalidJSONValueTypeError(key, jsonValue, value)
 		}
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 		if jsonValue.Type != gjson.Number {
-			return fmt.Errorf("tried to set field %s (%s) to a %T value", key, jsonValue.Type.String(), value)
+			return newInvalidJSONValueTypeError(key, jsonValue, value)
 		}
 	case bool:
 		if jsonValue.Type != gjson.True && jsonValue.Type != gjson.False {
-			return fmt.Errorf("tried to set field %s (%s) to a %T value", key, jsonValue.Type.String(), value)
+			return newInvalidJSONValueTypeError(key, jsonValue, value)
 		}
 	case []string:
 		if !jsonValue.IsArray() {
-			return fmt.Errorf("tried to set field %s (%s) to a %T value", key, jsonValue.Type.String(), value)
+			return newInvalidJSONValueTypeError(key, jsonValue, value)
 		}
 	}
 	return nil
