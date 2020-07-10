@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -489,15 +488,15 @@ func (api *DatabaseAPI) handleInsert(opID []byte, key string, data []byte) {
 	result.ForEach(func(key, value gjson.Result) bool {
 		anythingPresent = true
 		if !key.Exists() {
-			insertError = errors.New("values must be in a map")
+			insertError = errMissingMapValue
 			return false
 		}
 		if key.Type != gjson.String {
-			insertError = errors.New("keys must be strings")
+			insertError = errInvalidKey
 			return false
 		}
 		if !value.Exists() {
-			insertError = errors.New("non-existent value")
+			insertError = errValueNotExists
 			return false
 		}
 		insertError = acc.Set(key.String(), value.Value())
