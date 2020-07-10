@@ -28,6 +28,8 @@ func (s Severity) color() string {
 		return colorRed
 	case CriticalLevel:
 		return colorMagenta
+	case TraceLevel:
+		fallthrough
 	default:
 		return ""
 	}
