@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -21,7 +20,7 @@ func Register(name string, factory Factory) error {
 
 	_, ok := storages[name]
 	if ok {
-		return errors.New("factory for this type already exists")
+		return ErrExists
 	}
 
 	storages[name] = factory
@@ -40,7 +39,7 @@ func StartDatabase(name, storageType, location string) (Interface, error) {
 
 	factory, ok := storages[storageType]
 	if !ok {
-		return nil, fmt.Errorf("storage type %s not registered", storageType)
+		return nil, fmt.Errorf("%s: %w", storageType, ErrUnknownType)
 	}
 
 	return factory(name, location)

@@ -3,7 +3,6 @@ package bbolt
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -150,7 +149,7 @@ func (b *BBolt) Delete(key string) error {
 func (b *BBolt) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	queryIter := iterator.New()
@@ -211,7 +210,7 @@ func (b *BBolt) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loca
 						return nil
 					case queryIter.Next <- new:
 					case <-time.After(1 * time.Second):
-						return errors.New("query timeout")
+						return storage.ErrQueryTimeout
 					}
 				}
 			}
