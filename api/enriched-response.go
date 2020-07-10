@@ -2,7 +2,6 @@ package api
 
 import (
 	"bufio"
-	"errors"
 	"net"
 	"net/http"
 
@@ -51,7 +50,7 @@ func (lrw *LoggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 		log.Tracer(lrw.Request.Context()).Infof("api request: %s HIJ %s", lrw.Request.RemoteAddr, lrw.Request.RequestURI)
 		return c, b, nil
 	}
-	return nil, nil, errors.New("response does not implement http.Hijacker")
+	return nil, nil, errNoHijacker
 }
 
 // RequestLogger is a logging middleware.
