@@ -58,7 +58,7 @@ func (ll *logLine) Equal(ol *logLine) bool {
 	return true
 }
 
-// Log Levels
+// Log Levels.
 const (
 	TraceLevel    Severity = 1
 	DebugLevel    Severity = 2

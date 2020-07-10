@@ -13,7 +13,7 @@ import (
 	"github.com/safing/portbase/formats/varint"
 )
 
-// define types
+// Contants for built-in types.
 const (
 	AUTO = 0
 	NONE = 1
@@ -32,9 +32,10 @@ const (
 	GZIP = 90 // Z
 )
 
-// define errors
-var errNoMoreSpace = errors.New("dsd: no more space left after reading dsd type")
-var errNotImplemented = errors.New("dsd: this type is not yet implemented")
+var (
+  errNoMoreSpace = errors.New("dsd: no more space left after reading dsd type")
+  errNotImplemented = errors.New("dsd: this type is not yet implemented")
+)
 
 // Load loads an dsd structured data blob into the given interface.
 func Load(data []byte, t interface{}) (interface{}, error) {

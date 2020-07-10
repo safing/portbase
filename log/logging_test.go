@@ -13,7 +13,6 @@ func init() {
 	}
 }
 
-// test waiting
 func TestLogging(t *testing.T) {
 
 	// skip
