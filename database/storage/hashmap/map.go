@@ -2,7 +2,6 @@ package hashmap
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -23,8 +22,6 @@ type HashMap struct {
 func init() {
 	_ = storage.Register("hashmap", NewHashMap)
 }
-
-var errTimeout = errors.New("query timeout")
 
 // NewHashMap creates a hashmap database.
 func NewHashMap(name, location string) (storage.Interface, error) {
@@ -128,7 +125,7 @@ mapLoop:
 				break mapLoop
 			case queryIter.Next <- record:
 			case <-time.After(1 * time.Second):
-				err = errTimeout
+				err = storage.ErrQueryTimeout
 				break mapLoop
 			}
 		}
