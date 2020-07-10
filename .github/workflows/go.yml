@@ -21,7 +21,7 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v1
       with:
-        version: v1.26
+        version: v1.24
 
     - name: Get dependencies
       run: go get -v -t -d ./...
