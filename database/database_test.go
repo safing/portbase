@@ -213,12 +213,10 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 		if err != nil {
 			t.Fatal(err)
 		}
-
 	})
 }
 
 func TestDatabaseSystem(t *testing.T) {
-
 	// panic after 10 seconds, to check for locks
 	go func() {
 		time.Sleep(10 * time.Second)

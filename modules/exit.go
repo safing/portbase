@@ -1,8 +1,6 @@
 package modules
 
-var (
-	exitStatusCode int
-)
+var exitStatusCode int
 
 // SetExitStatusCode sets the exit code that the program
 // shell return to the host after shutdown.

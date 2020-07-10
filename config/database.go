@@ -13,9 +13,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-var (
-	dbController *database.Controller
-)
+var dbController *database.Controller
 
 // StorageInterface provices a storage.Interface to the configuration manager.
 type StorageInterface struct {
@@ -91,7 +89,6 @@ func (s *StorageInterface) Delete(key string) error {
 
 // Query returns a an iterator for the supplied query.
 func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
-
 	optionsLock.Lock()
 	defer optionsLock.Unlock()
 
@@ -109,7 +106,6 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 }
 
 func (s *StorageInterface) processQuery(it *iterator.Iterator, opts []*Option) {
-
 	sort.Sort(sortableOptions(opts))
 
 	for _, opt := range opts {

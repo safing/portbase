@@ -32,7 +32,6 @@ func (s Severity) String() string {
 }
 
 func formatLine(line *logLine, duplicates uint64, useColor bool) string {
-
 	colorStart := ""
 	colorEnd := ""
 	if useColor {

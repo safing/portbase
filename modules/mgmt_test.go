@@ -5,7 +5,6 @@ import (
 )
 
 func testModuleMgmt(t *testing.T) {
-
 	// enable module management
 	EnableModuleManagement(nil)
 

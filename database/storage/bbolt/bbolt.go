@@ -16,9 +16,7 @@ import (
 	"github.com/safing/portbase/database/storage"
 )
 
-var (
-	bucketName = []byte{0}
-)
+var bucketName = []byte{0}
 
 // BBolt database made pluggable for portbase.
 type BBolt struct {
@@ -32,8 +30,7 @@ func init() {
 
 // NewBBolt opens/creates a bbolt database.
 func NewBBolt(name, location string) (storage.Interface, error) {
-
-	db, err := bbolt.Open(filepath.Join(location, "db.bbolt"), 0600, nil)
+	db, err := bbolt.Open(filepath.Join(location, "db.bbolt"), 0o600, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +76,6 @@ func (b *BBolt) Get(key string) (record.Record, error) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

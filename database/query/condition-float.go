@@ -15,7 +15,6 @@ type floatCondition struct {
 }
 
 func newFloatCondition(key string, operator uint8, value interface{}) *floatCondition {
-
 	var parsedValue float64
 
 	switch v := value.(type) {

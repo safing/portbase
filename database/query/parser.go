@@ -121,7 +121,6 @@ func ParseQuery(query string) (*Query, error) {
 }
 
 func extractSnippets(text string) (snippets []*snippet, err error) {
-
 	skip := false
 	start := -1
 	inParenthesis := false
@@ -193,15 +192,14 @@ func extractSnippets(text string) (snippets []*snippet, err error) {
 	}
 
 	return snippets, nil
-
 }
 
 //nolint:gocognit
 func parseAndOr(getSnippet func() (*snippet, error), remainingSnippets func() int, rootCondition bool) (Condition, error) {
-	var isOr = false
-	var typeSet = false
-	var wrapInNot = false
-	var expectingMore = true
+	isOr := false
+	typeSet := false
+	wrapInNot := false
+	expectingMore := true
 	var conditions []Condition
 
 	for {
@@ -331,9 +329,7 @@ func parseCondition(firstSnippet *snippet, getSnippet func() (*snippet, error)) 
 	return Where(firstSnippet.text, operator, value.text), nil
 }
 
-var (
-	escapeReplacer = regexp.MustCompile(`\\([^\\])`)
-)
+var escapeReplacer = regexp.MustCompile(`\\([^\\])`)
 
 // prepToken removes surrounding parenthesis and escape characters.
 func prepToken(text string) string {

@@ -10,7 +10,6 @@ import (
 )
 
 func TestOnceAgain(t *testing.T) {
-
 	oa := OnceAgain{}
 	executed := abool.New()
 	var testWg sync.WaitGroup

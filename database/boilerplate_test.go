@@ -15,12 +15,10 @@ type Example struct {
 	Score int
 }
 
-var (
-	exampleDB = NewInterface(&Options{
-		Internal: true,
-		Local:    true,
-	})
-)
+var exampleDB = NewInterface(&Options{
+	Internal: true,
+	Local:    true,
+})
 
 // GetExample gets an Example from the database.
 func GetExample(key string) (*Example, error) {

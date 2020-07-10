@@ -10,9 +10,7 @@ import (
 	"github.com/safing/portbase/database/record"
 )
 
-var (
-	errNotImplemented = errors.New("not implemented")
-)
+var errNotImplemented = errors.New("not implemented")
 
 // InjectBase is a dummy base structure to reduce boilerplate code for injected storage interfaces.
 type InjectBase struct{}

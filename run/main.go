@@ -29,7 +29,6 @@ func init() {
 
 // Run execute a full program lifecycle (including signal handling) based on modules. Just empty-import required packages and do os.Exit(run.Run()).
 func Run() int {
-
 	// Start
 	err := modules.Start()
 	if err != nil {

@@ -134,7 +134,6 @@ func testSet(t *testing.T, acc Accessor, key string, shouldSucceed bool, valueTo
 }
 
 func TestAccessor(t *testing.T) {
-
 	// Test interface compliance
 	accs := []Accessor{
 		NewJSONAccessor(&testJSON),
@@ -273,5 +272,4 @@ func TestAccessor(t *testing.T) {
 	for _, acc := range accs {
 		testExists(t, acc, "X", false)
 	}
-
 }

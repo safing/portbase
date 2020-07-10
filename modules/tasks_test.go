@@ -32,10 +32,12 @@ func init() {
 // test waiting
 
 // globals
-var qtWg sync.WaitGroup
-var qtOutputChannel chan string
-var qtSleepDuration time.Duration
-var qtModule *Module
+var (
+	qtWg            sync.WaitGroup
+	qtOutputChannel chan string
+	qtSleepDuration time.Duration
+	qtModule        *Module
+)
 
 func init() {
 	qtModule = initNewModule("task test module", nil, nil, nil)
@@ -103,16 +105,17 @@ func TestQueuedTask(t *testing.T) {
 	if completeOutput != expectedOutput {
 		t.Errorf("QueuedTask test failed, expected sequence %s, got %s", expectedOutput, completeOutput)
 	}
-
 }
 
 // test scheduled tasks
 
 // globals
-var stWg sync.WaitGroup
-var stOutputChannel chan string
-var stSleepDuration time.Duration
-var stWaitCh chan bool
+var (
+	stWg            sync.WaitGroup
+	stOutputChannel chan string
+	stSleepDuration time.Duration
+	stWaitCh        chan bool
+)
 
 // functions
 func scheduledTaskTester(s string, sched time.Time) {
@@ -126,7 +129,6 @@ func scheduledTaskTester(s string, sched time.Time) {
 
 // test
 func TestScheduledTaskWaiting(t *testing.T) {
-
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -166,7 +168,6 @@ func TestScheduledTaskWaiting(t *testing.T) {
 	if completeOutput != expectedOutput {
 		t.Errorf("ScheduledTask test failed, expected sequence %s, got %s", expectedOutput, completeOutput)
 	}
-
 }
 
 func TestRequeueingTask(t *testing.T) {

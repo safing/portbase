@@ -68,5 +68,4 @@ func TestFeeder(t *testing.T) {
 	case <-time.After(10 * time.Millisecond):
 		t.Error("call blocks!")
 	}
-
 }

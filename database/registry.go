@@ -150,7 +150,7 @@ func saveRegistry(lock bool) error {
 	// write file
 	// TODO: write atomically (best effort)
 	filePath := path.Join(rootStructure.Path, registryFileName)
-	return ioutil.WriteFile(filePath, data, 0600)
+	return ioutil.WriteFile(filePath, data, 0o600)
 }
 
 func registryWriter() {

@@ -65,7 +65,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	// set permissions
 	if !onWindows {
 		// TODO: only set executable files to 0755, set other to 0644
-		err = os.Chmod(rv.storagePath(), 0755)
+		err = os.Chmod(rv.storagePath(), 0o755)
 		if err != nil {
 			log.Warningf("%s: failed to set permissions on downloaded file %s: %s", reg.Name, rv.storagePath(), err)
 		}

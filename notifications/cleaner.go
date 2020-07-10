@@ -50,7 +50,6 @@ func cleanNotifications() {
 			// fallback: delete after 3 days after creation
 			if n.Created < fallbackTimelimit {
 				go deleteNotification(n)
-
 			}
 		default:
 			// invalid, impossible to determine cleanup timeframe, delete now

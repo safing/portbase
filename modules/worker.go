@@ -119,7 +119,6 @@ func (m *Module) runWorker(name string, fn func(context.Context) error) (err err
 }
 
 func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn func() error) error {
-
 	stopFnError := make(chan error)
 	go func() {
 		stopFnError <- m.runCtrlFn(name, fn)

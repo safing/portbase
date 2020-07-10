@@ -238,7 +238,6 @@ func (res *Resource) selectVersion() {
 
 			log.Debugf("updater: active version of %s is %s, update available", res.Identifier, res.ActiveVersion.VersionNumber)
 		}
-
 	}()
 
 	if len(res.Versions) == 0 {

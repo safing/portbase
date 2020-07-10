@@ -25,6 +25,4 @@ const (
 	apiSeperator = "|"
 )
 
-var (
-	apiSeperatorBytes = []byte(apiSeperator)
-)
+var apiSeperatorBytes = []byte(apiSeperator)

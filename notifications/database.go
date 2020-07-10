@@ -115,7 +115,6 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 	// record is already locked!
 	key := r.DatabaseKey()
 	n, err := EnsureNotification(r)
-
 	if err != nil {
 		return nil, ErrInvalidData
 	}

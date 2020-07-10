@@ -54,7 +54,6 @@ func TestModules(t *testing.T) {
 }
 
 func testModuleOrder(t *testing.T) {
-
 	registerTestModule(t, "database")
 	registerTestModule(t, "stats", "database")
 	registerTestModule(t, "service", "database")
@@ -88,7 +87,6 @@ func testModuleOrder(t *testing.T) {
 }
 
 func testModuleErrors(t *testing.T) {
-
 	// test prep error
 	Register("prepfail", testFail, nil, nil)
 	err := Start()
