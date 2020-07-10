@@ -100,7 +100,7 @@ func testGetFloat(t *testing.T, acc Accessor, key string, shouldSucceed bool, ex
 	}
 }
 
-func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue bool) {
+func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed, expectedValue bool) {
 	v, ok := acc.GetBool(key)
 	switch {
 	case !ok && shouldSucceed:

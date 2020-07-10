@@ -149,7 +149,7 @@ func (sa *StructAccessor) GetFloat(key string) (value float64, ok bool) {
 }
 
 // GetBool returns the bool found by the given json key and whether it could be successfully extracted.
-func (sa *StructAccessor) GetBool(key string) (value bool, ok bool) {
+func (sa *StructAccessor) GetBool(key string) (value, ok bool) {
 	field := sa.object.FieldByName(key)
 	if !field.IsValid() || field.Kind() != reflect.Bool {
 		return false, false

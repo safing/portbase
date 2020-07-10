@@ -57,7 +57,7 @@ func CreateAtomic(dest string, r io.Reader, opts *AtomicFileOptions) error {
 // CopyFileAtomic is like CreateAtomic but copies content from
 // src to dest. If opts.Mode is 0 CopyFileAtomic tries to set
 // the file mode of src to dest.
-func CopyFileAtomic(dest string, src string, opts *AtomicFileOptions) error {
+func CopyFileAtomic(dest, src string, opts *AtomicFileOptions) error {
 	if opts == nil {
 		opts = &AtomicFileOptions{}
 	}
@@ -83,7 +83,7 @@ func CopyFileAtomic(dest string, src string, opts *AtomicFileOptions) error {
 // If dest exists it's file mode copied and used for the replacement. If
 // not, dest will get the same file mode as src. See CopyFileAtomic and
 // CreateAtomic for more information.
-func ReplaceFileAtomic(dest string, src string, opts *AtomicFileOptions) error {
+func ReplaceFileAtomic(dest, src string, opts *AtomicFileOptions) error {
 	if opts == nil {
 		opts = &AtomicFileOptions{}
 	}

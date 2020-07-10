@@ -8,7 +8,7 @@ type safe struct{}
 var Concurrent = &safe{}
 
 // GetAsString returns a function that returns the wanted string with high performance.
-func (cs *safe) GetAsString(name string, fallback string) StringOption {
+func (cs *safe) GetAsString(name, fallback string) StringOption {
 	valid := getValidityFlag()
 	option, valueCache := getValueCache(name, nil, OptTypeString)
 	value := fallback

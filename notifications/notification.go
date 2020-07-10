@@ -87,7 +87,7 @@ func NotifyPrompt(id, msg string, actions ...Action) *Notification {
 	return notify(Prompt, id, msg, actions...)
 }
 
-func notify(nType uint8, id string, msg string, actions ...Action) *Notification {
+func notify(nType uint8, id, msg string, actions ...Action) *Notification {
 	acts := make([]*Action, len(actions))
 	for idx := range actions {
 		a := actions[idx]

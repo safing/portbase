@@ -119,7 +119,7 @@ func (p *Perspective) GetAsInt(name string) (value int64, ok bool) {
 }
 
 // GetAsBool returns a function that returns the wanted int with high performance.
-func (p *Perspective) GetAsBool(name string) (value bool, ok bool) {
+func (p *Perspective) GetAsBool(name string) (value, ok bool) {
 	valueCache := p.getPerspectiveValueCache(name, OptTypeBool)
 	if valueCache != nil {
 		return valueCache.boolVal, true

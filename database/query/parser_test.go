@@ -130,7 +130,7 @@ func TestParseQuery(t *testing.T) {
 	testParsing(t, `query test: where banana not exists`, New("test:").Where(Not(Where("banana", Exists, nil))))
 }
 
-func testParseError(t *testing.T, queryText string, expectedErrorString string) {
+func testParseError(t *testing.T, queryText, expectedErrorString string) {
 	_, err := ParseQuery(queryText)
 	if err == nil {
 		t.Errorf("should fail to parse: %s", queryText)

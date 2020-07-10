@@ -36,7 +36,7 @@ type Info struct {
 }
 
 // Set sets meta information via the main routine. This should be the first thing your program calls.
-func Set(setName string, setVersion string, setLicenseName string, compareVersionToTag bool) {
+func Set(setName, setVersion, setLicenseName string, compareVersionToTag bool) {
 	name = setName
 	version = setVersion
 	license = setLicenseName

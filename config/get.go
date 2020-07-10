@@ -51,7 +51,7 @@ func getValueCache(name string, option *Option, requestedType uint8) (*Option, *
 }
 
 // GetAsString returns a function that returns the wanted string with high performance.
-func GetAsString(name string, fallback string) StringOption {
+func GetAsString(name, fallback string) StringOption {
 	valid := getValidityFlag()
 	option, valueCache := getValueCache(name, nil, OptTypeString)
 	value := fallback
