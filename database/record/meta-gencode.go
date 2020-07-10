@@ -127,7 +127,7 @@ func (m *Meta) GenCodeMarshal(buf []byte) ([]byte, error) {
 // GenCodeUnmarshal gencode unmarshalls Meta and returns the bytes read.
 func (m *Meta) GenCodeUnmarshal(buf []byte) (uint64, error) {
 	if len(buf) < m.GenCodeSize() {
-		return 0, fmt.Errorf("insufficient data: got %d out of %d bytes", len(buf), m.GenCodeSize())
+		return 0, fmt.Errorf("insufficient data: got %d out of %d bytes, %w", len(buf), m.GenCodeSize(), io.ErrUnexpectedEOF)
 	}
 
 	i := uint64(0)

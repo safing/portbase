@@ -1,7 +1,6 @@
 package record
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -27,26 +26,26 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 		return nil, err
 	}
 	if version != 1 {
-		return nil, fmt.Errorf("incompatible record version: %d", version)
+		return nil, fmt.Errorf("%d: %w", version, ErrUnsupportedVersion)
 	}
 
 	metaSection, n, err := varint.GetNextBlock(data[offset:])
 	if err != nil {
-		return nil, fmt.Errorf("could not get meta section: %s", err)
+		return nil, fmt.Errorf("could not get meta section: %w", err)
 	}
 	offset += n
 
 	newMeta := &Meta{}
 	_, err = dsd.Load(metaSection, newMeta)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
+		return nil, fmt.Errorf("could not unmarshal meta section: %w", err)
 	}
 
 	var format uint8 = dsd.NONE
 	if !newMeta.IsDeleted() {
 		format, n, err = varint.Unpack8(data[offset:])
 		if err != nil {
-			return nil, fmt.Errorf("could not get dsd format: %s", err)
+			return nil, fmt.Errorf("could not get dsd format: %w", err)
 		}
 		offset += n
 	}
@@ -82,7 +81,7 @@ func NewWrapper(key string, meta *Meta, format uint8, data []byte) (*Wrapper, er
 // Marshal marshals the object, without the database key or metadata.
 func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 	if w.Meta() == nil {
-		return nil, errors.New("missing meta")
+		return nil, ErrMissingMeta
 	}
 
 	if w.Meta().Deleted > 0 {
@@ -90,7 +89,7 @@ func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 	}
 
 	if format != AUTO && format != w.Format {
-		return nil, errors.New("could not dump model, wrapped object format mismatch")
+		return nil, ErrFormatMismatch
 	}
 
 	data := make([]byte, len(w.Data)+1)
@@ -105,7 +104,7 @@ func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 	// Duplication necessary, as the version from Base would call Base.Marshal instead of Wrapper.Marshal
 
 	if w.Meta() == nil {
-		return nil, errors.New("missing meta")
+		return nil, ErrMissingMeta
 	}
 
 	// version
@@ -137,12 +136,12 @@ func (w *Wrapper) IsWrapped() bool {
 func Unwrap(wrapped, new Record) error {
 	wrapper, ok := wrapped.(*Wrapper)
 	if !ok {
-		return fmt.Errorf("cannot unwrap %T", wrapped)
+		return fmt.Errorf("%T: %w", wrapped, ErrUnwrapUnsupported)
 	}
 
 	_, err := dsd.LoadAsFormat(wrapper.Data, wrapper.Format, new)
 	if err != nil {
-		return fmt.Errorf("failed to unwrap %T: %s", new, err)
+		return fmt.Errorf("failed to unwrap %T: %w", new, err)
 	}
 
 	new.SetKey(wrapped.Key())
