@@ -3,7 +3,6 @@ package dsd
 import (
 	"bytes"
 	"compress/gzip"
-	"errors"
 	"fmt"
 
 	"github.com/safing/portbase/formats/varint"
@@ -39,12 +38,9 @@ func DumpAndCompress(t interface{}, format, compression uint8) ([]byte, error) {
 		}
 
 		// write data
-		n, err := gzipWriter.Write(data)
+		_, err = gzipWriter.Write(data) // no need to check the number of bytes written
 		if err != nil {
 			return nil, err
-		}
-		if n != len(data) {
-			return nil, errors.New("failed to fully write to gzip compressor")
 		}
 
 		// flush and write gzip footer
@@ -53,7 +49,7 @@ func DumpAndCompress(t interface{}, format, compression uint8) ([]byte, error) {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("dsd: tried to compress with unknown format %d", format)
+		return nil, fmt.Errorf("%d: %w", format, errUnsupportedFormat)
 	}
 
 	return buf.Bytes(), nil
@@ -85,7 +81,7 @@ func DecompressAndLoad(data []byte, format uint8, t interface{}) (interface{}, e
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("dsd: tried to dump with unknown format %d", format)
+		return nil, fmt.Errorf("%d: %w", format, errUnsupportedFormat)
 	}
 
 	// assign decompressed data
