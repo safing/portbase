@@ -33,8 +33,10 @@ const (
 )
 
 var (
-	errNoMoreSpace    = errors.New("dsd: no more space left after reading dsd type")
-	errNotImplemented = errors.New("dsd: this type is not yet implemented")
+	errNoMoreSpace       = errors.New("dsd: no more space left after reading dsd type")
+	errNotImplemented    = errors.New("dsd: type not implemented")
+	errUnsupportedFormat = errors.New("dsd: unsupported format")
+	errTypeUnsupported   = errors.New("dsd: unsupported on type")
 )
 
 // Load loads an dsd structured data blob into the given interface.
@@ -65,7 +67,7 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 	case JSON:
 		err := json.Unmarshal(data, t)
 		if err != nil {
-			return nil, fmt.Errorf("dsd: failed to unpack json data: %s", data)
+			return nil, fmt.Errorf("dsd: failed to unpack json data: %s (%w)", data, err)
 		}
 		return t, nil
 	case BSON:
@@ -78,15 +80,15 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 	case GenCode:
 		genCodeStruct, ok := t.(GenCodeCompatible)
 		if !ok {
-			return nil, errors.New("dsd: gencode is not supported by the given data structure")
+			return nil, errTypeUnsupported
 		}
 		_, err := genCodeStruct.GenCodeUnmarshal(data)
 		if err != nil {
-			return nil, fmt.Errorf("dsd: failed to unpack gencode data: %s", err)
+			return nil, fmt.Errorf("dsd: failed to unpack gencode data: %w", err)
 		}
 		return t, nil
 	default:
-		return nil, fmt.Errorf("dsd: tried to load unknown type %d, data: %v", format, data)
+		return nil, fmt.Errorf("%d (data=%s): %w", format, data, errUnsupportedFormat)
 	}
 }
 
@@ -135,14 +137,14 @@ func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
 	case GenCode:
 		genCodeStruct, ok := t.(GenCodeCompatible)
 		if !ok {
-			return nil, errors.New("dsd: gencode is not supported by the given data structure")
+			return nil, errTypeUnsupported
 		}
 		data, err = genCodeStruct.GenCodeMarshal(nil)
 		if err != nil {
-			return nil, fmt.Errorf("dsd: failed to pack gencode struct: %s", err)
+			return nil, fmt.Errorf("dsd: failed to pack gencode struct: %w", err)
 		}
 	default:
-		return nil, fmt.Errorf("dsd: tried to dump with unknown format %d", format)
+		return nil, errUnsupportedFormat
 	}
 
 	r := append(f, data...)

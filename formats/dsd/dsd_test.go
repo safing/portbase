@@ -1,4 +1,4 @@
-//nolint:maligned,unparam,gocyclo,gocognit
+//nolint:maligned,gocyclo,gocognit
 package dsd
 
 import (
