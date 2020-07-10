@@ -60,6 +60,5 @@ func registerConfig() error {
 
 // SetDefaultAPIListenAddress sets the default listen address for the API.
 func SetDefaultAPIListenAddress(address string) {
-
 	defaultListenAddress = address
 }

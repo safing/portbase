@@ -27,12 +27,12 @@ func ExampleDirStructure() {
 		return
 	}
 
-	ds := NewDirStructure(basePath, 0755)
-	secret := ds.ChildDir("secret", 0700)
-	repo := ds.ChildDir("repo", 0777)
-	_ = repo.ChildDir("a", 0700)
-	b := repo.ChildDir("b", 0755)
-	c := b.ChildDir("c", 0750)
+	ds := NewDirStructure(basePath, 0o755)
+	secret := ds.ChildDir("secret", 0o700)
+	repo := ds.ChildDir("repo", 0o777)
+	_ = repo.ChildDir("a", 0o700)
+	b := repo.ChildDir("b", 0o755)
+	c := b.ChildDir("c", 0o750)
 
 	err = ds.Ensure()
 	if err != nil {

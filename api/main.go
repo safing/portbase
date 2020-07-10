@@ -8,9 +8,7 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
-var (
-	module *modules.Module
-)
+var module *modules.Module
 
 // API Errors
 var (

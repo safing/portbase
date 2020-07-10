@@ -16,7 +16,7 @@ func TestSubsystems(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "portbase-testing-")
 	// initialize data dir
 	if err == nil {
-		err = dataroot.Initialize(tmpDir, 0755)
+		err = dataroot.Initialize(tmpDir, 0o755)
 	}
 	// handle setup error
 	if err != nil {

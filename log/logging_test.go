@@ -14,7 +14,6 @@ func init() {
 }
 
 func TestLogging(t *testing.T) {
-
 	// skip
 	if testing.Short() {
 		t.Skip()
@@ -60,5 +59,4 @@ func TestLogging(t *testing.T) {
 
 	// do not really shut down, we may need logging for other tests
 	// ShutdownLogging()
-
 }

@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	defaultFileMode = os.FileMode(int(0644))
-	defaultDirMode  = os.FileMode(int(0755))
+	defaultFileMode = os.FileMode(int(0o644))
+	defaultDirMode  = os.FileMode(int(0o755))
 	onWindows       = runtime.GOOS == "windows"
 )
 
@@ -178,7 +178,6 @@ func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 
 func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, q *query.Query, local, internal bool) {
 	err := filepath.Walk(walkRoot, func(path string, info os.FileInfo, err error) error {
-
 		// check for error
 		if err != nil {
 			return fmt.Errorf("fstree: error in walking fs: %s", err)

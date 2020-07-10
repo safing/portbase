@@ -130,7 +130,6 @@ func ParseLevel(level string) Severity {
 
 // Start starts the logging system. Must be called in order to see logs.
 func Start() (err error) {
-
 	if !initializing.SetToIf(false, true) {
 		return nil
 	}

@@ -7,7 +7,6 @@ import (
 )
 
 func osFeeder(ctx context.Context) error {
-
 	entropyBytes := minFeedEntropy / 8
 	feeder := NewFeeder()
 	defer feeder.CloseFeeder()

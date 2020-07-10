@@ -54,7 +54,7 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 
 	// initialize private attributes
 	reg.storageDir = storageDir
-	reg.tmpDir = storageDir.ChildDir("tmp", 0700)
+	reg.tmpDir = storageDir.ChildDir("tmp", 0o700)
 	reg.resources = make(map[string]*Resource)
 
 	// remove tmp dir to delete old entries

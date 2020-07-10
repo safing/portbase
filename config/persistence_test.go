@@ -36,7 +36,6 @@ var (
 )
 
 func TestJSONMapConversion(t *testing.T) {
-
 	// convert to json
 	j, err := MapToJSON(mapData)
 	if err != nil {

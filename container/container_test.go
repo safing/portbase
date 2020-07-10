@@ -24,7 +24,6 @@ var (
 )
 
 func TestContainerDataHandling(t *testing.T) {
-
 	c1 := New(utils.DuplicateBytes(testData))
 	c1c := c1.carbonCopy()
 
@@ -83,7 +82,6 @@ func compareMany(t *testing.T, reference []byte, other ...[]byte) {
 }
 
 func TestContainerErrorHandling(t *testing.T) {
-
 	c1 := New(nil)
 
 	if c1.HasError() {
@@ -111,7 +109,6 @@ func TestContainerErrorHandling(t *testing.T) {
 	if c2.Error().Error() != "test error" {
 		t.Errorf("error message mismatch, was %s", c2.Error())
 	}
-
 }
 
 func TestDataFetching(t *testing.T) {
@@ -170,11 +167,9 @@ func TestBlocks(t *testing.T) {
 	if n4 != 43 {
 		t.Errorf("n should be 43, was %d", n4)
 	}
-
 }
 
 func TestContainerBlockHandling(t *testing.T) {
-
 	c1 := New(utils.DuplicateBytes(testData))
 	c1.PrependLength()
 	c1.AppendAsBlock(testData)
