@@ -114,6 +114,7 @@ func authMiddleware(next http.Handler) http.Handler {
 		http.SetCookie(w, &http.Cookie{
 			Name:     cookieName,
 			Value:    tokenString,
+			Path:     "/",
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 			MaxAge:   int(cookieTTL.Seconds()),
