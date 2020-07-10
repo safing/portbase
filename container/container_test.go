@@ -2,7 +2,7 @@ package container
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/safing/portbase/utils"
@@ -90,7 +90,7 @@ func TestContainerErrorHandling(t *testing.T) {
 		t.Error("should not have error")
 	}
 
-	c1.SetError(errors.New("test error"))
+	c1.SetError(fmt.Errorf("test error"))
 
 	if !c1.HasError() {
 		t.Error("should have error")
