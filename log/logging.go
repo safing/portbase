@@ -1,6 +1,7 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -66,6 +67,11 @@ const (
 	WarningLevel  Severity = 4
 	ErrorLevel    Severity = 5
 	CriticalLevel Severity = 6
+)
+
+// Error definitions.
+var (
+	ErrInvalidFileLevel = errors.New("invalid file log level")
 )
 
 var (
@@ -153,13 +159,13 @@ func Start() (err error) {
 		for _, pair := range strings.Split(pkgLogLevels, ",") {
 			splitted := strings.Split(pair, "=")
 			if len(splitted) != 2 {
-				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
+				err = fmt.Errorf("log warning: ignoring %q: %w", pair, ErrInvalidFileLevel)
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				break
 			}
 			fileLevel := ParseLevel(splitted[1])
 			if fileLevel == 0 {
-				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
+				err = fmt.Errorf("log warning: ignoring %q: %w", pair, ErrInvalidFileLevel)
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				break
 			}
