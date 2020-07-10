@@ -234,7 +234,7 @@ func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, 
 			case queryIter.Next <- r:
 			case <-queryIter.Done:
 			case <-time.After(1 * time.Second):
-				return errors.New("fstree: query buffer full, timeout")
+				return storage.ErrQueryTimeout
 			}
 		}
 

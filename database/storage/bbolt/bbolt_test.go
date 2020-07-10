@@ -1,4 +1,3 @@
-//nolint:unparam,maligned
 package bbolt
 
 import (
@@ -14,7 +13,7 @@ import (
 	"github.com/safing/portbase/database/record"
 )
 
-type TestRecord struct {
+type TestRecord struct { // nolint:maligned
 	record.Base
 	sync.Mutex
 	S    string
