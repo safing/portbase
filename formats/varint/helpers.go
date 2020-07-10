@@ -1,7 +1,5 @@
 package varint
 
-import "errors"
-
 // PrependLength prepends the varint encoded length of the byte slice to itself.
 func PrependLength(data []byte) []byte {
 	return append(Pack64(uint64(len(data))), data...)
@@ -16,7 +14,7 @@ func GetNextBlock(data []byte) ([]byte, int, error) {
 	length := int(l)
 	totalLength := length + n
 	if totalLength > len(data) {
-		return nil, 0, errors.New("varint: not enough data for given block length")
+		return nil, 0, errTooSmall
 	}
 	return data[n:totalLength], totalLength, nil
 }
