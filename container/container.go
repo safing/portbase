@@ -2,12 +2,20 @@ package container
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/safing/portbase/formats/varint"
 )
 
-// Container is []byte sclie on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation. (Error transportation requires use of varints for data)
+// Error definitions.
+var (
+	ErrNotEnoughData = errors.New("container: not enough data to return")
+)
+
+// Container is []byte sclie on steroids, allowing for quick data appending,
+// prepending and fetching as well as transparent error transportation.
+// (Error transportation requires use of varints for data).
 type Container struct {
 	compartments [][]byte
 	offset       int
@@ -23,7 +31,8 @@ func NewContainer(data ...[]byte) *Container {
 	}
 }
 
-// New creates a new container with an optional initial []byte slice. Data will NOT be copied.
+// New creates a new container with an optional initial []byte slice.
+// Data will NOT be copied.
 func New(data ...[]byte) *Container {
 	return &Container{
 		compartments: data,
@@ -54,7 +63,8 @@ func (c *Container) AppendInt(n int) {
 	c.compartments = append(c.compartments, varint.Pack64(uint64(n)))
 }
 
-// AppendAsBlock appends the length of the data and the data itself. Data will NOT be copied.
+// AppendAsBlock appends the length of the data and the data itself.
+// Data will NOT be copied.
 func (c *Container) AppendAsBlock(data []byte) {
 	c.AppendNumber(uint64(len(data)))
 	c.Append(data)
@@ -103,7 +113,7 @@ func (c *Container) CompileData() []byte {
 func (c *Container) Get(n int) ([]byte, error) {
 	buf := c.gather(n)
 	if len(buf) < n {
-		return nil, errors.New("container: not enough data to return")
+		return nil, ErrNotEnoughData
 	}
 	c.skip(len(buf))
 	return buf, nil
@@ -113,7 +123,7 @@ func (c *Container) Get(n int) ([]byte, error) {
 func (c *Container) GetAsContainer(n int) (*Container, error) {
 	new := c.gatherAsContainer(n)
 	if new == nil {
-		return nil, errors.New("container: not enough data to return")
+		return nil, ErrNotEnoughData
 	}
 	c.skip(n)
 	return new, nil
@@ -208,7 +218,7 @@ func (c *Container) SetError(err error) {
 func (c *Container) CheckError() {
 	if len(c.compartments[c.offset]) > 0 && c.compartments[c.offset][0] == 0x00 {
 		c.compartments[c.offset] = c.compartments[c.offset][1:]
-		c.err = errors.New(string(c.CompileData()))
+		c.err = fmt.Errorf(string(c.CompileData()))
 		c.compartments = nil
 	}
 }
