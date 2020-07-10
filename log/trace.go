@@ -132,12 +132,16 @@ func (tracer *ContextTracer) Submit() {
 	}
 }
 
-func (tracer *ContextTracer) log(level Severity, msg string) {
+func (tracer *ContextTracer) log(level Severity, msg string, args []interface{}) {
 	if tracer == nil {
 		if fastcheck(level) {
-			log(level, msg, nil)
+			log(level, nil, msg, args)
 		}
 		return
+	}
+
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
 	}
 
 	// get file and line
@@ -166,60 +170,60 @@ func (tracer *ContextTracer) log(level Severity, msg string) {
 
 // Trace is used to log tiny steps. Log traces to context if you can!
 func (tracer *ContextTracer) Trace(msg string) {
-	tracer.log(TraceLevel, msg)
+	tracer.Tracef(msg)
 }
 
 // Tracef is used to log tiny steps. Log traces to context if you can!
 func (tracer *ContextTracer) Tracef(format string, things ...interface{}) {
-	tracer.Trace(fmt.Sprintf(format, things...))
+	tracer.log(TraceLevel, format, things)
 }
 
 // Debug is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func (tracer *ContextTracer) Debug(msg string) {
-	tracer.log(DebugLevel, msg)
+	tracer.Debugf(msg)
 }
 
 // Debugf is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func (tracer *ContextTracer) Debugf(format string, things ...interface{}) {
-	tracer.Debug(fmt.Sprintf(format, things...))
+	tracer.log(DebugLevel, format, things)
 }
 
 // Info is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
 func (tracer *ContextTracer) Info(msg string) {
-	tracer.log(InfoLevel, msg)
+	tracer.Infof(msg)
 }
 
 // Infof is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
 func (tracer *ContextTracer) Infof(format string, things ...interface{}) {
-	tracer.Info(fmt.Sprintf(format, things...))
+	tracer.log(InfoLevel, format, things)
 }
 
 // Warning is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func (tracer *ContextTracer) Warning(msg string) {
-	tracer.log(WarningLevel, msg)
+	tracer.Warningf(msg)
 }
 
 // Warningf is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func (tracer *ContextTracer) Warningf(format string, things ...interface{}) {
-	tracer.Warning(fmt.Sprintf(format, things...))
+	tracer.log(WarningLevel, format, things)
 }
 
 // Error is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational. Maybe User/Admin should be informed.
 func (tracer *ContextTracer) Error(msg string) {
-	tracer.log(ErrorLevel, msg)
+	tracer.Errorf(msg)
 }
 
 // Errorf is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational.
 func (tracer *ContextTracer) Errorf(format string, things ...interface{}) {
-	tracer.Error(fmt.Sprintf(format, things...))
+	tracer.log(ErrorLevel, format, things)
 }
 
 // Critical is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func (tracer *ContextTracer) Critical(msg string) {
-	tracer.log(CriticalLevel, msg)
+	tracer.Criticalf(msg)
 }
 
 // Criticalf is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func (tracer *ContextTracer) Criticalf(format string, things ...interface{}) {
-	tracer.Critical(fmt.Sprintf(format, things...))
+	tracer.log(CriticalLevel, format, things)
 }

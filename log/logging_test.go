@@ -50,7 +50,7 @@ func TestLogging(t *testing.T) {
 	SetLogLevel(TraceLevel)
 
 	// log invalid level
-	log(0xFF, "msg", nil)
+	log(0xFF, nil, "msg", nil)
 
 	// wait logs to be written
 	time.Sleep(1 * time.Millisecond)
