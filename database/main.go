@@ -40,13 +40,12 @@ func Initialize(dirStructureRoot *utils.DirStructure) error {
 			return fmt.Errorf("could not create/open database directory (%s): %s", rootStructure.Path, err)
 		}
 
-		err = loadRegistry()
-		if err != nil {
-			return fmt.Errorf("could not load database registry (%s): %s", filepath.Join(rootStructure.Path, registryFileName), err)
+		if registryPersistence.IsSet() {
+			err = loadRegistry()
+			if err != nil {
+				return fmt.Errorf("could not load database registry (%s): %s", filepath.Join(rootStructure.Path, registryFileName), err)
+			}
 		}
-
-		// start registry writer
-		go registryWriter()
 
 		return nil
 	}
