@@ -48,7 +48,7 @@ func CreateAtomic(dest string, r io.Reader, opts *AtomicFileOptions) error {
 	}
 
 	if err := tmpFile.CloseAtomicallyReplace(); err != nil {
-		return fmt.Errorf("failed to rename temp file to %q", dest)
+		return fmt.Errorf("failed to rename temp file to %q: %w", dest, err)
 	}
 
 	return nil
