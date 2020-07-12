@@ -13,6 +13,12 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
+// Common errors.
+var (
+	ErrEmptyIndex                 = errors.New("index file is empty")
+	ErrSelectedVersionUnavailable = errors.New("selected version is not available")
+)
+
 // ScanStorage scans root within the storage dir and adds found
 // resources to the registry. If an error occurred, it is logged
 // and the last error is returned. Everything that was found
@@ -31,7 +37,7 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 			return err
 		}
 		if !strings.HasPrefix(root, reg.storageDir.Path) {
-			return errors.New("supplied scan root path not within storage")
+			return fmt.Errorf("scan path: %w", utils.ErrOutOfDirScope)
 		}
 	}
 
@@ -122,7 +128,7 @@ func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
 	}
 
 	if len(releases) == 0 {
-		return fmt.Errorf("%s is empty", path)
+		return fmt.Errorf("%s: %w", path, ErrEmptyIndex)
 	}
 
 	err = reg.AddResources(releases, false, idx.Stable, idx.Beta)
@@ -149,7 +155,7 @@ func (reg *ResourceRegistry) CreateSymlinks(symlinkRoot *utils.DirStructure) err
 
 	for _, res := range reg.resources {
 		if res.SelectedVersion == nil {
-			return fmt.Errorf("no selected version available for %s", res.Identifier)
+			return fmt.Errorf("%s: %w", res.Identifier, ErrSelectedVersionUnavailable)
 		}
 
 		targetPath := res.SelectedVersion.storagePath()

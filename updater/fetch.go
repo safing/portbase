@@ -2,6 +2,7 @@ package updater
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,12 @@ import (
 	"github.com/google/renameio"
 
 	"github.com/safing/portbase/log"
+)
+
+// Common errors.
+var (
+	ErrUnexpectedStatusCode = errors.New("received unexpected status")
+	ErrIncomplete           = errors.New("incomplete download")
 )
 
 func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
@@ -33,7 +40,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 
 	err = reg.storageDir.EnsureAbsPath(dirPath)
 	if err != nil {
-		return fmt.Errorf("could not create updates folder: %s", dirPath)
+		return fmt.Errorf("could not create updates folder %s: %w", dirPath, err)
 	}
 
 	// open file for writing
@@ -44,14 +51,14 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	defer atomicFile.Cleanup() //nolint:errcheck // ignore error for now, tmp dir will be cleaned later again anyway
 
 	// start file download
-	resp, err := http.Get(downloadURL) //nolint:gosec // url is variable on purpose
+	resp, err := http.Get(downloadURL) // nolint:gosec,noctx // url is variable on purpose
 	if err != nil {
 		return fmt.Errorf("error fetching url (%s): %w", downloadURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error fetching url (%s): %s", downloadURL, resp.Status)
+		return fmt.Errorf("%w %s for %s", ErrUnexpectedStatusCode, resp.Status, downloadURL)
 	}
 
 	// download and write file
@@ -60,7 +67,7 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 		return fmt.Errorf("failed downloading %s: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
-		return fmt.Errorf("download unfinished, written %d out of %d bytes", n, resp.ContentLength)
+		return fmt.Errorf("received %d out of %d bytes: %w", n, resp.ContentLength, ErrIncomplete)
 	}
 
 	// finalize file
@@ -94,14 +101,14 @@ func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, 
 	}
 
 	// start file download
-	resp, err := http.Get(downloadURL) //nolint:gosec // url is variable on purpose
+	resp, err := http.Get(downloadURL) // nolint:gosec,noctx // url is variable on purpose
 	if err != nil {
 		return nil, fmt.Errorf("error fetching url (%s): %w", downloadURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error fetching url (%s): %s", downloadURL, resp.Status)
+		return nil, fmt.Errorf("%w %s for %s", ErrUnexpectedStatusCode, resp.Status, downloadURL)
 	}
 
 	// download and write file
@@ -111,7 +118,7 @@ func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, 
 		return nil, fmt.Errorf("failed downloading %s: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
-		return nil, fmt.Errorf("download unfinished, written %d out of %d bytes", n, resp.ContentLength)
+		return nil, fmt.Errorf("received %d out of %d bytes: %w", n, resp.ContentLength, ErrIncomplete)
 	}
 
 	return buf.Bytes(), nil
