@@ -18,7 +18,7 @@ func EnsureDirectory(path string, perm os.FileMode) error {
 	if !isDir {
 		err = os.MkdirAll(path, perm)
 		if err != nil {
-			return fmt.Errorf("could not create dir %s: %s", path, err)
+			return fmt.Errorf("could not create dir %s: %w", path, err)
 		}
 		return nil
 	}
@@ -38,7 +38,7 @@ func mayRemoveFile(path string) (isDir bool, mode os.FileMode, err error) {
 	f, err := os.Stat(path)
 	if err != nil && !os.IsNotExist(err) {
 		// something happened that we cannot handle
-		return false, 0, fmt.Errorf("failed to access %s: %s", path, err)
+		return false, 0, fmt.Errorf("failed to access %s: %w", path, err)
 	}
 
 	if os.IsNotExist(err) {

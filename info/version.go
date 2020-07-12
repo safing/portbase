@@ -22,6 +22,11 @@ var (
 	compareVersion bool
 )
 
+var (
+	errVersionUnset     = errors.New("must call SetInfo() before calling CheckVersion()")
+	errUnsupportedBuild = errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
+)
+
 // Info holds the programs meta information.
 type Info struct {
 	Name         string
@@ -93,7 +98,7 @@ func CheckVersion() error {
 	default:
 		// check version information
 		if name == "[NAME]" {
-			return errors.New("must call SetInfo() before calling CheckVersion()")
+			return errVersionUnset
 		}
 		if version == "[version unknown]" ||
 			commit == "[commit unknown]" ||
@@ -103,7 +108,7 @@ func CheckVersion() error {
 			buildHost == "[host unknown]" ||
 			buildDate == "[date unknown]" ||
 			buildSource == "[source unknown]" {
-			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
+			return errUnsupportedBuild
 		}
 	}
 
