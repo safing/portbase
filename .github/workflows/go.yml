@@ -31,10 +31,10 @@ jobs:
       run: go vet ./...
 
     - name: Install golint
-      run: GOBIN=. go get -u golang.org/x/lint/golint
+      run: GOBIN=/tmp go get -u golang.org/x/lint/golint
 
     - name: Run golint
-      run: ./golint -set_exit_status -min_confidence 1.0 ./...
+      run: /tmp/golint -set_exit_status -min_confidence 1.0 ./...
    
     - name: Run gofmt
       run: bash -c "test -z $(gofmt -s -l .)"
