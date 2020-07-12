@@ -53,7 +53,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 
 	// check for content
 	if len(new) == 0 {
-		return fmt.Errorf("index %s is empty", idx.Path)
+		return fmt.Errorf("%s: %w", idx.Path, ErrEmptyIndex)
 	}
 
 	// add resources to registry

@@ -3,6 +3,7 @@ package updater
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,12 @@ import (
 	"github.com/google/renameio"
 
 	"github.com/safing/portbase/log"
+)
+
+// Common errors.
+var (
+	ErrUnexpectedStatusCode = errors.New("received unexpected status")
+	ErrIncomplete           = errors.New("incomplete download")
 )
 
 func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client, rv *ResourceVersion, tries int) error {
@@ -31,7 +38,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	dirPath := filepath.Dir(rv.storagePath())
 	err := reg.storageDir.EnsureAbsPath(dirPath)
 	if err != nil {
-		return fmt.Errorf("could not create updates folder: %s", dirPath)
+		return fmt.Errorf("could not create updates folder %s: %w", dirPath, err)
 	}
 
 	// open file for writing
@@ -54,7 +61,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 		return fmt.Errorf("failed to download %q: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
-		return fmt.Errorf("failed to finish download of %q: written %d out of %d bytes", downloadURL, n, resp.ContentLength)
+		return fmt.Errorf("failed to finish download of %q: received %d out of %d bytes: %w", downloadURL, n, resp.ContentLength, ErrIncomplete)
 	}
 
 	// finalize file
@@ -99,7 +106,7 @@ func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client,
 		return nil, fmt.Errorf("failed to download %q: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
-		return nil, fmt.Errorf("failed to finish download of %q: written %d out of %d bytes", downloadURL, n, resp.ContentLength)
+		return nil, fmt.Errorf("failed to finish download of %q: received %d out of %d bytes: %w", downloadURL, n, resp.ContentLength, ErrIncomplete)
 	}
 
 	return buf.Bytes(), nil
@@ -139,6 +146,11 @@ func (reg *ResourceRegistry) makeRequest(ctx context.Context, client *http.Clien
 		resp.Body.Close()
 		return nil, "", fmt.Errorf("failed to fetch %q: %d %s", downloadURL, resp.StatusCode, resp.Status)
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("failed to fetch %q: %w %d %s", downloadURL, ErrUnexpectedStatusCode, resp.StatusCode, resp.Status)
+	}
+
 
 	return resp, downloadURL, err
 }
