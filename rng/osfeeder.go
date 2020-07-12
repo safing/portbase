@@ -16,10 +16,10 @@ func osFeeder(ctx context.Context) error {
 		osEntropy := make([]byte, entropyBytes)
 		n, err := rand.Read(osEntropy)
 		if err != nil {
-			return fmt.Errorf("could not read entropy from os: %s", err)
+			return fmt.Errorf("could not read entropy from os: %w", err)
 		}
 		if n != entropyBytes {
-			return fmt.Errorf("could not read enough entropy from os: got only %d bytes instead of %d", n, entropyBytes)
+			return fmt.Errorf("%w: got only %d bytes instead of %d", ErrNoEntropy, n, entropyBytes)
 		}
 
 		// feed

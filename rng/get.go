@@ -2,7 +2,6 @@ package rng
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"math"
 	"time"
@@ -30,7 +29,7 @@ func init() {
 
 func checkEntropy() (err error) {
 	if !rngReady {
-		return errors.New("RNG is not ready yet")
+		return ErrNotReady
 	}
 	if rngBytesRead > reseedAfterBytes ||
 		int(time.Since(rngLastFeed).Seconds()) > reseedAfterSeconds {
@@ -40,7 +39,7 @@ func checkEntropy() (err error) {
 			rngBytesRead = 0
 			rngLastFeed = time.Now()
 		case <-time.After(1 * time.Second):
-			return errors.New("failed to get new entropy")
+			return ErrNoEntropy
 		}
 	}
 	return nil
