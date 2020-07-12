@@ -26,6 +26,13 @@ var (
 	module *modules.Module
 )
 
+// Common errors.
+var (
+	ErrNotReady      = errors.New("RNG not ready")
+	ErrNoEntropy     = errors.New("failed to get entropy")
+	ErrUnknownCipher = errors.New("unknown cipher")
+)
+
 func init() {
 	module = modules.Register("rng", nil, start, nil)
 }
@@ -37,7 +44,7 @@ func newCipher(key []byte) (cipher.Block, error) {
 	case "serpent":
 		return serpent.NewCipher(key)
 	default:
-		return nil, fmt.Errorf("unknown or unsupported cipher: %s", rngCipher)
+		return nil, fmt.Errorf("%s: %w", rngCipher, ErrUnknownCipher)
 	}
 }
 
@@ -46,17 +53,13 @@ func start() error {
 	defer rngLock.Unlock()
 
 	rng = fortuna.NewGenerator(newCipher)
-	if rng == nil {
-		return errors.New("failed to initialize rng")
-	}
-
 	// add another (async) OS rng seed
 	module.StartWorker("initial rng feed", func(_ context.Context) error {
 		// get entropy from OS
 		osEntropy := make([]byte, minFeedEntropy/8)
 		_, err := rand.Read(osEntropy)
 		if err != nil {
-			return fmt.Errorf("could not read entropy from os: %s", err)
+			return fmt.Errorf("could not read entropy from os: %w", err)
 		}
 		// feed
 		rngLock.Lock()

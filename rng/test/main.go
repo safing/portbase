@@ -1,3 +1,4 @@
+// nolint:goerr113
 package main
 
 import (
@@ -66,7 +67,6 @@ func prep() error {
 	return nil
 }
 
-//nolint:gocognit
 func start() error {
 	// generates 1MB and writes to stdout
 
