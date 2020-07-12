@@ -2,11 +2,14 @@ package modules
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -15,11 +18,59 @@ var (
 )
 
 func init() {
-	go microTaskScheduler()
+	// TODO(ppacher): remove once refactoring is done
+	DefaultMicroTaskScheduler.Start(context.Background())
+}
+
+func TestMicroTaskScheduler(t *testing.T) {
+	sched := NewMicroTaskScheduler()
+	sched.SetMaxConcurrentMicroTasks(4)
+
+	done := make(chan struct{})
+	defer close(done)
+
+	// occupy three of our 4 slots.
+	go sched.RunNow(mtModule, "block", func(context.Context) error { <-done; return nil })
+	go sched.RunNow(mtModule, "block", func(context.Context) error { <-done; return nil })
+	go sched.RunNow(mtModule, "block", func(context.Context) error { <-done; return nil })
+
+	results := make(chan string, 100)
+	go sched.RunLowPriority(mtModule, "low-1", func(context.Context) error {
+		results <- "low"
+		return nil
+	})
+	go sched.RunLowPriority(mtModule, "low-2", func(context.Context) error {
+		results <- "low"
+		return nil
+	})
+	go sched.RunMediumPriority(mtModule, "medium-1", func(context.Context) error {
+		results <- "medium"
+		return nil
+	})
+	go sched.RunMediumPriority(mtModule, "medium-2", func(context.Context) error {
+		results <- "medium"
+		return nil
+	})
+
+	var str []string
+	for s := range results {
+		str = append(str, s)
+		if len(str) == 4 {
+			close(results)
+		}
+	}
+
+	assert.Equal(t, []string{"medium", "medium", "low", "low"}, str)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sched.Start(ctx)
 }
 
 // test waiting.
 func TestMicroTaskWaiting(t *testing.T) {
+	DefaultMicroTaskScheduler.Start(context.Background())
+
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -29,19 +80,20 @@ func TestMicroTaskWaiting(t *testing.T) {
 	mtwWaitGroup := new(sync.WaitGroup)
 	mtwOutputChannel := make(chan string, 100)
 	mtwExpectedOutput := "1234567"
-	mtwSleepDuration := 10 * time.Millisecond
+	mtwSleepDuration := 1 * time.Millisecond
 
 	// TEST
 	mtwWaitGroup.Add(4)
 
 	// ensure we only execute one microtask at once
-	atomic.StoreInt32(microTasksThreshhold, 1)
+	atomic.StoreInt32(&DefaultMicroTaskScheduler.concurrencyLimit, 1)
 
 	// High Priority - slot 1-5
 	go func() {
 		defer mtwWaitGroup.Done()
 		// exec at slot 1
-		_ = mtModule.RunMicroTask(&mtTestName, func(ctx context.Context) error {
+		name := "1 and 2"
+		_ = mtModule.RunMicroTask(&name, func(ctx context.Context) error {
 			mtwOutputChannel <- "1" // slot 1
 			time.Sleep(mtwSleepDuration * 5)
 			mtwOutputChannel <- "2" // slot 5
@@ -49,6 +101,7 @@ func TestMicroTaskWaiting(t *testing.T) {
 		})
 	}()
 
+	runtime.Gosched()
 	time.Sleep(mtwSleepDuration * 1)
 
 	// clear clearances
@@ -60,12 +113,14 @@ func TestMicroTaskWaiting(t *testing.T) {
 	go func() {
 		defer mtwWaitGroup.Done()
 		// exec at slot 2
-		_ = mtModule.RunLowPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
+		name := "7"
+		_ = mtModule.RunLowPriorityMicroTask(&name, func(ctx context.Context) error {
 			mtwOutputChannel <- "7" // slot 16
 			return nil
 		})
 	}()
 
+	runtime.Gosched()
 	time.Sleep(mtwSleepDuration * 1)
 
 	// High Priority - slot 10-15
@@ -73,7 +128,8 @@ func TestMicroTaskWaiting(t *testing.T) {
 		defer mtwWaitGroup.Done()
 		time.Sleep(mtwSleepDuration * 8)
 		// exec at slot 10
-		_ = mtModule.RunMicroTask(&mtTestName, func(ctx context.Context) error {
+		name := "4 and 6"
+		_ = mtModule.RunMicroTask(&name, func(ctx context.Context) error {
 			mtwOutputChannel <- "4" // slot 10
 			time.Sleep(mtwSleepDuration * 5)
 			mtwOutputChannel <- "6" // slot 15
@@ -85,7 +141,8 @@ func TestMicroTaskWaiting(t *testing.T) {
 	go func() {
 		defer mtwWaitGroup.Done()
 		// exec at slot 3
-		_ = mtModule.RunMediumPriorityMicroTask(&mtTestName, func(ctx context.Context) error {
+		name := "3 and 5"
+		_ = mtModule.RunMediumPriorityMicroTask(&name, func(ctx context.Context) error {
 			mtwOutputChannel <- "3" // slot 6
 			time.Sleep(mtwSleepDuration * 7)
 			mtwOutputChannel <- "5" // slot 13
@@ -145,6 +202,7 @@ func TestMicroTaskOrdering(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
 	}
+	DefaultMicroTaskScheduler.Start(context.Background())
 
 	// init
 	mtoOutputChannel = make(chan string, 100)
@@ -154,7 +212,7 @@ func TestMicroTaskOrdering(t *testing.T) {
 	mtoWaitGroup.Add(20)
 
 	// ensure we only execute one microtask at once
-	atomic.StoreInt32(microTasksThreshhold, 1)
+	atomic.StoreInt32(&DefaultMicroTaskScheduler.concurrencyLimit, 1)
 
 	// kick off
 	go mediumPrioTaskTester()
@@ -185,7 +243,7 @@ func TestMicroTaskOrdering(t *testing.T) {
 	close(mtoWaitCh)
 	// trigger
 	select {
-	case microTaskFinished <- struct{}{}:
+	case DefaultMicroTaskScheduler.taskFinishNotifier <- struct{}{}:
 	default:
 	}
 
