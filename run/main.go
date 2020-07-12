@@ -74,9 +74,9 @@ signalLoop:
 			fmt.Println(" <INTERRUPT>")
 			log.Warning("main: program was interrupted, shutting down.")
 
-			forceCnt := 5
 			// catch signals during shutdown
 			go func() {
+				forceCnt := 5
 				for {
 					<-signalCh
 					forceCnt--

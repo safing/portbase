@@ -104,8 +104,8 @@ func (p *StablePool) Get() interface{} {
 	return nil
 }
 
-// Cnt returns the amount of items the pool currently holds.
-func (p *StablePool) Cnt() int {
+// Size returns the amount of items the pool currently holds.
+func (p *StablePool) Size() int {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 

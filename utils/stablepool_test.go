@@ -9,8 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStablePool(t *testing.T) {
-
+func TestStablePoolRealWorld(t *testing.T) {
 	// "real world" simulation
 
 	cnt := 0
@@ -55,7 +54,7 @@ func TestStablePool(t *testing.T) {
 		// wait for round to finish
 		testWorkerWg.Wait()
 	}
-	t.Logf("real world simulation: cnt=%d p.cnt=%d p.max=%d\n", cnt, testPool.Cnt(), testPool.Max())
+	t.Logf("real world simulation: cnt=%d p.cnt=%d p.max=%d\n", cnt, testPool.Size(), testPool.Max())
 	assert.GreaterOrEqual(t, 200, cnt, "should not use more than 200 values")
 	assert.GreaterOrEqual(t, 100, testPool.Max(), "pool should have at most this max size")
 
@@ -71,7 +70,9 @@ func TestStablePool(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 100, optPool.Max(), "pool should have exactly this max size")
+}
 
+func TestStablePoolFuzzing(t *testing.T) {
 	// fuzzing test
 
 	fuzzPool := &StablePool{}
@@ -97,7 +98,9 @@ func TestStablePool(t *testing.T) {
 	fuzzWg.Done()
 	// wait for all to finish
 	fuzzWorkerWg.Wait()
+}
 
+func TestStablePoolBreaking(t *testing.T) {
 	// try to break it
 
 	breakPool := &StablePool{}
