@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -37,7 +38,9 @@ func Start() error {
 	defer mgmtLock.Unlock()
 
 	// start microtask scheduler
-	go microTaskScheduler()
+	// FIXME go microTaskScheduler()
+
+	DefaultMicroTaskScheduler.Start(context.Background())
 	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0) * 2)
 
 	// inter-link modules
