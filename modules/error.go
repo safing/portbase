@@ -1,11 +1,34 @@
 package modules
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime/debug"
 	"sync"
 	"time"
+)
+
+// Common error definitions.
+var (
+	ErrModuleNotOffline       = errors.New("module is not stopped")
+	ErrModuleNotOnline        = errors.New("module not started")
+	ErrModuleOnline           = errors.New("module online")
+	ErrModuleOffline          = errors.New("module offline")
+	ErrModulePrepared         = errors.New("module prepared")
+	ErrModuleSystemNotStarted = errors.New("module system not yet started")
+	ErrModuleSystemStarted    = errors.New("module system already started")
+	ErrUnknownModule          = errors.New("module does not exist")
+	ErrUnknownEvent           = errors.New("event does not exist")
+	ErrDependencyLoop         = errors.New("module dependency loop detected")
+	ErrShuttingDown           = errors.New("module system is shutting down")
+	ErrTimeout                = errors.New("timeout")
+
+	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
+	ErrCleanExit = errors.New("clean exit requested")
+
+	// ErrRestartNow may be returned (wrapped) by service workers to request an immediate restart.
+	ErrRestartNow = errors.New("requested restart")
 )
 
 var (
