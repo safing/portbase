@@ -2,6 +2,7 @@ package run
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -32,7 +33,7 @@ func Run() int {
 	// Start
 	err := modules.Start()
 	if err != nil {
-		if err == modules.ErrCleanExit {
+		if errors.Is(err, modules.ErrCleanExit) {
 			return 0
 		}
 
