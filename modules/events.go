@@ -2,7 +2,6 @@ package modules
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/safing/portbase/log"
@@ -43,16 +42,16 @@ func (m *Module) processEventTrigger(event string, data interface{}) {
 // InjectEvent triggers an event from a foreign module and executes all hook functions registered to that event.
 func (m *Module) InjectEvent(sourceEventName, targetModuleName, targetEventName string, data interface{}) error {
 	if !m.OnlineSoon() {
-		return errors.New("module not yet started")
+		return ErrModuleNotOnline
 	}
 
 	if !modulesLocked.IsSet() {
-		return errors.New("module system not yet started")
+		return ErrModuleSystemNotStarted
 	}
 
 	targetModule, ok := modules[targetModuleName]
 	if !ok {
-		return fmt.Errorf(`module "%s" does not exist`, targetModuleName)
+		return fmt.Errorf(`%s: %w`, targetModuleName, ErrUnknownModule)
 	}
 
 	targetModule.eventHooksLock.RLock()
@@ -60,7 +59,7 @@ func (m *Module) InjectEvent(sourceEventName, targetModuleName, targetEventName 
 
 	targetHooks, ok := targetModule.eventHooks[targetEventName]
 	if !ok {
-		return fmt.Errorf(`module "%s" has no event named "%s"`, targetModuleName, targetEventName)
+		return fmt.Errorf("%s/%s: %w", targetModuleName, targetEventName, ErrUnknownEvent)
 	}
 
 	for _, hook := range targetHooks {
@@ -131,7 +130,7 @@ func (m *Module) RegisterEventHook(module, event, description string, fn func(co
 		var ok bool
 		eventModule, ok = modules[module]
 		if !ok {
-			return fmt.Errorf(`module "%s" does not exist`, module)
+			return fmt.Errorf("%s: %w", module, ErrUnknownModule)
 		}
 	}
 
@@ -140,7 +139,7 @@ func (m *Module) RegisterEventHook(module, event, description string, fn func(co
 	defer eventModule.eventHooksLock.Unlock()
 	hooks, ok := eventModule.eventHooks[event]
 	if !ok {
-		return fmt.Errorf(`event "%s/%s" does not exist`, eventModule.Name, event)
+		return fmt.Errorf("%s/%s: %w", eventModule.Name, event, ErrUnknownEvent)
 	}
 
 	// add hook

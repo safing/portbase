@@ -11,10 +11,6 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-// ErrModuleSystemStarted indicates that the module system has already
-// been started.
-var ErrModuleSystemStarted = errors.New("module system already started")
-
 var (
 	initialStartCompleted = abool.NewBool(false)
 	globalPrepFn          func() error
@@ -54,7 +50,7 @@ func Start() error {
 	// parse flags
 	err = parseFlags()
 	if err != nil {
-		if err != ErrCleanExit {
+		if !errors.Is(err, ErrCleanExit) {
 			fmt.Fprintf(os.Stderr, "CRITICAL ERROR: failed to parse flags: %s\n", err)
 		}
 		return err
@@ -64,7 +60,7 @@ func Start() error {
 	if globalPrepFn != nil {
 		err = globalPrepFn()
 		if err != nil {
-			if err != ErrCleanExit {
+			if !errors.Is(err, ErrCleanExit) {
 				fmt.Fprintf(os.Stderr, "CRITICAL ERROR: %s\n", err)
 			}
 			return err
@@ -74,7 +70,7 @@ func Start() error {
 	// prep modules
 	err = prepareModules()
 	if err != nil {
-		if err != ErrCleanExit {
+		if !errors.Is(err, ErrCleanExit) {
 			fmt.Fprintf(os.Stderr, "CRITICAL ERROR: %s\n", err)
 		}
 		return err
@@ -143,14 +139,14 @@ func prepareModules() error {
 			// finished
 			if waiting > 0 {
 				// check for dep loop
-				return fmt.Errorf("modules: dependency loop detected, cannot continue")
+				return ErrDependencyLoop
 			}
 			return nil
 		}
 
 		rep = <-reports
 		if rep.err != nil {
-			if rep.err == ErrCleanExit {
+			if errors.Is(rep.err, ErrCleanExit) {
 				return rep.err
 			}
 			return fmt.Errorf("failed to prep module %s: %w", rep.module.Name, rep.err)
@@ -185,7 +181,7 @@ func startModules() error {
 			// finished
 			if waiting > 0 {
 				// check for dep loop
-				return fmt.Errorf("modules: dependency loop detected, cannot continue")
+				return ErrDependencyLoop
 			}
 			// return last error
 			return nil

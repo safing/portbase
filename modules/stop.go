@@ -1,9 +1,6 @@
 package modules
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/tevino/abool"
 
 	"github.com/safing/portbase/log"
@@ -36,7 +33,7 @@ func Shutdown() error {
 		close(shutdownSignal)
 	} else {
 		// shutdown was already issued
-		return errors.New("shutdown already initiated")
+		return ErrShuttingDown
 	}
 
 	if initialStartCompleted.IsSet() {
@@ -100,7 +97,7 @@ func stopModules() error {
 			// finished
 			if waiting > 0 {
 				// check for dep loop
-				return fmt.Errorf("modules: dependency loop detected, cannot continue")
+				return ErrDependencyLoop
 			}
 			// return last error
 			return lastErr

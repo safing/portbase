@@ -38,7 +38,7 @@ func registerTestModule(t *testing.T, name string, dependencies ...string) {
 }
 
 func testFail() error {
-	return errors.New("test error")
+	return errTest
 }
 
 func testCleanExit() error {
@@ -99,7 +99,7 @@ func testModuleErrors(t *testing.T) {
 	// test prep clean exit
 	Register("prepcleanexit", testCleanExit, nil, nil)
 	err = Start()
-	if err != ErrCleanExit {
+	if !errors.Is(err, ErrCleanExit) {
 		t.Error("should fail with clean exit")
 	}
 

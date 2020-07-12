@@ -15,11 +15,7 @@ const (
 	DefaultBackoffDuration = 2 * time.Second
 )
 
-var (
-	// ErrRestartNow may be returned (wrapped) by service workers to request an immediate restart.
-	ErrRestartNow = errors.New("requested restart")
-	errNoModule   = errors.New("missing module (is nil!)")
-)
+var errNoModule = errors.New("missing module (is nil!)")
 
 // StartWorker directly starts a generic worker that does not fit to be a Task or MicroTask, such as long running (and possibly mostly idle) sessions. A call to StartWorker starts a new goroutine and returns immediately.
 func (m *Module) StartWorker(name string, fn func(context.Context) error) {
@@ -124,7 +120,7 @@ func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn fun
 	case err := <-stopFnError:
 		return err
 	case <-time.After(timeout):
-		return fmt.Errorf("timed out (%s)", timeout)
+		return fmt.Errorf("%w after %s", ErrTimeout, timeout)
 	}
 }
 
