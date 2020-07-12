@@ -2,6 +2,10 @@ package database
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
+
+	"github.com/safing/portbase/database/record"
 )
 
 // Errors.
@@ -22,3 +26,22 @@ var (
 	ErrInvalidScope           = errors.New("invalid database scope")
 	ErrInvalidName            = errors.New("database name must only contain alphanumeric and `_-` characters and must be at least 4 characters long")
 )
+
+// UnexpectedRecordTypeError is the common error of receiving an record of an unknown
+// or unsupported type.
+type UnexpectedRecordTypeError struct {
+	Expected string
+	Actual   string
+}
+
+func (urte *UnexpectedRecordTypeError) Error() string {
+	return fmt.Sprintf("expected record of type %s but got %s", urte.Expected, urte.Actual)
+}
+
+// NewUnexpectedRecordTypeErr returns a new unexpected record type error.
+func NewUnexpectedRecordTypeErr(expected string, r record.Record) *UnexpectedRecordTypeError {
+	return &UnexpectedRecordTypeError{
+		Expected: expected,
+		Actual:   reflect.TypeOf(r).String(),
+	}
+}

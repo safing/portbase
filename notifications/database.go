@@ -2,7 +2,6 @@ package notifications
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -219,7 +218,7 @@ func EnsureNotification(r record.Record) (*Notification, error) {
 	// or adjust type
 	new, ok := r.(*Notification)
 	if !ok {
-		return nil, fmt.Errorf("record not of type *Example, but %T", r)
+		return nil, database.NewUnexpectedRecordTypeErr("*Notification", r)
 	}
 	return new, nil
 }
