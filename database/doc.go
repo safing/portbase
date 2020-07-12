@@ -45,7 +45,7 @@ Boilerplate Code:
       // or adjust type
       new, ok := r.(*Example)
       if !ok {
-        return nil, fmt.Errorf("record not of type *Example, but %T", r)
+        return nil, NewUnexpectedRecordTypeErr("*Example", r)
       }
       return new, nil
     }
