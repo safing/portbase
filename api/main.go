@@ -14,7 +14,8 @@ var (
 
 // API Errors
 var (
-	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set (or must be set earlier)")
+	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set")
+	ErrAuthenticationImmutable  = errors.New("the authentication function can only be set before the api has started")
 )
 
 func init() {

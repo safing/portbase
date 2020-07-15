@@ -19,9 +19,10 @@ const (
 )
 
 var (
-	writeRegistrySoon = abool.NewBool(false)
+	registryPersistence = abool.NewBool(false)
+	writeRegistrySoon   = abool.NewBool(false)
 
-	registry     map[string]*Database
+	registry     = make(map[string]*Database)
 	registryLock sync.Mutex
 
 	nameConstraint = regexp.MustCompile("^[A-Za-z0-9_-]{4,}$")
@@ -67,7 +68,7 @@ func Register(new *Database) (*Database, error) {
 		save = true
 	}
 
-	if save {
+	if save && registryPersistence.IsSet() {
 		if ok {
 			registeredDB.Updated()
 		}
@@ -99,6 +100,15 @@ func getDatabase(name string) (*Database, error) {
 	return registeredDB, nil
 }
 
+// EnableRegistryPersistence enables persistence of the database registry.
+func EnableRegistryPersistence() {
+	if registryPersistence.SetToIf(false, true) {
+		// start registry writer
+		go registryWriter()
+		// TODO: make an initial write if database system is already initialized
+	}
+}
+
 func loadRegistry() error {
 	registryLock.Lock()
 	defer registryLock.Unlock()
@@ -108,7 +118,6 @@ func loadRegistry() error {
 	data, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			registry = make(map[string]*Database)
 			return nil
 		}
 		return err
