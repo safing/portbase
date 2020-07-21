@@ -2,6 +2,7 @@ package updater
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,10 +17,14 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
+func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client, rv *ResourceVersion, tries int) error {
 	// backoff when retrying
 	if tries > 0 {
-		time.Sleep(time.Duration(tries*tries) * time.Second)
+		select {
+		case <-ctx.Done():
+			return nil // module is shutting down
+		case <-time.After(time.Duration(tries*tries) * time.Second):
+		}
 	}
 
 	// create URL
@@ -44,7 +49,11 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	defer atomicFile.Cleanup() //nolint:errcheck // ignore error for now, tmp dir will be cleaned later again anyway
 
 	// start file download
-	resp, err := http.Get(downloadURL) //nolint:gosec // url is variable on purpose
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, http.NoBody) //nolint:gosec
+	if err != nil {
+		return fmt.Errorf("error creating request (%s): %w", downloadURL, err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error fetching url (%s): %w", downloadURL, err)
 	}
@@ -81,10 +90,14 @@ func (reg *ResourceRegistry) fetchFile(rv *ResourceVersion, tries int) error {
 	return nil
 }
 
-func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, error) {
+func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client, downloadPath string, tries int) ([]byte, error) {
 	// backoff when retrying
 	if tries > 0 {
-		time.Sleep(time.Duration(tries*tries) * time.Second)
+		select {
+		case <-ctx.Done():
+			return nil, nil // module is shutting down
+		case <-time.After(time.Duration(tries*tries) * time.Second):
+		}
 	}
 
 	// create URL
@@ -94,7 +107,11 @@ func (reg *ResourceRegistry) fetchData(downloadPath string, tries int) ([]byte, 
 	}
 
 	// start file download
-	resp, err := http.Get(downloadURL) //nolint:gosec // url is variable on purpose
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, http.NoBody) //nolint:gosec
+	if err != nil {
+		return nil, fmt.Errorf("error creating request (%s): %w", downloadURL, err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching url (%s): %w", downloadURL, err)
 	}

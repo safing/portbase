@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"path/filepath"
 
 	"github.com/safing/portbase/utils"
@@ -13,11 +14,12 @@ import (
 )
 
 // UpdateIndexes downloads all indexes and returns the first error encountered.
-func (reg *ResourceRegistry) UpdateIndexes() error {
+func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 	var firstErr error
 
+	client := &http.Client{}
 	for _, idx := range reg.getIndexes() {
-		if err := reg.downloadIndex(idx); err != nil {
+		if err := reg.downloadIndex(ctx, client, idx); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -27,13 +29,13 @@ func (reg *ResourceRegistry) UpdateIndexes() error {
 	return firstErr
 }
 
-func (reg *ResourceRegistry) downloadIndex(idx Index) error {
+func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Client, idx Index) error {
 	var err error
 	var data []byte
 
 	// download new index
 	for tries := 0; tries < 3; tries++ {
-		data, err = reg.fetchData(idx.Path, tries)
+		data, err = reg.fetchData(ctx, client, idx.Path, tries)
 		if err == nil {
 			break
 		}
@@ -115,9 +117,10 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 
 	// download updates
 	log.Infof("%s: starting to download %d updates", reg.Name, len(toUpdate))
+	client := &http.Client{}
 	for _, rv := range toUpdate {
 		for tries := 0; tries < 3; tries++ {
-			err = reg.fetchFile(rv, tries)
+			err = reg.fetchFile(ctx, client, rv, tries)
 			if err == nil {
 				rv.Available = true
 				break

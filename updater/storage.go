@@ -1,10 +1,12 @@
 package updater
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,8 +80,9 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 // LoadIndexes loads the current release indexes from disk
 // or will fetch a new version if not available and the
 // registry is marked as online.
-func (reg *ResourceRegistry) LoadIndexes() error {
+func (reg *ResourceRegistry) LoadIndexes(ctx context.Context) error {
 	var firstErr error
+	client := &http.Client{}
 	for _, idx := range reg.getIndexes() {
 		err := reg.loadIndexFile(idx)
 		if err == nil {
@@ -88,7 +91,7 @@ func (reg *ResourceRegistry) LoadIndexes() error {
 			// try to download the index file if a local disk version
 			// does not exist or we don't have permission to read it.
 			if os.IsNotExist(err) || os.IsPermission(err) {
-				err = reg.downloadIndex(idx)
+				err = reg.downloadIndex(ctx, client, idx)
 			}
 		}
 
