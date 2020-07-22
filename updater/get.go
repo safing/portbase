@@ -1,8 +1,10 @@
 package updater
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/safing/portbase/log"
 )
@@ -43,8 +45,9 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 
 	// download file
 	log.Tracef("%s: starting download of %s", reg.Name, file.versionedPath)
+	client := &http.Client{}
 	for tries := 0; tries < 5; tries++ {
-		err = reg.fetchFile(file.version, tries)
+		err = reg.fetchFile(context.TODO(), client, file.version, tries)
 		if err != nil {
 			log.Tracef("%s: failed to download %s: %s, retrying (%d)", reg.Name, file.versionedPath, err, tries+1)
 		} else {
