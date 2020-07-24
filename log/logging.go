@@ -1,6 +1,7 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -58,7 +59,7 @@ func (ll *logLine) Equal(ol *logLine) bool {
 	return true
 }
 
-// Log Levels
+// Log Levels.
 const (
 	TraceLevel    Severity = 1
 	DebugLevel    Severity = 2
@@ -66,6 +67,11 @@ const (
 	WarningLevel  Severity = 4
 	ErrorLevel    Severity = 5
 	CriticalLevel Severity = 6
+)
+
+// Error definitions.
+var (
+	ErrInvalidFileLevel = errors.New("invalid file log level")
 )
 
 var (
@@ -130,7 +136,6 @@ func ParseLevel(level string) Severity {
 
 // Start starts the logging system. Must be called in order to see logs.
 func Start() (err error) {
-
 	if !initializing.SetToIf(false, true) {
 		return nil
 	}
@@ -154,13 +159,13 @@ func Start() (err error) {
 		for _, pair := range strings.Split(pkgLogLevels, ",") {
 			splitted := strings.Split(pair, "=")
 			if len(splitted) != 2 {
-				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
+				err = fmt.Errorf("log warning: ignoring %q: %w", pair, ErrInvalidFileLevel)
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				break
 			}
 			fileLevel := ParseLevel(splitted[1])
 			if fileLevel == 0 {
-				err = fmt.Errorf("log warning: invalid file log level \"%s\", ignoring", pair)
+				err = fmt.Errorf("log warning: ignoring %q: %w", pair, ErrInvalidFileLevel)
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				break
 			}

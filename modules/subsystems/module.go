@@ -89,7 +89,7 @@ func (sub *Subsystem) addDependencies(module *modules.Module, seen map[string]st
 	}
 }
 
-// SetDatabaseKeySpace sets a key space where subsystem status
+// SetDatabaseKeySpace sets a key space where subsystem status.
 func SetDatabaseKeySpace(keySpace string) {
 	if databaseKeySpace == "" {
 		databaseKeySpace = keySpace

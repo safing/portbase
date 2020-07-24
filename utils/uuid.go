@@ -12,7 +12,7 @@ var (
 	instanceUUID = RandomUUID("instance")
 )
 
-// RandomUUID returns a new random UUID with optionally provided ns
+// RandomUUID returns a new random UUID with optionally provided ns.
 func RandomUUID(ns string) uuid.UUID {
 	randUUID, err := uuid.NewV4()
 	switch {

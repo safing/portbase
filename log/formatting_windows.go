@@ -20,9 +20,7 @@ const (
 	// colorWhite   = "\033[37m"
 )
 
-var (
-	colorsSupported bool
-)
+var colorsSupported bool
 
 func init() {
 	colorsSupported = osdetail.EnableColorSupport()

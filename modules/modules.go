@@ -2,7 +2,6 @@ package modules
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -21,9 +20,6 @@ var (
 
 	moduleStartTimeout = 2 * time.Minute
 	moduleStopTimeout  = 1 * time.Minute
-
-	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
-	ErrCleanExit = errors.New("clean exit requested")
 )
 
 // Module represents a module.
@@ -105,7 +101,7 @@ func (m *Module) prep(reports chan *report) {
 		go func() {
 			reports <- &report{
 				module: m,
-				err:    fmt.Errorf("module already prepped"),
+				err:    ErrModulePrepared,
 			}
 		}()
 		return
@@ -152,7 +148,7 @@ func (m *Module) start(reports chan *report) {
 		go func() {
 			reports <- &report{
 				module: m,
-				err:    fmt.Errorf("module not offline"),
+				err:    ErrModuleNotOffline,
 			}
 		}()
 		return
@@ -210,7 +206,7 @@ func (m *Module) stop(reports chan *report) {
 		go func() {
 			reports <- &report{
 				module: m,
-				err:    fmt.Errorf("module not online"),
+				err:    ErrModuleNotOnline,
 			}
 		}()
 		return
@@ -340,7 +336,7 @@ func initDependencies() error {
 			// get dependency
 			depModule, ok := modules[depName]
 			if !ok {
-				return fmt.Errorf("module %s declares dependency \"%s\", but this module has not been registered", m.Name, depName)
+				return fmt.Errorf("dependecy %s of %s: %w", depName, m.Name, ErrUnknownModule)
 			}
 
 			// link together

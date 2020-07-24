@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"sort"
 	"strings"
 
@@ -13,9 +12,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-var (
-	dbController *database.Controller
-)
+var dbController *database.Controller
 
 // StorageInterface provices a storage.Interface to the configuration manager.
 type StorageInterface struct {
@@ -43,7 +40,7 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 
 	acc := r.GetAccessor(r)
 	if acc == nil {
-		return nil, errors.New("invalid data")
+		return nil, ErrInvalidData
 	}
 
 	val, ok := acc.Get("Value")
@@ -59,7 +56,7 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 	option, ok := options[r.DatabaseKey()]
 	optionsLock.RUnlock()
 	if !ok {
-		return nil, errors.New("config option does not exist")
+		return nil, ErrUnknownOption
 	}
 
 	var value interface{}
@@ -74,7 +71,8 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 		value, ok = acc.GetBool("Value")
 	}
 	if !ok {
-		return nil, errors.New("received invalid value in \"Value\"")
+		val, _ := acc.Get("Value")
+		return nil, newInvalidValueError(option.Key, val, "invalid value")
 	}
 
 	err := setConfigOption(r.DatabaseKey(), value, false)
@@ -91,7 +89,6 @@ func (s *StorageInterface) Delete(key string) error {
 
 // Query returns a an iterator for the supplied query.
 func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
-
 	optionsLock.Lock()
 	defer optionsLock.Unlock()
 
@@ -109,7 +106,6 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 }
 
 func (s *StorageInterface) processQuery(it *iterator.Iterator, opts []*Option) {
-
 	sort.Sort(sortableOptions(opts))
 
 	for _, opt := range opts {

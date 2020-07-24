@@ -114,5 +114,4 @@ func TestStablePoolBreaking(t *testing.T) {
 			assert.Equal(t, k, breakPool.Get(), "should match")
 		}
 	}
-
 }

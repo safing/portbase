@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -67,7 +68,7 @@ func Serve() {
 			return server.ListenAndServe()
 		})
 		// return on shutdown error
-		if err == http.ErrServerClosed {
+		if errors.Is(err, http.ErrServerClosed) {
 			return
 		}
 		// log error and restart

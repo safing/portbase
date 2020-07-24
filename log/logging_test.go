@@ -13,9 +13,7 @@ func init() {
 	}
 }
 
-// test waiting
 func TestLogging(t *testing.T) {
-
 	// skip
 	if testing.Short() {
 		t.Skip()
@@ -51,7 +49,7 @@ func TestLogging(t *testing.T) {
 	SetLogLevel(TraceLevel)
 
 	// log invalid level
-	log(0xFF, "msg", nil)
+	log(0xFF, nil, "msg", nil)
 
 	// wait logs to be written
 	time.Sleep(1 * time.Millisecond)
@@ -61,5 +59,4 @@ func TestLogging(t *testing.T) {
 
 	// do not really shut down, we may need logging for other tests
 	// ShutdownLogging()
-
 }

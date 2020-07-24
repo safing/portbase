@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"regexp"
 	"sync"
 )
@@ -14,16 +13,16 @@ var (
 // Register registers a new configuration option.
 func Register(option *Option) error {
 	if option.Name == "" {
-		return fmt.Errorf("failed to register option: please set option.Name")
+		return newInvalidOptionError("missing .Name", nil)
 	}
 	if option.Key == "" {
-		return fmt.Errorf("failed to register option: please set option.Key")
+		return newInvalidOptionError("missing .Key", nil)
 	}
 	if option.Description == "" {
-		return fmt.Errorf("failed to register option: please set option.Description")
+		return newInvalidOptionError("missing .Description", nil)
 	}
 	if option.OptType == 0 {
-		return fmt.Errorf("failed to register option: please set option.OptType")
+		return newInvalidOptionError("missing .OptType", nil)
 	}
 
 	var err error
@@ -31,13 +30,13 @@ func Register(option *Option) error {
 	if option.ValidationRegex != "" {
 		option.compiledRegex, err = regexp.Compile(option.ValidationRegex)
 		if err != nil {
-			return fmt.Errorf("config: could not compile option.ValidationRegex: %s", err)
+			return newInvalidOptionError("config: could not compile option.ValidationRegex", err)
 		}
 	}
 
 	option.activeFallbackValue, err = validateValue(option, option.DefaultValue)
 	if err != nil {
-		return fmt.Errorf("config: invalid default value: %s", err)
+		return newInvalidOptionError("config: invalid default value: %s", err)
 	}
 
 	optionsLock.Lock()

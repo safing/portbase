@@ -2,7 +2,6 @@ package sinkhole
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/safing/portbase/database/iterator"
@@ -65,7 +64,7 @@ func (s *Sinkhole) Delete(key string) error {
 
 // Query returns a an iterator for the supplied query.
 func (s *Sinkhole) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
-	return nil, errors.New("query not implemented by sinkhole")
+	return nil, storage.ErrNotImplemented
 }
 
 // ReadOnly returns whether the database is read only.

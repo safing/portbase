@@ -8,14 +8,17 @@ import (
 	"time"
 )
 
-func log(level Severity, msg string, tracer *ContextTracer) {
+func log(level Severity, tracer *ContextTracer, msg string, args []interface{}) {
+	if !fastcheck(level) {
+		return
+	}
 
 	if !started.IsSet() {
 		// a bit resource intense, but keeps logs before logging started.
 		// TODO: create option to disable logging
 		go func() {
 			<-startedSignal
-			log(level, msg, tracer)
+			log(level, tracer, msg, args)
 		}()
 		return
 	}
@@ -46,19 +49,18 @@ func log(level Severity, msg string, tracer *ContextTracer) {
 		pkgLevelsLock.Lock()
 		severity, ok := pkgLevels[pathSegments[len(pathSegments)-2]]
 		pkgLevelsLock.Unlock()
-		if ok {
-			if level < severity {
-				return
-			}
-		} else {
-			// no package level set, check against global level
-			if uint32(level) < atomic.LoadUint32(logLevel) {
-				return
-			}
+		if ok && level < severity {
+			return
 		}
-	} else if uint32(level) < atomic.LoadUint32(logLevel) {
+	}
+
+	if uint32(level) < atomic.LoadUint32(logLevel) {
 		// no package levels set, check against global level
 		return
+	}
+
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
 	}
 
 	// create log object
@@ -104,84 +106,60 @@ func fastcheck(level Severity) bool {
 
 // Trace is used to log tiny steps. Log traces to context if you can!
 func Trace(msg string) {
-	if fastcheck(TraceLevel) {
-		log(TraceLevel, msg, nil)
-	}
+	Tracef(msg)
 }
 
 // Tracef is used to log tiny steps. Log traces to context if you can!
 func Tracef(format string, things ...interface{}) {
-	if fastcheck(TraceLevel) {
-		log(TraceLevel, fmt.Sprintf(format, things...), nil)
-	}
+	log(TraceLevel, nil, format, things)
 }
 
 // Debug is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func Debug(msg string) {
-	if fastcheck(DebugLevel) {
-		log(DebugLevel, msg, nil)
-	}
+	Debugf(msg)
 }
 
 // Debugf is used to log minor errors or unexpected events. These occurrences are usually not worth mentioning in itself, but they might hint at a bigger problem.
 func Debugf(format string, things ...interface{}) {
-	if fastcheck(DebugLevel) {
-		log(DebugLevel, fmt.Sprintf(format, things...), nil)
-	}
+	log(DebugLevel, nil, format, things)
 }
 
 // Info is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
 func Info(msg string) {
-	if fastcheck(InfoLevel) {
-		log(InfoLevel, msg, nil)
-	}
+	Infof(msg)
 }
 
 // Infof is used to log mildly significant events. Should be used to inform about somewhat bigger or user affecting events that happen.
 func Infof(format string, things ...interface{}) {
-	if fastcheck(InfoLevel) {
-		log(InfoLevel, fmt.Sprintf(format, things...), nil)
-	}
+	log(InfoLevel, nil, format, things)
 }
 
 // Warning is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func Warning(msg string) {
-	if fastcheck(WarningLevel) {
-		log(WarningLevel, msg, nil)
-	}
+	Warningf(msg)
 }
 
 // Warningf is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func Warningf(format string, things ...interface{}) {
-	if fastcheck(WarningLevel) {
-		log(WarningLevel, fmt.Sprintf(format, things...), nil)
-	}
+	log(WarningLevel, nil, format, things)
 }
 
 // Error is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational. Maybe User/Admin should be informed.
 func Error(msg string) {
-	if fastcheck(ErrorLevel) {
-		log(ErrorLevel, msg, nil)
-	}
+	Errorf(msg)
 }
 
 // Errorf is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational.
 func Errorf(format string, things ...interface{}) {
-	if fastcheck(ErrorLevel) {
-		log(ErrorLevel, fmt.Sprintf(format, things...), nil)
-	}
+	log(ErrorLevel, nil, format, things)
 }
 
 // Critical is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func Critical(msg string) {
-	if fastcheck(CriticalLevel) {
-		log(CriticalLevel, msg, nil)
-	}
+	Criticalf(msg)
 }
 
 // Criticalf is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func Criticalf(format string, things ...interface{}) {
-	if fastcheck(CriticalLevel) {
-		log(CriticalLevel, fmt.Sprintf(format, things...), nil)
-	}
+	log(CriticalLevel, nil, format, things)
 }

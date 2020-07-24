@@ -46,5 +46,4 @@ func TestRegistry(t *testing.T) {
 	}); err == nil {
 		t.Error("should fail")
 	}
-
 }

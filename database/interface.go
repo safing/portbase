@@ -90,7 +90,7 @@ func (i *Interface) updateCache(r record.Record) {
 func (i *Interface) Exists(key string) (bool, error) {
 	_, _, err := i.getRecord(getDBFromKey, key, false, false)
 	if err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			return false, nil
 		}
 		return false, err
@@ -112,7 +112,7 @@ func (i *Interface) Get(key string) (record.Record, error) {
 	return r, err
 }
 
-func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
+func (i *Interface) getRecord(dbName, dbKey string, check, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
 	if dbName == "" {
 		dbName, dbKey = record.ParseKey(dbKey)
 	}
@@ -128,7 +128,7 @@ func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWri
 
 	r, err = db.Get(dbKey)
 	if err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			return nil, db, err
 		}
 		return nil, nil, err
@@ -142,7 +142,7 @@ func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWri
 }
 
 // InsertValue inserts a value into a record.
-func (i *Interface) InsertValue(key string, attribute string, value interface{}) error {
+func (i *Interface) InsertValue(key, attribute string, value interface{}) error {
 	r, db, err := i.getRecord(getDBFromKey, key, true, true)
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func (i *Interface) InsertValue(key string, attribute string, value interface{})
 	if r.IsWrapped() {
 		wrapper, ok := r.(*record.Wrapper)
 		if !ok {
-			return errors.New("record is malformed (reports to be wrapped but is not of type *record.Wrapper)")
+			return ErrMalformedWrappedRecord
 		}
 		acc = accessor.NewJSONBytesAccessor(&wrapper.Data)
 	} else {
@@ -164,7 +164,7 @@ func (i *Interface) InsertValue(key string, attribute string, value interface{})
 
 	err = acc.Set(attribute, value)
 	if err != nil {
-		return fmt.Errorf("failed to set value with %s: %s", acc.Type(), err)
+		return fmt.Errorf("failed to set value with %s: %w", acc.Type(), err)
 	}
 
 	i.options.Apply(r)
@@ -177,7 +177,7 @@ func (i *Interface) Put(r record.Record) (err error) {
 	var db *Controller
 	if !i.options.Internal || !i.options.Local {
 		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true, true)
-		if err != nil && err != ErrNotFound {
+		if err != nil && !errors.Is(err, ErrNotFound) {
 			return err
 		}
 	} else {
@@ -202,7 +202,7 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 	var db *Controller
 	if !i.options.Internal || !i.options.Local {
 		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true, true)
-		if err != nil && err != ErrNotFound {
+		if err != nil && errors.Is(err, ErrNotFound) {
 			return err
 		}
 	} else {
@@ -227,7 +227,7 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 // - Record locking
 // - Hooks
 // - Subscriptions
-// - Caching
+// - Caching.
 func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	interfaceBatch := make(chan record.Record, 100)
 
@@ -267,7 +267,7 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 				dbBatch <- r
 			case <-time.After(1 * time.Second):
 				// bail out
-				internalErr = errors.New("timeout: putmany unused for too long")
+				internalErr = fmt.Errorf("putmany: %w", ErrTimeout)
 				finished.Set()
 				return
 			}
@@ -286,7 +286,7 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 			case err := <-errs:
 				return err
 			default:
-				return errors.New("batch is closed")
+				return ErrBatchClosed
 			}
 		}
 
@@ -300,7 +300,7 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 
 		// check record scope
 		if r.DatabaseName() != dbName {
-			return errors.New("record out of database scope")
+			return ErrInvalidScope
 		}
 
 		// submit

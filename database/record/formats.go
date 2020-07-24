@@ -4,7 +4,7 @@ import (
 	"github.com/safing/portbase/formats/dsd"
 )
 
-// Reimport DSD storage types
+// Reimport DSD storage types.
 const (
 	AUTO    = dsd.AUTO
 	STRING  = dsd.STRING  // S

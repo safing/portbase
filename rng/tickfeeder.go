@@ -7,7 +7,6 @@ import (
 )
 
 func getTickFeederTickDuration() time.Duration {
-
 	// be ready in 1/10 time of reseedAfterSeconds
 	msecsAvailable := reseedAfterSeconds * 100
 	// ex.: reseed after 10 minutes: msecsAvailable = 60000
@@ -33,7 +32,6 @@ func getTickFeederTickDuration() time.Duration {
 // tickFeeder is a really simple entropy feeder that adds the least significant bit of the current nanosecond unixtime to its pool every time it 'ticks'.
 // The more work the program does, the better the quality, as the internal schedular cannot immediately run the goroutine when it's ready.
 func tickFeeder(ctx context.Context) error {
-
 	var value int64
 	var pushes int
 	feeder := NewFeeder()

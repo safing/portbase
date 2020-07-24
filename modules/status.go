@@ -1,6 +1,6 @@
 package modules
 
-// Module Status Values
+// Module Status Values.
 const (
 	StatusDead      uint8 = 0 // not prepared, not started
 	StatusPreparing uint8 = 1
@@ -10,7 +10,7 @@ const (
 	StatusOnline    uint8 = 5 // online and running
 )
 
-// Module Failure Status Values
+// Module Failure Status Values.
 const (
 	FailureNone    uint8 = 0
 	FailureHint    uint8 = 1
@@ -18,7 +18,7 @@ const (
 	FailureError   uint8 = 3
 )
 
-// ready status
+// ready status.
 const (
 	statusWaiting uint8 = iota
 	statusReady
@@ -56,7 +56,11 @@ func (m *Module) FailureStatus() (failureStatus uint8, failureID, failureMsg str
 	return m.failureStatus, m.failureID, m.failureMsg
 }
 
-// Hint sets failure status to hint. This is a somewhat special failure status, as the module is believed to be working correctly, but there is an important module specific information to convey. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
+// Hint sets failure status to hint. This is a somewhat special
+// failure status, as the module is believed to be working correctly,
+// but there is an important module specific information to convey.
+// The supplied failureID is for improved automatic handling within
+// connected systems, the failureMsg is for humans.
 func (m *Module) Hint(failureID, failureMsg string) {
 	m.Lock()
 	defer m.Unlock()
@@ -68,7 +72,9 @@ func (m *Module) Hint(failureID, failureMsg string) {
 	m.notifyOfChange()
 }
 
-// Warning sets failure status to warning. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
+// Warning sets failure status to warning. The supplied failureID is for
+// improved automatic handling within connected systems, the failureMsg
+// is for humans.
 func (m *Module) Warning(failureID, failureMsg string) {
 	m.Lock()
 	defer m.Unlock()
@@ -80,7 +86,9 @@ func (m *Module) Warning(failureID, failureMsg string) {
 	m.notifyOfChange()
 }
 
-// Error sets failure status to error. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
+// Error sets failure status to error. The supplied failureID is for
+// improved automatic handling within connected systems, the failureMsg
+// is for humans.
 func (m *Module) Error(failureID, failureMsg string) {
 	m.Lock()
 	defer m.Unlock()
@@ -92,7 +100,9 @@ func (m *Module) Error(failureID, failureMsg string) {
 	m.notifyOfChange()
 }
 
-// Resolve removes the failure state from the module if the given failureID matches the current failure ID. If the given failureID is an empty string, Resolve removes any failure state.
+// Resolve removes the failure state from the module if the given failureID
+// matches the current failure ID. If the given failureID is an empty string,
+// Resolve removes any failure state.
 func (m *Module) Resolve(failureID string) {
 	m.Lock()
 	defer m.Unlock()

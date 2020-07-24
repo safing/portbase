@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
-// Notification types
+// Notification types.
 const (
 	Info    uint8 = 0
 	Warning uint8 = 1
@@ -87,7 +88,7 @@ func NotifyPrompt(id, msg string, actions ...Action) *Notification {
 	return notify(Prompt, id, msg, actions...)
 }
 
-func notify(nType uint8, id string, msg string, actions ...Action) *Notification {
+func notify(nType uint8, id, msg string, actions ...Action) *Notification {
 	acts := make([]*Action, len(actions))
 	for idx := range actions {
 		a := actions[idx]
@@ -240,8 +241,8 @@ func (n *Notification) Delete() error {
 	if n.Persistent && persistentBasePath != "" {
 		key := fmt.Sprintf("%s/%s", persistentBasePath, n.ID)
 		err := dbInterface.Delete(key)
-		if err != nil && err != database.ErrNotFound {
-			return fmt.Errorf("failed to delete persisted notification %s from database: %s", key, err)
+		if err != nil && !errors.Is(err, database.ErrNotFound) {
+			return fmt.Errorf("failed to delete persisted notification %s from database: %w", key, err)
 		}
 	}
 

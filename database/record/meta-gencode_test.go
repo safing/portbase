@@ -6,16 +6,14 @@ import (
 	"time"
 )
 
-var (
-	genCodeTestMeta = &Meta{
-		Created:   time.Now().Unix(),
-		Modified:  time.Now().Unix(),
-		Expires:   time.Now().Unix(),
-		Deleted:   time.Now().Unix(),
-		secret:    true,
-		cronjewel: true,
-	}
-)
+var genCodeTestMeta = &Meta{
+	Created:   time.Now().Unix(),
+	Modified:  time.Now().Unix(),
+	Expires:   time.Now().Unix(),
+	Deleted:   time.Now().Unix(),
+	secret:    true,
+	cronjewel: true,
+}
 
 func TestGenCode(t *testing.T) {
 	encoded, err := genCodeTestMeta.GenCodeMarshal(nil)

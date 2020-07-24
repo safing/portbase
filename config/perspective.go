@@ -55,7 +55,7 @@ optionsLoop:
 
 	if firstErr != nil {
 		if errCnt > 0 {
-			return perspective, fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+			return perspective, fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
 		}
 		return perspective, firstErr
 	}
@@ -119,7 +119,7 @@ func (p *Perspective) GetAsInt(name string) (value int64, ok bool) {
 }
 
 // GetAsBool returns a function that returns the wanted int with high performance.
-func (p *Perspective) GetAsBool(name string) (value bool, ok bool) {
+func (p *Perspective) GetAsBool(name string) (value, ok bool) {
 	valueCache := p.getPerspectiveValueCache(name, OptTypeBool)
 	if valueCache != nil {
 		return valueCache.boolVal, true

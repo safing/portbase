@@ -53,7 +53,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 
 	// check for content
 	if len(new) == 0 {
-		return fmt.Errorf("index %s is empty", idx.Path)
+		return fmt.Errorf("%s: %w", idx.Path, ErrEmptyIndex)
 	}
 
 	// add resources to registry
@@ -69,7 +69,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 	}
 
 	// save index
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644)
+	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0o644) //nolint:gosec // 0644 is intended
 	if err != nil {
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}

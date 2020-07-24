@@ -2,6 +2,7 @@ package run
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -29,11 +30,10 @@ func init() {
 
 // Run execute a full program lifecycle (including signal handling) based on modules. Just empty-import required packages and do os.Exit(run.Run()).
 func Run() int {
-
 	// Start
 	err := modules.Start()
 	if err != nil {
-		if err == modules.ErrCleanExit {
+		if errors.Is(err, modules.ErrCleanExit) {
 			return 0
 		}
 

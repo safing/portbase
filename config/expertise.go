@@ -9,7 +9,7 @@ import (
 	"github.com/tevino/abool"
 )
 
-// Expertise Level constants
+// Expertise Level constants.
 const (
 	ExpertiseLevelUser      uint8 = 0
 	ExpertiseLevelExpert    uint8 = 1

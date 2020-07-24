@@ -15,6 +15,8 @@ var (
 	module *modules.Module
 )
 
+var errMissingLocation = errors.New("database location not configured")
+
 func init() {
 	module = modules.Register("database", prep, start, stop)
 }
@@ -29,7 +31,7 @@ func SetDatabaseLocation(dirStructureRoot *utils.DirStructure) {
 func prep() error {
 	SetDatabaseLocation(dataroot.Root())
 	if databaseStructureRoot == nil {
-		return errors.New("database location not specified")
+		return errMissingLocation
 	}
 
 	return nil

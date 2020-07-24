@@ -3,7 +3,6 @@ package bbolt
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -16,9 +15,7 @@ import (
 	"github.com/safing/portbase/database/storage"
 )
 
-var (
-	bucketName = []byte{0}
-)
+var bucketName = []byte{0}
 
 // BBolt database made pluggable for portbase.
 type BBolt struct {
@@ -32,8 +29,7 @@ func init() {
 
 // NewBBolt opens/creates a bbolt database.
 func NewBBolt(name, location string) (storage.Interface, error) {
-
-	db, err := bbolt.Open(filepath.Join(location, "db.bbolt"), 0600, nil)
+	db, err := bbolt.Open(filepath.Join(location, "db.bbolt"), 0o600, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +75,6 @@ func (b *BBolt) Get(key string) (record.Record, error) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +149,7 @@ func (b *BBolt) Delete(key string) error {
 func (b *BBolt) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	queryIter := iterator.New()
@@ -215,7 +210,7 @@ func (b *BBolt) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loca
 						return nil
 					case queryIter.Next <- new:
 					case <-time.After(1 * time.Second):
-						return errors.New("query timeout")
+						return storage.ErrQueryTimeout
 					}
 				}
 			}

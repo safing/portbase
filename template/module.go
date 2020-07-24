@@ -13,9 +13,7 @@ const (
 	eventStateUpdate = "state update"
 )
 
-var (
-	module *modules.Module
-)
+var module *modules.Module
 
 func init() {
 	// register base module, for database initialization

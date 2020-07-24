@@ -15,12 +15,10 @@ type Example struct {
 	Score int
 }
 
-var (
-	exampleDB = NewInterface(&Options{
-		Internal: true,
-		Local:    true,
-	})
-)
+var exampleDB = NewInterface(&Options{
+	Internal: true,
+	Local:    true,
+})
 
 // GetExample gets an Example from the database.
 func GetExample(key string) (*Example, error) {
@@ -43,7 +41,7 @@ func GetExample(key string) (*Example, error) {
 	// or adjust type
 	new, ok := r.(*Example)
 	if !ok {
-		return nil, fmt.Errorf("record not of type *Example, but %T", r)
+		return nil, fmt.Errorf("record not of type *Example, but %T", r) // nolint:goerr113
 	}
 	return new, nil
 }

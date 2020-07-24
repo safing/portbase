@@ -2,21 +2,12 @@ package api
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/safing/portbase/modules"
 )
 
-var (
-	module *modules.Module
-)
-
-// API Errors
-var (
-	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set")
-	ErrAuthenticationImmutable  = errors.New("the authentication function can only be set before the api has started")
-)
+var module *modules.Module
 
 func init() {
 	module = modules.Register("api", prep, start, stop, "database", "config")
@@ -24,7 +15,7 @@ func init() {
 
 func prep() error {
 	if getDefaultListenAddress() == "" {
-		return errors.New("no listen address for api available")
+		return errNoListenAddr
 	}
 	return registerConfig()
 }

@@ -13,9 +13,7 @@ const (
 	minFeedEntropy = 256
 )
 
-var (
-	rngFeeder = make(chan []byte)
-)
+var rngFeeder = make(chan []byte)
 
 // The Feeder is used to feed entropy to the RNG.
 type Feeder struct {

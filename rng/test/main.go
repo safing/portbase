@@ -1,3 +1,4 @@
+// nolint:goerr113
 package main
 
 import (
@@ -58,7 +59,7 @@ func prep() error {
 	}
 
 	var err error
-	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0660)
+	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0o660)
 	if err != nil {
 		return fmt.Errorf("failed to open output file: %s", err)
 	}
@@ -66,7 +67,6 @@ func prep() error {
 	return nil
 }
 
-//nolint:gocognit
 func start() error {
 	// generates 1MB and writes to stdout
 

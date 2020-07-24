@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -15,7 +14,6 @@ type floatCondition struct {
 }
 
 func newFloatCondition(key string, operator uint8, value interface{}) *floatCondition {
-
 	var parsedValue float64
 
 	switch v := value.(type) {
@@ -88,7 +86,7 @@ func (c *floatCondition) complies(acc accessor.Accessor) bool {
 
 func (c *floatCondition) check() error {
 	if c.operator == errorPresent {
-		return errors.New(c.key)
+		return conditionKeyError(c.key)
 	}
 	return nil
 }

@@ -2,7 +2,6 @@ package notifications
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -24,7 +23,7 @@ var (
 	persistentBasePath string
 )
 
-// Storage interface errors
+// Storage interface errors.
 var (
 	ErrInvalidData = errors.New("invalid data, must be a notification object")
 	ErrInvalidPath = errors.New("invalid path")
@@ -115,7 +114,6 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 	// record is already locked!
 	key := r.DatabaseKey()
 	n, err := EnsureNotification(r)
-
 	if err != nil {
 		return nil, ErrInvalidData
 	}
@@ -220,7 +218,7 @@ func EnsureNotification(r record.Record) (*Notification, error) {
 	// or adjust type
 	new, ok := r.(*Notification)
 	if !ok {
-		return nil, fmt.Errorf("record not of type *Example, but %T", r)
+		return nil, database.NewUnexpectedRecordTypeErr("*Notification", r)
 	}
 	return new, nil
 }

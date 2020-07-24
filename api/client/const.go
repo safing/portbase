@@ -1,6 +1,6 @@
 package client
 
-// message types
+// message types.
 const (
 	msgRequestGet    = "get"
 	msgRequestQuery  = "query"
@@ -25,6 +25,4 @@ const (
 	apiSeperator = "|"
 )
 
-var (
-	apiSeperatorBytes = []byte(apiSeperator)
-)
+var apiSeperatorBytes = []byte(apiSeperator)

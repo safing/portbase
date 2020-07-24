@@ -8,9 +8,7 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
-var (
-	showVersion bool
-)
+var showVersion bool
 
 func init() {
 	modules.Register("info", prep, nil, nil)

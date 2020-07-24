@@ -6,7 +6,6 @@ import (
 )
 
 func getFullFeedDuration() time.Duration {
-
 	// full feed every 5x time of reseedAfterSeconds
 	secsUntilFullFeed := reseedAfterSeconds * 5
 

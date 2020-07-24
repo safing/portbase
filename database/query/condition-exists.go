@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/safing/portbase/database/accessor"
@@ -25,7 +24,7 @@ func (c *existsCondition) complies(acc accessor.Accessor) bool {
 
 func (c *existsCondition) check() error {
 	if c.operator == errorPresent {
-		return errors.New(c.key)
+		return conditionKeyError(c.key)
 	}
 	return nil
 }

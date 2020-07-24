@@ -32,7 +32,7 @@ func DuplicateStrings(a []string) []string {
 }
 
 // StringSliceEqual returns whether the given string slices are equal.
-func StringSliceEqual(a []string, b []string) bool {
+func StringSliceEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}

@@ -30,16 +30,14 @@ import (
 	// xdr2 "github.com/davecgh/go-xdr/xdr2"
 )
 
-var (
-	testMeta = &Meta{
-		Created:   time.Now().Unix(),
-		Modified:  time.Now().Unix(),
-		Expires:   time.Now().Unix(),
-		Deleted:   time.Now().Unix(),
-		secret:    true,
-		cronjewel: true,
-	}
-)
+var testMeta = &Meta{
+	Created:   time.Now().Unix(),
+	Modified:  time.Now().Unix(),
+	Expires:   time.Now().Unix(),
+	Deleted:   time.Now().Unix(),
+	secret:    true,
+	cronjewel: true,
+}
 
 func BenchmarkAllocateBytes(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -61,7 +59,6 @@ func BenchmarkAllocateStruct2(b *testing.B) {
 }
 
 func BenchmarkMetaSerializeContainer(b *testing.B) {
-
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
 		c := container.New()
@@ -80,11 +77,9 @@ func BenchmarkMetaSerializeContainer(b *testing.B) {
 			c.AppendNumber(0)
 		}
 	}
-
 }
 
 func BenchmarkMetaUnserializeContainer(b *testing.B) {
-
 	// Setup
 	c := container.New()
 	c.AppendNumber(uint64(testMeta.Created))
@@ -157,11 +152,9 @@ func BenchmarkMetaUnserializeContainer(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaSerializeVarInt(b *testing.B) {
-
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
 		encoded := make([]byte, 33)
@@ -199,11 +192,9 @@ func BenchmarkMetaSerializeVarInt(b *testing.B) {
 		}
 		offset++
 	}
-
 }
 
 func BenchmarkMetaUnserializeVarInt(b *testing.B) {
-
 	// Setup
 	encoded := make([]byte, 33)
 	offset := 0
@@ -295,7 +286,6 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 // func BenchmarkMetaSerializeWithXDR2(b *testing.B) {
@@ -394,7 +384,6 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 // }
 
 func BenchmarkMetaSerializeWithCodegen(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		_, err := testMeta.GenCodeMarshal(nil)
 		if err != nil {
@@ -402,11 +391,9 @@ func BenchmarkMetaSerializeWithCodegen(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaUnserializeWithCodegen(b *testing.B) {
-
 	// Setup
 	encodedData, err := testMeta.GenCodeMarshal(nil)
 	if err != nil {
@@ -426,11 +413,9 @@ func BenchmarkMetaUnserializeWithCodegen(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaSerializeWithDSDJSON(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		_, err := dsd.Dump(testMeta, JSON)
 		if err != nil {
@@ -438,11 +423,9 @@ func BenchmarkMetaSerializeWithDSDJSON(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaUnserializeWithDSDJSON(b *testing.B) {
-
 	// Setup
 	encodedData, err := dsd.Dump(testMeta, JSON)
 	if err != nil {
@@ -462,5 +445,4 @@ func BenchmarkMetaUnserializeWithDSDJSON(b *testing.B) {
 			return
 		}
 	}
-
 }

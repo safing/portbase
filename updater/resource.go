@@ -13,6 +13,14 @@ import (
 	semver "github.com/hashicorp/go-version"
 )
 
+// Common errors.
+var (
+	// ErrOneVersionRequired is returned when attempting to ignore the last available
+	// version of a resource.
+	ErrOneVersionRequired = errors.New("last available resource version is required")
+	ErrVersionNotFound    = errors.New("version not found")
+)
+
 // Resource represents a resource (via an identifier) and multiple file versions.
 type Resource struct {
 	sync.Mutex
@@ -238,7 +246,6 @@ func (res *Resource) selectVersion() {
 
 			log.Debugf("updater: active version of %s is %s, update available", res.Identifier, res.ActiveVersion.VersionNumber)
 		}
-
 	}()
 
 	if len(res.Versions) == 0 {
@@ -320,7 +327,7 @@ func (res *Resource) Blacklist(version string) error {
 		}
 	}
 	if valid <= 1 {
-		return errors.New("cannot blacklist last version") // last one, cannot blacklist!
+		return ErrOneVersionRequired
 	}
 
 	// find version and blacklist
@@ -333,7 +340,7 @@ func (res *Resource) Blacklist(version string) error {
 		}
 	}
 
-	return errors.New("could not find version")
+	return ErrVersionNotFound
 }
 
 // Purge deletes old updates, retaining a certain amount, specified by

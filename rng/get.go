@@ -2,7 +2,6 @@ package rng
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"math"
 	"time"
@@ -21,7 +20,7 @@ var (
 	rngLastFeed  = time.Now()
 )
 
-// reader provides an io.Reader interface
+// reader provides an io.Reader interface.
 type reader struct{}
 
 func init() {
@@ -30,7 +29,7 @@ func init() {
 
 func checkEntropy() (err error) {
 	if !rngReady {
-		return errors.New("RNG is not ready yet")
+		return ErrNotReady
 	}
 	if rngBytesRead > reseedAfterBytes ||
 		int(time.Since(rngLastFeed).Seconds()) > reseedAfterSeconds {
@@ -40,7 +39,7 @@ func checkEntropy() (err error) {
 			rngBytesRead = 0
 			rngLastFeed = time.Now()
 		case <-time.After(1 * time.Second):
-			return errors.New("failed to get new entropy")
+			return ErrNoEntropy
 		}
 	}
 	return nil
@@ -58,7 +57,7 @@ func Read(b []byte) (n int, err error) {
 	return copy(b, rng.PseudoRandomData(uint(len(b)))), nil
 }
 
-// Read implements the io.Reader interface
+// Read implements the io.Reader interface.
 func (r reader) Read(b []byte) (n int, err error) {
 	return Read(b)
 }

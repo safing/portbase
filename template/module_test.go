@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	// initialize data dir
-	err = dataroot.Initialize(tmpDir, 0755)
+	err = dataroot.Initialize(tmpDir, 0o755)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize data root: %s\n", err)
 		os.Exit(1)

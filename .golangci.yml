@@ -8,6 +8,7 @@ linters:
     - whitespace
     - wsl
     - gomnd
+    - testpackage
 
 linters-settings:
   godox:
@@ -15,3 +16,4 @@ linters-settings:
     # might be left in the code accidentally and should be resolved before merging
     keywords:
       - FIXME
+      - BUG

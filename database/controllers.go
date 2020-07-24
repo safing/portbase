@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -15,7 +14,7 @@ var (
 
 func getController(name string) (*Controller, error) {
 	if !initialized.IsSet() {
-		return nil, errors.New("database not initialized")
+		return nil, ErrNotInitialized
 	}
 
 	// return database if already started
@@ -36,19 +35,19 @@ func getController(name string) (*Controller, error) {
 	// get db registration
 	registeredDB, err := getDatabase(name)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s: %s`, name, err)
+		return nil, fmt.Errorf(`could not start database %s: %w`, name, err)
 	}
 
 	// get location
 	dbLocation, err := getLocation(name, registeredDB.StorageType)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+		return nil, fmt.Errorf(`could not start database %s (type %s): %w`, name, registeredDB.StorageType, err)
 	}
 
 	// start database
 	storageInt, err := storage.StartDatabase(name, registeredDB.StorageType, dbLocation)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+		return nil, fmt.Errorf(`could not start database %s (type %s): %w`, name, registeredDB.StorageType, err)
 	}
 
 	controller = newController(storageInt)
@@ -67,7 +66,7 @@ func InjectDatabase(name string, storageInt storage.Interface) (*Controller, err
 
 	_, ok := controllers[name]
 	if ok {
-		return nil, fmt.Errorf(`database "%s" already loaded`, name)
+		return nil, fmt.Errorf(`%s: %w`, name, ErrLoaded)
 	}
 
 	registryLock.Lock()
@@ -76,10 +75,10 @@ func InjectDatabase(name string, storageInt storage.Interface) (*Controller, err
 	// check if database is registered
 	registeredDB, ok := registry[name]
 	if !ok {
-		return nil, fmt.Errorf(`database "%s" not registered`, name)
+		return nil, fmt.Errorf(`%s: %w`, name, ErrNotRegistered)
 	}
 	if registeredDB.StorageType != "injected" {
-		return nil, fmt.Errorf(`database not of type "injected"`)
+		return nil, ErrInvalidStorageType
 	}
 
 	controller := newController(storageInt)

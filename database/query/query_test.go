@@ -8,9 +8,8 @@ import (
 	"github.com/safing/portbase/formats/dsd"
 )
 
-var (
-	// copied from https://github.com/tidwall/gjson/blob/master/gjson_test.go
-	testJSON = `{"age":100, "name":{"here":"B\\\"R"},
+// copied from https://github.com/tidwall/gjson/blob/master/gjson_test.go
+var testJSON = `{"age":100, "name":{"here":"B\\\"R"},
   "noop":{"what is a wren?":"a bird"},
   "happy":true,"immortal":false,
   "items":[1,2,3,{"tags":[1,2,3],"points":[[1,2],[3,4]]},4,5,6,7],
@@ -46,7 +45,6 @@ var (
   "lastly":{"yay":"final"},
 	"temperature": 120.413
 }`
-)
 
 func testQuery(t *testing.T, r record.Record, shouldMatch bool, condition Condition) {
 	q := New("test:").Where(condition).MustBeValid()
@@ -63,7 +61,6 @@ func testQuery(t *testing.T, r record.Record, shouldMatch bool, condition Condit
 }
 
 func TestQuery(t *testing.T) {
-
 	// if !gjson.Valid(testJSON) {
 	// 	t.Fatal("test json is invalid")
 	// }
@@ -110,5 +107,4 @@ func TestQuery(t *testing.T) {
 	testQuery(t, r, true, Where("happy", Exists, nil))
 
 	testQuery(t, r, true, Where("created", Matches, "^2014-[0-9]{2}-[0-9]{2}T"))
-
 }

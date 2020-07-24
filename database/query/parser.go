@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -26,7 +25,7 @@ func ParseQuery(query string) (*Query, error) {
 		// order is important, as parseAndOr will always consume one additional snippet.
 		snippetsPos++
 		if snippetsPos > len(snippets) {
-			return nil, fmt.Errorf("unexpected end at position %d", len(query))
+			return nil, &SyntaxError{Pos: len(query), Msg: "unexpected end"}
 		}
 		return snippets[snippetsPos-1], nil
 	}
@@ -40,7 +39,7 @@ func ParseQuery(query string) (*Query, error) {
 		return nil, err
 	}
 	if queryWord.text != "query" {
-		return nil, errors.New("queries must start with \"query\"")
+		return nil, syntaxErr(queryWord, "queries must start with \"query\"")
 	}
 
 	// get prefix
@@ -59,7 +58,7 @@ func ParseQuery(query string) (*Query, error) {
 		switch command.text {
 		case "where":
 			if q.where != nil {
-				return nil, fmt.Errorf("duplicate \"%s\" clause found at position %d", command.text, command.globalPosition)
+				return nil, syntaxErr(command, "duplicate clause")
 			}
 
 			// parse conditions
@@ -73,7 +72,7 @@ func ParseQuery(query string) (*Query, error) {
 			q.Where(condition)
 		case "orderby":
 			if q.orderBy != "" {
-				return nil, fmt.Errorf("duplicate \"%s\" clause found at position %d", command.text, command.globalPosition)
+				return nil, syntaxErr(command, "duplicate clause")
 			}
 
 			orderBySnippet, err := getSnippet()
@@ -84,7 +83,7 @@ func ParseQuery(query string) (*Query, error) {
 			q.OrderBy(orderBySnippet.text)
 		case "limit":
 			if q.limit != 0 {
-				return nil, fmt.Errorf("duplicate \"%s\" clause found at position %d", command.text, command.globalPosition)
+				return nil, syntaxErr(command, "duplicate clause")
 			}
 
 			limitSnippet, err := getSnippet()
@@ -93,13 +92,13 @@ func ParseQuery(query string) (*Query, error) {
 			}
 			limit, err := strconv.ParseUint(limitSnippet.text, 10, 31)
 			if err != nil {
-				return nil, fmt.Errorf("could not parse integer (%s) at position %d", limitSnippet.text, limitSnippet.globalPosition)
+				return nil, syntaxErr(limitSnippet, "invalid integer")
 			}
 
 			q.Limit(int(limit))
 		case "offset":
 			if q.offset != 0 {
-				return nil, fmt.Errorf("duplicate \"%s\" clause found at position %d", command.text, command.globalPosition)
+				return nil, syntaxErr(command, "duplicate clause")
 			}
 
 			offsetSnippet, err := getSnippet()
@@ -108,12 +107,12 @@ func ParseQuery(query string) (*Query, error) {
 			}
 			offset, err := strconv.ParseUint(offsetSnippet.text, 10, 31)
 			if err != nil {
-				return nil, fmt.Errorf("could not parse integer (%s) at position %d", offsetSnippet.text, offsetSnippet.globalPosition)
+				return nil, syntaxErr(offsetSnippet, "invalid integer")
 			}
 
 			q.Offset(int(offset))
 		default:
-			return nil, fmt.Errorf("unknown clause \"%s\" at position %d", command.text, command.globalPosition)
+			return nil, syntaxErr(command, "unknown clause")
 		}
 	}
 
@@ -121,7 +120,6 @@ func ParseQuery(query string) (*Query, error) {
 }
 
 func extractSnippets(text string) (snippets []*snippet, err error) {
-
 	skip := false
 	start := -1
 	inParenthesis := false
@@ -177,7 +175,7 @@ func extractSnippets(text string) (snippets []*snippet, err error) {
 			})
 		case '"':
 			if start < pos {
-				return nil, fmt.Errorf("parenthesis ('\"') may not be used within words, please escape with '\\' (position: %d)", pos+1)
+				return nil, &SyntaxError{Pos: pos + 1, Msg: "parenthesis ('\"') may not be used within words, please escape with '\\'"}
 			}
 			inParenthesis = true
 		}
@@ -193,15 +191,14 @@ func extractSnippets(text string) (snippets []*snippet, err error) {
 	}
 
 	return snippets, nil
-
 }
 
 //nolint:gocognit
 func parseAndOr(getSnippet func() (*snippet, error), remainingSnippets func() int, rootCondition bool) (Condition, error) {
-	var isOr = false
-	var typeSet = false
-	var wrapInNot = false
-	var expectingMore = true
+	isOr := false
+	typeSet := false
+	wrapInNot := false
+	expectingMore := true
 	var conditions []Condition
 
 	for {
@@ -258,14 +255,14 @@ func parseAndOr(getSnippet func() (*snippet, error), remainingSnippets func() in
 			return And(conditions...), nil
 		case "and":
 			if typeSet && isOr {
-				return nil, fmt.Errorf("you may not mix \"and\" and \"or\" (position: %d)", firstSnippet.globalPosition)
+				return nil, syntaxErr(firstSnippet, "mix \"and\" and \"or\"")
 			}
 			isOr = false
 			typeSet = true
 			expectingMore = true
 		case "or":
 			if typeSet && !isOr {
-				return nil, fmt.Errorf("you may not mix \"and\" and \"or\" (position: %d)", firstSnippet.globalPosition)
+				return nil, syntaxErr(firstSnippet, "mix \"and\" and \"or\"")
 			}
 			isOr = true
 			typeSet = true
@@ -309,7 +306,7 @@ func parseCondition(firstSnippet *snippet, getSnippet func() (*snippet, error)) 
 	// get operator
 	operator, ok := operatorNames[opName.text]
 	if !ok {
-		return nil, fmt.Errorf("unknown operator at position %d", opName.globalPosition)
+		return nil, syntaxErr(opName, "unknown operator")
 	}
 
 	// don't need a value for "exists"
@@ -331,16 +328,14 @@ func parseCondition(firstSnippet *snippet, getSnippet func() (*snippet, error)) 
 	return Where(firstSnippet.text, operator, value.text), nil
 }
 
-var (
-	escapeReplacer = regexp.MustCompile(`\\([^\\])`)
-)
+var escapeReplacer = regexp.MustCompile(`\\([^\\])`)
 
 // prepToken removes surrounding parenthesis and escape characters.
 func prepToken(text string) string {
 	return escapeReplacer.ReplaceAllString(strings.Trim(text, "\""), "$1")
 }
 
-// escapeString correctly escapes a snippet for printing
+// escapeString correctly escapes a snippet for printing.
 func escapeString(token string) string {
 	// check if token contains characters that need to be escaped
 	if strings.ContainsAny(token, "()\"\\\t\r\n ") {

@@ -65,7 +65,7 @@ func writer() (err error) {
 		// recover from panic
 		panicVal := recover()
 		if panicVal != nil {
-			err = fmt.Errorf("%s", panicVal)
+			err = fmt.Errorf("%s", panicVal) // nolint
 
 			// write stack to stderr
 			fmt.Fprintf(

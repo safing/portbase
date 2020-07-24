@@ -7,14 +7,18 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
+// Common errors.
 var (
-	root *utils.DirStructure
+	ErrAlreadyInitialized = errors.New("already initialized")
+	ErrNotSet             = errors.New("data root is not set")
 )
 
-// Initialize initializes the data root directory
+var root *utils.DirStructure
+
+// Initialize initializes the data root directory.
 func Initialize(rootDir string, perm os.FileMode) error {
 	if root != nil {
-		return errors.New("already initialized")
+		return ErrAlreadyInitialized
 	}
 
 	root = utils.NewDirStructure(rootDir, perm)

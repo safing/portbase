@@ -25,7 +25,6 @@ var (
 
 // GetServiceStatus returns the current status of a Windows Service (limited implementation).
 func GetServiceStatus(name string) (status uint8, err error) {
-
 	output, err := exec.Command("sc", "query", name).Output()
 	if err != nil {
 		return StatusUnknown, fmt.Errorf("failed to query service: %s", err)

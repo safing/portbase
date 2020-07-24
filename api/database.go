@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -31,9 +30,7 @@ const (
 	emptyString    = ""
 )
 
-var (
-	dbAPISeperatorBytes = []byte(dbAPISeperator)
-)
+var dbAPISeperatorBytes = []byte(dbAPISeperator)
 
 func init() {
 	RegisterHandleFunc("/api/database/v1", startDatabaseAPI) // net/http pattern matching only this exact path
@@ -55,7 +52,6 @@ func allowAnyOrigin(r *http.Request) bool {
 }
 
 func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
-
 	upgrader := websocket.Upgrader{
 		CheckOrigin:     allowAnyOrigin,
 		ReadBufferSize:  1024,
@@ -85,7 +81,6 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *DatabaseAPI) handler() {
-
 	// 123|get|<key>
 	//    123|ok|<key>|<data>
 	//    123|error|<message>
@@ -226,7 +221,7 @@ func (api *DatabaseAPI) writer() {
 	}
 }
 
-func (api *DatabaseAPI) send(opID []byte, msgType string, msgOrKey string, data []byte) {
+func (api *DatabaseAPI) send(opID []byte, msgType, msgOrKey string, data []byte) {
 	c := container.New(opID)
 	c.Append(dbAPISeperatorBytes)
 	c.Append([]byte(msgType))
@@ -490,18 +485,18 @@ func (api *DatabaseAPI) handleInsert(opID []byte, key string, data []byte) {
 	result := gjson.ParseBytes(data)
 	anythingPresent := false
 	var insertError error
-	result.ForEach(func(key gjson.Result, value gjson.Result) bool {
+	result.ForEach(func(key, value gjson.Result) bool {
 		anythingPresent = true
 		if !key.Exists() {
-			insertError = errors.New("values must be in a map")
+			insertError = errMissingMapValue
 			return false
 		}
 		if key.Type != gjson.String {
-			insertError = errors.New("keys must be strings")
+			insertError = errInvalidKey
 			return false
 		}
 		if !value.Exists() {
-			insertError = errors.New("non-existent value")
+			insertError = errValueNotExists
 			return false
 		}
 		insertError = acc.Set(key.String(), value.Value())

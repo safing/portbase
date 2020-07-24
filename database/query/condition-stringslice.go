@@ -15,7 +15,6 @@ type stringSliceCondition struct {
 }
 
 func newStringSliceCondition(key string, operator uint8, value interface{}) *stringSliceCondition {
-
 	switch v := value.(type) {
 	case string:
 		parsedValue := strings.Split(v, ",")
@@ -42,7 +41,6 @@ func newStringSliceCondition(key string, operator uint8, value interface{}) *str
 			operator: errorPresent,
 		}
 	}
-
 }
 
 func (c *stringSliceCondition) complies(acc accessor.Accessor) bool {
@@ -61,7 +59,7 @@ func (c *stringSliceCondition) complies(acc accessor.Accessor) bool {
 
 func (c *stringSliceCondition) check() error {
 	if c.operator == errorPresent {
-		return fmt.Errorf("could not parse \"%s\" to []string", c.key)
+		return fmt.Errorf("could not parse \"%w\" to []string", conditionKeyError(c.key))
 	}
 	return nil
 }

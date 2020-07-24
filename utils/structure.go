@@ -1,12 +1,17 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 )
+
+// ErrOutOfDirScope indicates that a given path is not inside the required
+// directory.
+var ErrOutOfDirScope = errors.New(`path outside of DirStructure scope`)
 
 // DirStructure represents a directory structure with permissions that should be enforced.
 type DirStructure struct {
@@ -88,13 +93,13 @@ func (ds *DirStructure) EnsureAbsPath(dirPath string) error {
 	}
 	// check if given path is in scope
 	if !strings.HasPrefix(dirPath, slashedPath) {
-		return fmt.Errorf(`path "%s" is outside of DirStructure scope`, dirPath)
+		return fmt.Errorf("%s: %w", dirPath, ErrOutOfDirScope)
 	}
 
 	// get relative path
 	relPath, err := filepath.Rel(ds.Path, dirPath)
 	if err != nil {
-		return fmt.Errorf("failed to get relative path: %s", err)
+		return fmt.Errorf("failed to get relative path: %w", err)
 	}
 
 	// split to path elements

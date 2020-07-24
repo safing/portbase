@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -15,7 +14,6 @@ type boolCondition struct {
 }
 
 func newBoolCondition(key string, operator uint8, value interface{}) *boolCondition {
-
 	var parsedValue bool
 
 	switch v := value.(type) {
@@ -60,7 +58,7 @@ func (c *boolCondition) complies(acc accessor.Accessor) bool {
 
 func (c *boolCondition) check() error {
 	if c.operator == errorPresent {
-		return errors.New(c.key)
+		return conditionKeyError(c.key)
 	}
 	return nil
 }

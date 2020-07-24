@@ -18,9 +18,8 @@ func init() {
 	go microTaskScheduler()
 }
 
-// test waiting
+// test waiting.
 func TestMicroTaskWaiting(t *testing.T) {
-
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -108,17 +107,18 @@ func TestMicroTaskWaiting(t *testing.T) {
 	if completeOutput != mtwExpectedOutput {
 		t.Errorf("MicroTask waiting test failed, expected sequence %s, got %s", mtwExpectedOutput, completeOutput)
 	}
-
 }
 
 // test ordering
 
-// globals
-var mtoWaitGroup sync.WaitGroup
-var mtoOutputChannel chan string
-var mtoWaitCh chan struct{}
+// globals.
+var (
+	mtoWaitGroup     sync.WaitGroup
+	mtoOutputChannel chan string
+	mtoWaitCh        chan struct{}
+)
 
-// functions
+// functions.
 func mediumPrioTaskTester() {
 	defer mtoWaitGroup.Done()
 	<-mtoWaitCh
@@ -139,9 +139,8 @@ func lowPrioTaskTester() {
 	})
 }
 
-// test
+// test.
 func TestMicroTaskOrdering(t *testing.T) {
-
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -204,5 +203,4 @@ func TestMicroTaskOrdering(t *testing.T) {
 	if !strings.Contains(completeOutput, "11111") || !strings.Contains(completeOutput, "22222") {
 		t.Errorf("MicroTask ordering test failed, output was %s. This happens occasionally, please run the test multiple times to verify", completeOutput)
 	}
-
 }

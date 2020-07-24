@@ -25,7 +25,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		registry = &updater.ResourceRegistry{}
-		return registry.Initialize(utils.NewDirStructure(absPath, 0755))
+		return registry.Initialize(utils.NewDirStructure(absPath, 0o755))
 	},
 	SilenceUsage: true,
 }

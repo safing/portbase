@@ -100,7 +100,7 @@ func testGetFloat(t *testing.T, acc Accessor, key string, shouldSucceed bool, ex
 	}
 }
 
-func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue bool) {
+func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed, expectedValue bool) {
 	v, ok := acc.GetBool(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -134,7 +134,6 @@ func testSet(t *testing.T, acc Accessor, key string, shouldSucceed bool, valueTo
 }
 
 func TestAccessor(t *testing.T) {
-
 	// Test interface compliance
 	accs := []Accessor{
 		NewJSONAccessor(&testJSON),
@@ -273,5 +272,4 @@ func TestAccessor(t *testing.T) {
 	for _, acc := range accs {
 		testExists(t, acc, "X", false)
 	}
-
 }

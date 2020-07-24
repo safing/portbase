@@ -1,8 +1,6 @@
 package query
 
 import (
-	"fmt"
-
 	"github.com/safing/portbase/database/accessor"
 )
 
@@ -13,7 +11,7 @@ type Condition interface {
 	string() string
 }
 
-// Operators
+// Operators.
 const (
 	Equals                  uint8 = iota // int
 	GreaterThan                          // int
@@ -66,6 +64,6 @@ func Where(key string, operator uint8, value interface{}) Condition {
 	case Exists:
 		return newExistsCondition(key, operator)
 	default:
-		return newErrorCondition(fmt.Errorf("no operator with ID %d", operator))
+		return newErrorCondition(&OperatorError{Operator: operator})
 	}
 }

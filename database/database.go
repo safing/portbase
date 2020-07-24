@@ -1,11 +1,10 @@
 package database
 
 import (
-	"errors"
 	"time"
 )
 
-// Database holds information about registered databases
+// Database holds information about registered databases.
 type Database struct {
 	Name        string
 	Description string
@@ -18,7 +17,7 @@ type Database struct {
 
 // MigrateTo migrates the database to another storage type.
 func (db *Database) MigrateTo(newStorageType string) error {
-	return errors.New("not implemented yet") // TODO
+	return ErrNotImplemented
 }
 
 // Loaded updates the LastLoaded timestamp.

@@ -14,7 +14,6 @@ var (
 )
 
 func (d *SimpleTestStruct) Size() (s uint64) {
-
 	{
 		l := uint64(len(d.S))
 
@@ -100,7 +99,6 @@ func (d *SimpleTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
 }
 
 func (d *GenCodeTestStruct) Size() (s uint64) {
-
 	{
 		l := uint64(len(d.S))
 
@@ -152,7 +150,6 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 		}
 
 		for k0 := range d.Sa {
-
 			{
 				l := uint64(len(d.Sa[k0]))
 
@@ -168,7 +165,6 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 				}
 				s += l
 			}
-
 		}
 
 	}
@@ -190,7 +186,6 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 				}
 
 				for k0 := range *d.Sap {
-
 					{
 						l := uint64(len((*d.Sap)[k0]))
 
@@ -206,7 +201,6 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 						}
 						s += l
 					}
-
 				}
 
 			}
@@ -215,7 +209,6 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 	}
 	{
 		if d.Bp != nil {
-
 			s++
 		}
 	}
@@ -271,9 +264,7 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 	i := uint64(0)
 
 	{
-
 		buf[0+0] = byte(d.I8 >> 0)
-
 	}
 	{
 
@@ -313,9 +304,7 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 
 	}
 	{
-
 		buf[0+15] = byte(d.UI8 >> 0)
-
 	}
 	{
 
@@ -418,7 +407,6 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 
 		}
 		for k0 := range d.Sa {
-
 			{
 				l := uint64(len(d.Sa[k0]))
 
@@ -438,7 +426,6 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 				copy(buf[i+31:], d.Sa[k0])
 				i += l
 			}
-
 		}
 	}
 	{
@@ -464,7 +451,6 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 
 				}
 				for k0 := range *d.Sap {
-
 					{
 						l := uint64(len((*d.Sap)[k0]))
 
@@ -484,7 +470,6 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 						copy(buf[i+32:], (*d.Sap)[k0])
 						i += l
 					}
-
 				}
 			}
 			i += 0
@@ -559,44 +544,28 @@ func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
 	i := uint64(0)
 
 	{
-
 		d.I8 = 0 | (int8(buf[i+0+0]) << 0)
-
 	}
 	{
-
 		d.I16 = 0 | (int16(buf[i+0+1]) << 0) | (int16(buf[i+1+1]) << 8)
-
 	}
 	{
-
 		d.I32 = 0 | (int32(buf[i+0+3]) << 0) | (int32(buf[i+1+3]) << 8) | (int32(buf[i+2+3]) << 16) | (int32(buf[i+3+3]) << 24)
-
 	}
 	{
-
 		d.I64 = 0 | (int64(buf[i+0+7]) << 0) | (int64(buf[i+1+7]) << 8) | (int64(buf[i+2+7]) << 16) | (int64(buf[i+3+7]) << 24) | (int64(buf[i+4+7]) << 32) | (int64(buf[i+5+7]) << 40) | (int64(buf[i+6+7]) << 48) | (int64(buf[i+7+7]) << 56)
-
 	}
 	{
-
 		d.UI8 = 0 | (uint8(buf[i+0+15]) << 0)
-
 	}
 	{
-
 		d.UI16 = 0 | (uint16(buf[i+0+16]) << 0) | (uint16(buf[i+1+16]) << 8)
-
 	}
 	{
-
 		d.UI32 = 0 | (uint32(buf[i+0+18]) << 0) | (uint32(buf[i+1+18]) << 8) | (uint32(buf[i+2+18]) << 16) | (uint32(buf[i+3+18]) << 24)
-
 	}
 	{
-
 		d.UI64 = 0 | (uint64(buf[i+0+22]) << 0) | (uint64(buf[i+1+22]) << 8) | (uint64(buf[i+2+22]) << 16) | (uint64(buf[i+3+22]) << 24) | (uint64(buf[i+4+22]) << 32) | (uint64(buf[i+5+22]) << 40) | (uint64(buf[i+6+22]) << 48) | (uint64(buf[i+7+22]) << 56)
-
 	}
 	{
 		l := uint64(0)
@@ -672,7 +641,6 @@ func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
 			d.Sa = make([]string, l)
 		}
 		for k0 := range d.Sa {
-
 			{
 				l := uint64(0)
 
@@ -693,7 +661,6 @@ func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
 				d.Sa[k0] = string(buf[i+31 : i+31+l])
 				i += l
 			}
-
 		}
 	}
 	{
@@ -725,7 +692,6 @@ func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
 					(*d.Sap) = make([]string, l)
 				}
 				for k0 := range *d.Sap {
-
 					{
 						l := uint64(0)
 
@@ -746,7 +712,6 @@ func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
 						(*d.Sap)[k0] = string(buf[i+32 : i+32+l])
 						i += l
 					}
-
 				}
 			}
 			i += 0
