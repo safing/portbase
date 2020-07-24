@@ -24,6 +24,7 @@ type ResourceRegistry struct {
 
 	resources        map[string]*Resource
 	UpdateURLs       []string
+	UserAgent        string
 	MandatoryUpdates []string
 
 	Beta    bool
