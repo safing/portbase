@@ -90,7 +90,11 @@ func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn
 				// log error
 				sleepFor := time.Duration(failCnt) * backoffDuration
 				log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
-				time.Sleep(sleepFor)
+				select {
+				case <-time.After(sleepFor):
+				case <-m.Ctx.Done():
+					return
+				}
 				// loop to restart
 			} else {
 				log.Infof("%s: service-worker %s %s - restarting now", m.Name, name, err)

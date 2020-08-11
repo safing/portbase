@@ -227,7 +227,7 @@ func (res *Resource) selectVersion() {
 
 	// export after we finish
 	defer func() {
-		log.Debugf("updater: selected version %s for resource %s", res.SelectedVersion, res.Identifier)
+		log.Tracef("updater: selected version %s for resource %s", res.SelectedVersion, res.Identifier)
 
 		if res.inUse() &&
 			res.SelectedVersion != res.ActiveVersion && // new selected version does not match previously selected version
