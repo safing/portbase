@@ -110,7 +110,7 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 
 func (s *StorageInterface) processQuery(it *iterator.Iterator, opts []*Option) {
 
-	sort.Sort(sortableOptions(opts))
+	sort.Sort(sortByKey(opts))
 
 	for _, opt := range opts {
 		r, err := opt.Export()

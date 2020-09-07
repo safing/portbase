@@ -25,7 +25,7 @@ func parseAndSetDefaultConfig(jsonData string) error {
 	return SetDefaultConfig(m)
 }
 
-func quickRegister(t *testing.T, key string, optType uint8, defaultValue interface{}) {
+func quickRegister(t *testing.T, key string, optType OptionType, defaultValue interface{}) {
 	err := Register(&Option{
 		Name:           key,
 		Key:            key,

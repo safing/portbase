@@ -13,15 +13,18 @@ import (
 )
 
 var (
+	subsystemsLock   sync.Mutex
 	subsystems       []*Subsystem
 	subsystemsMap    = make(map[string]*Subsystem)
-	subsystemsLock   sync.Mutex
 	subsystemsLocked = abool.New()
 
 	handlingConfigChanges = abool.New()
 )
 
-// Register registers a new subsystem. The given option must be a bool option. Should be called in init() directly after the modules.Register() function. The config option must not yet be registered and will be registered for you. Pass a nil option to force enable.
+// Register registers a new subsystem. The given option must be a bool option.
+// Should be called in init() directly after the modules.Register() function.
+// The config option must not yet be registered and will be registered for
+// you. Pass a nil option to force enable.
 func Register(id, name, description string, module *modules.Module, configKeySpace string, option *config.Option) {
 	// lock slice and map
 	subsystemsLock.Lock()
@@ -33,8 +36,7 @@ func Register(id, name, description string, module *modules.Module, configKeySpa
 	}
 
 	// check if already registered
-	_, ok := subsystemsMap[name]
-	if ok {
+	if _, ok := subsystemsMap[name]; ok {
 		panic(fmt.Sprintf(`subsystem "%s" already registered`, name))
 	}
 
@@ -65,7 +67,6 @@ func Register(id, name, description string, module *modules.Module, configKeySpa
 		new.toggleValue = func() bool { return true }
 	}
 
-	// add to lists
 	subsystemsMap[name] = new
 	subsystems = append(subsystems, new)
 }
@@ -113,9 +114,10 @@ subsystemLoop:
 	}
 }
 
-func handleConfigChanges(ctx context.Context, data interface{}) error {
-	// check if ready
-	if !subsystemsLocked.IsSet() {
+func handleConfigChanges(ctx context.Context, _ interface{}) error {
+	// bail out early if we haven't started yet or are already
+	// shutting down
+	if !subsystemsLocked.IsSet() || modules.IsShuttingDown() {
 		return nil
 	}
 
@@ -124,11 +126,6 @@ func handleConfigChanges(ctx context.Context, data interface{}) error {
 		time.Sleep(100 * time.Millisecond)
 		handlingConfigChanges.UnSet()
 	} else {
-		return nil
-	}
-
-	// don't do anything if we are already shutting down globally
-	if modules.IsShuttingDown() {
 		return nil
 	}
 
@@ -143,18 +140,18 @@ func handleConfigChanges(ctx context.Context, data interface{}) error {
 			changed = true
 		}
 	}
+	if !changed {
+		return nil
+	}
 
-	// trigger module management if any setting was changed
-	if changed {
-		err := modules.ManageModules()
-		if err != nil {
-			module.Error(
-				"modulemgmt-failed",
-				fmt.Sprintf("The subsystem framework failed to start or stop one or more modules.\nError: %s\nCheck logs for more information.", err),
-			)
-		} else {
-			module.Resolve("modulemgmt-failed")
-		}
+	err := modules.ManageModules()
+	if err != nil {
+		module.Error(
+			"modulemgmt-failed",
+			fmt.Sprintf("The subsystem framework failed to start or stop one or more modules.\nError: %s\nCheck logs for more information.", err),
+		)
+	} else {
+		module.Resolve("modulemgmt-failed")
 	}
 
 	return nil

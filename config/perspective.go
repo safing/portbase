@@ -63,7 +63,7 @@ optionsLoop:
 	return perspective, nil
 }
 
-func (p *Perspective) getPerspectiveValueCache(name string, requestedType uint8) *valueCache {
+func (p *Perspective) getPerspectiveValueCache(name string, requestedType OptionType) *valueCache {
 	// get option
 	pOption, ok := p.config[name]
 	if !ok {

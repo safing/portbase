@@ -46,7 +46,7 @@ func prep() error {
 	// register options
 	err := config.Register(&config.Option{
 		Name:            "language",
-		Key:             "config:template/language",
+		Key:             "template/language",
 		Description:     "Sets the language for the template [TEMPLATE]",
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelUser, // default
