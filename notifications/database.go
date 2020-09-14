@@ -19,9 +19,6 @@ var (
 	notsLock sync.RWMutex
 
 	dbController *database.Controller
-	dbInterface  *database.Interface
-
-	persistentBasePath string
 )
 
 // Storage interface errors
@@ -30,13 +27,6 @@ var (
 	ErrInvalidPath = errors.New("invalid path")
 	ErrNoDelete    = errors.New("notifications may not be deleted, they must be handled")
 )
-
-// SetPersistenceBasePath sets the base path for persisting persistent notifications.
-func SetPersistenceBasePath(dbBasePath string) {
-	if persistentBasePath == "" {
-		persistentBasePath = dbBasePath
-	}
-}
 
 // StorageInterface provices a storage.Interface to the configuration manager.
 type StorageInterface struct {
@@ -69,18 +59,17 @@ func (s *StorageInterface) Get(key string) (record.Record, error) {
 	defer notsLock.RUnlock()
 
 	// transform key
-	if strings.HasPrefix(key, "all/") {
-		key = strings.TrimPrefix(key, "all/")
-	} else {
+	if !strings.HasPrefix(key, "all/") {
 		return nil, storage.ErrNotFound
 	}
+	key = strings.TrimPrefix(key, "all/")
 
 	// get notification
 	not, ok := nots[key]
-	if ok {
-		return not, nil
+	if !ok {
+		return nil, storage.ErrNotFound
 	}
-	return nil, storage.ErrNotFound
+	return not, nil
 }
 
 // Query returns a an iterator for the supplied query.
@@ -103,7 +92,12 @@ func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
 		}
 
 		if q.MatchesKey(n.DatabaseKey()) && q.MatchesRecord(n) {
-			it.Next <- n
+			select {
+			case it.Next <- n:
+			case <-it.Done:
+				// make sure we don't leak this goroutine if the iterator get's cancelled
+				return
+			}
 		}
 	}
 
@@ -127,56 +121,68 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 		return nil, ErrInvalidPath
 	}
 
-	// continue in goroutine
-	go UpdateNotification(n, key)
-
-	return n, nil
+	return applyUpdate(n, key)
 }
 
-// UpdateNotification updates a notification with input from a database action. Notification will not be saved/propagated if there is no valid change.
-func UpdateNotification(n *Notification, key string) {
-	n.Lock()
-	defer n.Unlock()
-
+func applyUpdate(n *Notification, key string) (*Notification, error) {
 	// separate goroutine in order to correctly lock notsLock
 	notsLock.RLock()
-	origN, ok := nots[key]
+	existing, ok := nots[key]
 	notsLock.RUnlock()
+
+	// ignore if already deleted
+
+	if !ok || existing.Meta().IsDeleted() {
+		// this is a completely new notification
+		// we pass pushUpdate==false because the storage
+		// controller will push an update on put anyway.
+		n.save(false)
+		return n, nil
+	}
+
+	existing.Lock()
+	defer existing.Unlock()
+
+	// A notification can only be updated to select and execute the
+	// notification action. If the existing one already has an
+	// Executed timestamp this update request is invalid
+	if existing.Executed > 0 {
+		return existing, fmt.Errorf("action already executed at %d", existing.Executed)
+	}
 
 	save := false
 
-	// ignore if already deleted
-	if ok && origN.Meta().IsDeleted() {
-		ok = false
-	}
-
-	if ok {
-		// existing notification
-		// only update select attributes
-		origN.Lock()
-		defer origN.Unlock()
-	} else {
-		// new notification (from external source): old == new
-		origN = n
-		save = true
-	}
-
-	switch {
-	case n.SelectedActionID != "" && n.Responded == 0:
-		// select action, if not yet already handled
-		log.Tracef("notifications: selected action for %s: %s", n.ID, n.SelectedActionID)
-		origN.selectAndExecuteAction(n.SelectedActionID)
-		save = true
-	case origN.Executed == 0 && n.Executed != 0:
+	// check if the notification has been marked as
+	// "executed externally".
+	if n.Executed > 0 {
 		log.Tracef("notifications: action for %s executed externally", n.ID)
-		origN.Executed = n.Executed
+		existing.Executed = n.Executed
+		save = true
+
+		// in case the action has been executed immediately by the
+		// sender we may need to update the SelectedActionID and the
+		// Responded timestamp as well. Though, we guard the assignments
+		// with value checks so partial updates that only change the
+		// Executed property do not overwrite existing values.
+		if n.SelectedActionID != "" {
+			existing.SelectedActionID = n.SelectedActionID
+		}
+		if n.Responded != 0 {
+			existing.Responded = n.Responded
+		}
+	}
+
+	if n.SelectedActionID != "" && existing.Responded == 0 {
+		log.Tracef("notifications: selected action for %s: %s", n.ID, n.SelectedActionID)
+		existing.selectAndExecuteAction(n.SelectedActionID)
 		save = true
 	}
 
 	if save {
-		// we may be locking
-		go origN.Save()
+		existing.save(false)
 	}
+
+	return existing, nil
 }
 
 // Delete deletes a record from the database.

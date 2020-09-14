@@ -5,17 +5,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
 
+// Type describes the type of a notification.
+type Type uint8
+
 // Notification types
 const (
-	Info    uint8 = 0
-	Warning uint8 = 1
-	Prompt  uint8 = 2
+	Info    Type = 0
+	Warning Type = 1
+	Prompt  Type = 2
 )
 
 // Notification represents a notification that is to be delivered to the user.
@@ -29,13 +31,12 @@ type Notification struct {
 	// MessageTemplate string
 	// MessageData []string
 	DataSubject sync.Locker
-	Type        uint8
+	Type        Type
 
-	Persistent bool  // this notification persists until it is handled and survives restarts
-	Created    int64 // creation timestamp, notification "starts"
-	Expires    int64 // expiry timestamp, notification is expected to be canceled at this time and may be cleaned up afterwards
-	Responded  int64 // response timestamp, notification "ends"
-	Executed   int64 // execution timestamp, notification will be deleted soon
+	Created   int64 // creation timestamp, notification "starts"
+	Expires   int64 // expiry timestamp, notification is expected to be canceled at this time and may be cleaned up afterwards
+	Responded int64 // response timestamp, notification "ends"
+	Executed  int64 // execution timestamp, notification will be deleted soon
 
 	AvailableActions []*Action
 	SelectedActionID string
@@ -52,8 +53,7 @@ type Action struct {
 	Text string
 }
 
-func noOpAction(n *Notification) {
-}
+func noOpAction(n *Notification) {}
 
 // Get returns the notification identifed by the given id or nil if it doesn't exist.
 func Get(id string) *Notification {
@@ -87,7 +87,7 @@ func NotifyPrompt(id, msg string, actions ...Action) *Notification {
 	return notify(Prompt, id, msg, actions...)
 }
 
-func notify(nType uint8, id string, msg string, actions ...Action) *Notification {
+func notify(nType Type, id string, msg string, actions ...Action) *Notification {
 	acts := make([]*Action, len(actions))
 	for idx := range actions {
 		a := actions[idx]
@@ -110,11 +110,13 @@ func notify(nType uint8, id string, msg string, actions ...Action) *Notification
 
 // Save saves the notification and returns it.
 func (n *Notification) Save() *Notification {
-	notsLock.Lock()
-	defer notsLock.Unlock()
 	n.Lock()
 	defer n.Unlock()
 
+	return n.save(true)
+}
+
+func (n *Notification) save(pushUpdate bool) *Notification {
 	// initialize
 	if n.Created == 0 {
 		n.Created = time.Now().Unix()
@@ -139,39 +141,16 @@ func (n *Notification) Save() *Notification {
 		n.SetKey(fmt.Sprintf("notifications:all/%s", n.ID))
 	}
 
-	// update meta
 	n.UpdateMeta()
 
-	// assign to data map
+	// store the notification inside or map
+	notsLock.Lock()
 	nots[n.ID] = n
+	notsLock.Unlock()
 
-	// push update
-	log.Tracef("notifications: pushing update for %s to subscribers", n.Key())
-	dbController.PushUpdate(n)
-
-	// persist
-	if n.Persistent && persistentBasePath != "" {
-		duplicate := &Notification{
-			ID:               n.ID,
-			Message:          n.Message,
-			DataSubject:      n.DataSubject,
-			AvailableActions: duplicateActions(n.AvailableActions),
-			SelectedActionID: n.SelectedActionID,
-			Persistent:       n.Persistent,
-			Created:          n.Created,
-			Expires:          n.Expires,
-			Responded:        n.Responded,
-			Executed:         n.Executed,
-		}
-		duplicate.SetMeta(n.Meta().Duplicate())
-		key := fmt.Sprintf("%s/%s", persistentBasePath, n.ID)
-		duplicate.SetKey(key)
-		go func() {
-			err := dbInterface.Put(duplicate)
-			if err != nil {
-				log.Warningf("notifications: failed to persist notification %s: %s", key, err)
-			}
-		}()
+	if pushUpdate {
+		log.Tracef("notifications: pushing update for %s to subscribers", n.Key())
+		dbController.PushUpdate(n)
 	}
 
 	return n
@@ -200,17 +179,12 @@ func (n *Notification) Response() <-chan string {
 
 // Update updates/resends a notification if it was not already responded to.
 func (n *Notification) Update(expires int64) {
-	responded := true
 	n.lock.Lock()
-	if n.Responded == 0 {
-		responded = false
-		n.Expires = expires
-	}
-	n.lock.Unlock()
+	defer n.lock.Unlock()
 
-	// save if not yet responded
-	if !responded {
-		n.Save()
+	if n.Responded == 0 {
+		n.Expires = expires
+		n.save(true)
 	}
 }
 
@@ -235,15 +209,6 @@ func (n *Notification) Delete() error {
 
 	// push update
 	dbController.PushUpdate(n)
-
-	// delete from persistent storage
-	if n.Persistent && persistentBasePath != "" {
-		key := fmt.Sprintf("%s/%s", persistentBasePath, n.ID)
-		err := dbInterface.Delete(key)
-		if err != nil && err != database.ErrNotFound {
-			return fmt.Errorf("failed to delete persisted notification %s from database: %s", key, err)
-		}
-	}
 
 	return nil
 }
