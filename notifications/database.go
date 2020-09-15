@@ -143,37 +143,31 @@ func applyUpdate(n *Notification, key string) (*Notification, error) {
 	existing.Lock()
 	defer existing.Unlock()
 
-	// A notification can only be updated to select and execute the
-	// notification action. If the existing one already has an
-	// Executed timestamp this update request is invalid
-	if existing.Executed > 0 {
-		return existing, fmt.Errorf("action already executed at %d", existing.Executed)
+	if existing.State == Executed {
+		return existing, fmt.Errorf("action already executed")
 	}
 
 	save := false
 
 	// check if the notification has been marked as
 	// "executed externally".
-	if n.Executed > 0 {
-		log.Tracef("notifications: action for %s executed externally", n.ID)
-		existing.Executed = n.Executed
+	if n.State == Executed {
+		log.Tracef("notifications: action for %s executed externally", n.EventID)
+		existing.State = Executed
 		save = true
 
 		// in case the action has been executed immediately by the
-		// sender we may need to update the SelectedActionID and the
-		// Responded timestamp as well. Though, we guard the assignments
-		// with value checks so partial updates that only change the
-		// Executed property do not overwrite existing values.
+		// sender we may need to update the SelectedActionID.
+		// Though, we guard the assignments with value check
+		// so partial updates that only change the
+		// State property do not overwrite existing values.
 		if n.SelectedActionID != "" {
 			existing.SelectedActionID = n.SelectedActionID
 		}
-		if n.Responded != 0 {
-			existing.Responded = n.Responded
-		}
 	}
 
-	if n.SelectedActionID != "" && existing.Responded == 0 {
-		log.Tracef("notifications: selected action for %s: %s", n.ID, n.SelectedActionID)
+	if n.SelectedActionID != "" && existing.State == Active {
+		log.Tracef("notifications: selected action for %s: %s", n.EventID, n.SelectedActionID)
 		existing.selectAndExecuteAction(n.SelectedActionID)
 		save = true
 	}
@@ -188,21 +182,23 @@ func applyUpdate(n *Notification, key string) (*Notification, error) {
 // Delete deletes a record from the database.
 func (s *StorageInterface) Delete(key string) error {
 	// transform key
-	if strings.HasPrefix(key, "all/") {
-		key = strings.TrimPrefix(key, "all/")
-	} else {
+	if !strings.HasPrefix(key, "all/") {
 		return storage.ErrNotFound
 	}
+	key = strings.TrimPrefix(key, "all/")
 
-	// get notification
 	notsLock.Lock()
+	defer notsLock.Unlock()
+
 	n, ok := nots[key]
-	notsLock.Unlock()
 	if !ok {
 		return storage.ErrNotFound
 	}
-	// delete
-	return n.Delete()
+
+	n.Lock()
+	defer n.Unlock()
+
+	return n.delete(true)
 }
 
 // ReadOnly returns whether the database is read only.
