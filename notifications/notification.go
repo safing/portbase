@@ -20,25 +20,64 @@ const (
 	Prompt  Type = 2
 )
 
+// State describes the state of a notification.
+type State string
+
+// Possible notification states.
+// State transitions can only happen from top to bottom.
+const (
+	// Active describes a notification that is active, no expired and,
+	// if actions are available, still waits for the user to select an
+	// action.
+	Active State = "active"
+	// Responded describes a notification where the user has already
+	// selected which action to take but that action is still to be
+	// performed.
+	Responded State = "responded"
+	// Executes describes a notification where the user has selected
+	// and action and that action has been performed.
+	Executed State = "executed"
+)
+
 // Notification represents a notification that is to be delivered to the user.
 type Notification struct {
 	record.Base
-
-	ID   string
+	// EventID is used to identify a specific notification. It consists of
+	// the module name and a per-module unique event id.
+	// The following format is recommended:
+	// 	<module-id>:<event-id>
+	EventID string
+	// GUID is a unique identifier for each notification instance. That is
+	// two notifications with the same EventID must still have unique GUIDs.
+	// The GUID is mainly used for system (Windows) integration and is
+	// automatically populated by the notification package. Average users
+	// don't need to care about this field.
 	GUID string
-
+	// Type is the notification type. It can be one of Info, Warning or Prompt.
+	Type Type
+	// Message is the default message shown to the user if no localized version
+	// of the notification is available. Note that the message should already
+	// have any paramerized values replaced.
 	Message string
-	// MessageTemplate string
-	// MessageData []string
-	DataSubject sync.Locker
-	Type        Type
-
-	Created   int64 // creation timestamp, notification "starts"
-	Expires   int64 // expiry timestamp, notification is expected to be canceled at this time and may be cleaned up afterwards
-	Responded int64 // response timestamp, notification "ends"
-	Executed  int64 // execution timestamp, notification will be deleted soon
-
+	// EventData contains an additional payload for the notification. This payload
+	// may contain contextual data and may be used by a localization framework
+	// to populate the notification message template.
+	// If EventData implements sync.Locker it will be locked and unlocked together with the
+	// notification. Otherwise, EventData is expected to be immutable once the
+	// notification has been saved and handed over to the notification or database package.
+	EventData interface{}
+	// Expires holds the unix epoch timestamp at which the notification expires
+	// and can be cleaned up.
+	// Users can safely ignore expired notifications and should handle expiry the
+	// same as deletion.
+	Expires int64
+	// State describes the current state of a notification. See State for
+	// a list of available values and their meaning.
+	State State
+	// AvailableActions defines a list of actions that a user can choose from.
 	AvailableActions []*Action
+	// SelectedActionID is updated to match the ID of one of the AvailableActions
+	// based on the user selection.
 	SelectedActionID string
 
 	lock           sync.Mutex
@@ -99,7 +138,7 @@ func notify(nType Type, id string, msg string, actions ...Action) *Notification 
 	}
 
 	n := Notification{
-		ID:               id,
+		EventID:          id,
 		Message:          msg,
 		Type:             nType,
 		AvailableActions: acts,
@@ -117,12 +156,8 @@ func (n *Notification) Save() *Notification {
 }
 
 func (n *Notification) save(pushUpdate bool) *Notification {
-	// initialize
-	if n.Created == 0 {
-		n.Created = time.Now().Unix()
-	}
 	if n.GUID == "" {
-		n.GUID = utils.RandomUUID(n.ID).String()
+		n.GUID = utils.RandomUUID(n.EventID).String()
 	}
 
 	// make ack notification if there are no defined actions
@@ -136,16 +171,21 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 		n.actionFunction = noOpAction
 	}
 
+	// Make sure we always have a reasonable expiration set.
+	if n.Expires == 0 {
+		n.Expires = time.Now().Add(72 * time.Hour).Unix()
+	}
+
 	// check key
 	if n.DatabaseKey() == "" {
-		n.SetKey(fmt.Sprintf("notifications:all/%s", n.ID))
+		n.SetKey(fmt.Sprintf("notifications:all/%s", n.EventID))
 	}
 
 	n.UpdateMeta()
 
 	// store the notification inside or map
 	notsLock.Lock()
-	nots[n.ID] = n
+	nots[n.EventID] = n
 	notsLock.Unlock()
 
 	if pushUpdate {
@@ -182,7 +222,7 @@ func (n *Notification) Update(expires int64) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.Responded == 0 {
+	if n.State == Active {
 		n.Expires = expires
 		n.save(true)
 	}
@@ -195,11 +235,15 @@ func (n *Notification) Delete() error {
 	n.Lock()
 	defer n.Unlock()
 
+	return n.delete(true)
+}
+
+func (n *Notification) delete(pushUpdate bool) error {
 	// mark as deleted
 	n.Meta().Delete()
 
 	// delete from internal storage
-	delete(nots, n.ID)
+	delete(nots, n.EventID)
 
 	// close expired
 	if n.expiredTrigger != nil {
@@ -207,8 +251,9 @@ func (n *Notification) Delete() error {
 		n.expiredTrigger = nil
 	}
 
-	// push update
-	dbController.PushUpdate(n)
+	if pushUpdate {
+		dbController.PushUpdate(n)
+	}
 
 	return nil
 }
@@ -227,23 +272,27 @@ func (n *Notification) Expired() <-chan struct{} {
 
 // selectAndExecuteAction sets the user response and executes/triggers the action, if possible.
 func (n *Notification) selectAndExecuteAction(id string) {
-	// abort if already executed
-	if n.Executed != 0 {
+	if n.State != Active {
 		return
 	}
 
-	// set response
-	n.Responded = time.Now().Unix()
+	n.State = Responded
 	n.SelectedActionID = id
 
-	// execute
 	executed := false
 	if n.actionFunction != nil {
 		go n.actionFunction(n)
 		executed = true
 	}
+
 	if n.actionTrigger != nil {
-		// satisfy all listeners
+		// satisfy all listeners (if they are listening)
+		// TODO(ppacher): if we miss to notify the waiter here (because
+		//                nobody is listeing on actionTrigger) we wil likely
+		//                never be able to execute the action again (simply because
+		//                we won't try). May consider replacing the single actionTrigger
+		//                channel with a per-listener (buffered) one so we just send
+		//                the value and close the channel.
 	triggerAll:
 		for {
 			select {
@@ -255,32 +304,31 @@ func (n *Notification) selectAndExecuteAction(id string) {
 		}
 	}
 
-	// save execution time
 	if executed {
-		n.Executed = time.Now().Unix()
+		n.State = Executed
 	}
 }
 
-// AddDataSubject adds the data subject to the notification. This is the only way how a data subject should be added - it avoids locking problems.
-func (n *Notification) AddDataSubject(ds sync.Locker) {
-	n.lock.Lock()
-	defer n.lock.Unlock()
-	n.DataSubject = ds
-}
-
-// Lock locks the Notification and the DataSubject, if available.
+// Lock locks the Notification. If EventData is set and
+// implements sync.Locker it is locked as well. Users that
+// want to replace the EventData on a notification must
+// ensure to unlock the current value on their own. If the
+// new EventData implements sync.Locker as well, it must
+// be locked prior to unlocking the notification.
 func (n *Notification) Lock() {
 	n.lock.Lock()
-	if n.DataSubject != nil {
-		n.DataSubject.Lock()
+	if locker, ok := n.EventData.(sync.Locker); ok {
+		locker.Lock()
 	}
 }
 
-// Unlock unlocks the Notification and the DataSubject, if available.
+// Unlock unlocks the Notification and the EventData, if
+// it implements sync.Locker. See Lock() for more information
+// on how to replace and work with EventData.
 func (n *Notification) Unlock() {
 	n.lock.Unlock()
-	if n.DataSubject != nil {
-		n.DataSubject.Unlock()
+	if locker, ok := n.EventData.(sync.Locker); ok {
+		locker.Unlock()
 	}
 }
 
