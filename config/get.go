@@ -15,7 +15,7 @@ type (
 	BoolOption func() bool
 )
 
-func getValueCache(name string, option *Option, requestedType uint8) (*Option, *valueCache) {
+func getValueCache(name string, option *Option, requestedType OptionType) (*Option, *valueCache) {
 	// get option
 	if option == nil {
 		var ok bool

@@ -42,13 +42,15 @@ func registerConfig() error {
 		Name:            "API Address",
 		Key:             CfgDefaultListenAddressKey,
 		Description:     "Define on which IP and port the API should listen on.",
-		Order:           128,
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		ReleaseLevel:    config.ReleaseLevelStable,
 		DefaultValue:    getDefaultListenAddress(),
 		ValidationRegex: "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,5}|\\[[:0-9A-Fa-f]+\\]:[0-9]{1,5})$",
 		RequiresRestart: true,
+		Annotations: config.Annotations{
+			config.DisplayOrderAnnotation: 128,
+		},
 	})
 	if err != nil {
 		return err

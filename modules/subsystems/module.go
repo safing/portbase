@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/database"
 	_ "github.com/safing/portbase/database/dbmodule" // database module is required
 	"github.com/safing/portbase/modules"
@@ -25,10 +26,14 @@ var (
 )
 
 func init() {
-	// enable partial starting
+	// The subsystem layer takes over module management. Note that
+	// no one must have called EnableModuleManagement. Otherwise
+	// the subsystem layer will silently fail managing module
+	// dependencies!
+	// TODO(ppacher): we SHOULD panic here!
+	// TASK(#1431)
 	modules.EnableModuleManagement(handleModuleChanges)
 
-	// register module and enable it for starting
 	module = modules.Register("subsystems", prep, start, nil, "config", "database", "base")
 	module.Enable()
 
@@ -44,29 +49,59 @@ func prep() error {
 		return modules.ErrCleanExit
 	}
 
-	return module.RegisterEventHook("config", configChangeEvent, "control subsystems", handleConfigChanges)
+	// We need to listen for configuration changes so we can
+	// start/stop dependend modules in case a subsystem is
+	// (de-)activated.
+	if err := module.RegisterEventHook(
+		"config",
+		configChangeEvent,
+		"control subsystems",
+		handleConfigChanges,
+	); err != nil {
+		return fmt.Errorf("register event hook: %w", err)
+	}
+
+	return nil
 }
 
 func start() error {
-	// lock registration
+	// Registration of subsystems is only allowed during
+	// preperation. Make sure any further call to Register()
+	// panics.
 	subsystemsLocked.Set()
 
-	// lock slice and map
 	subsystemsLock.Lock()
-	// go through all dependencies
-	seen := make(map[string]struct{})
+	defer subsystemsLock.Unlock()
+
+	seen := make(map[string]struct{}, len(subsystems))
+	configKeyPrefixes := make(map[string]*Subsystem, len(subsystems))
+	// mark all sub-systems as seen. This prevents sub-systems
+	// from being added as a sub-systems dependency in addAndMarkDependencies.
 	for _, sub := range subsystems {
-		// mark subsystem module as seen
 		seen[sub.module.Name] = struct{}{}
+		configKeyPrefixes[sub.ConfigKeySpace] = sub
 	}
+
+	// aggregate all modules dependencies (and the subsystem module itself)
+	// into the Modules slice. Configuration options form dependened modules
+	// will be marked using config.SubsystemAnnotation if not already set.
 	for _, sub := range subsystems {
-		// add main module
 		sub.Modules = append(sub.Modules, statusFromModule(sub.module))
-		// add dependencies
 		sub.addDependencies(sub.module, seen)
 	}
-	// unlock
-	subsystemsLock.Unlock()
+
+	// Annotate all configuration options with their respective subsystem.
+	config.ForEachOption(func(opt *config.Option) error {
+		subsys, ok := configKeyPrefixes[opt.Key]
+		if !ok {
+			return nil
+		}
+
+		// Add a new subsystem annotation is it is not already set!
+		opt.AddAnnotation(config.SubsystemAnnotation, subsys.ID)
+
+		return nil
+	})
 
 	// apply config
 	module.StartWorker("initial subsystem configuration", func(ctx context.Context) error {
@@ -77,13 +112,10 @@ func start() error {
 
 func (sub *Subsystem) addDependencies(module *modules.Module, seen map[string]struct{}) {
 	for _, module := range module.Dependencies() {
-		_, ok := seen[module.Name]
-		if !ok {
-			// add dependency to modules
-			sub.Modules = append(sub.Modules, statusFromModule(module))
-			// mark as seen
+		if _, ok := seen[module.Name]; !ok {
 			seen[module.Name] = struct{}{}
-			// add further dependencies
+
+			sub.Modules = append(sub.Modules, statusFromModule(module))
 			sub.addDependencies(module, seen)
 		}
 	}
@@ -109,7 +141,7 @@ func printGraph() {
 	for _, sub := range subsystems {
 		sub.module.Enable() // mark as tree root
 	}
-	// print
+
 	for _, sub := range subsystems {
 		printModuleGraph("", sub.module, true)
 	}

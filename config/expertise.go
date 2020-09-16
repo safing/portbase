@@ -3,17 +3,22 @@
 package config
 
 import (
-	"fmt"
 	"sync/atomic"
 
 	"github.com/tevino/abool"
 )
 
+// ExpertiseLevel allows to group settings by user expertise.
+// It's useful if complex or technical settings should be hidden
+// from the average user while still allowing experts and developers
+// to change deep configuration settings.
+type ExpertiseLevel uint8
+
 // Expertise Level constants
 const (
-	ExpertiseLevelUser      uint8 = 0
-	ExpertiseLevelExpert    uint8 = 1
-	ExpertiseLevelDeveloper uint8 = 2
+	ExpertiseLevelUser      ExpertiseLevel = 0
+	ExpertiseLevelExpert    ExpertiseLevel = 1
+	ExpertiseLevelDeveloper ExpertiseLevel = 2
 
 	ExpertiseLevelNameUser      = "user"
 	ExpertiseLevelNameExpert    = "expert"
@@ -23,33 +28,44 @@ const (
 )
 
 var (
-	expertiseLevel           *int32
 	expertiseLevelOption     *Option
+	expertiseLevel           = new(int32)
 	expertiseLevelOptionFlag = abool.New()
 )
 
 func init() {
-	var expertiseLevelVal int32
-	expertiseLevel = &expertiseLevelVal
-
 	registerExpertiseLevelOption()
 }
 
 func registerExpertiseLevelOption() {
 	expertiseLevelOption = &Option{
-		Name:        "Expertise Level",
-		Key:         expertiseLevelKey,
-		Description: "The Expertise Level controls the perceived complexity. Higher settings will show you more complex settings and information. This might also affect various other things relying on this setting. Modified settings in higher expertise levels stay in effect when switching back. (Unlike the Release Level)",
-
+		Name:           "Expertise Level",
+		Key:            expertiseLevelKey,
+		Description:    "The Expertise Level controls the perceived complexity. Higher settings will show you more complex settings and information. This might also affect various other things relying on this setting. Modified settings in higher expertise levels stay in effect when switching back. (Unlike the Release Level)",
 		OptType:        OptTypeString,
 		ExpertiseLevel: ExpertiseLevelUser,
-		ReleaseLevel:   ExpertiseLevelUser,
-
-		RequiresRestart: false,
-		DefaultValue:    ExpertiseLevelNameUser,
-
-		ExternalOptType: "string list",
-		ValidationRegex: fmt.Sprintf("^(%s|%s|%s)$", ExpertiseLevelNameUser, ExpertiseLevelNameExpert, ExpertiseLevelNameDeveloper),
+		ReleaseLevel:   ReleaseLevelStable,
+		DefaultValue:   ExpertiseLevelNameUser,
+		Annotations: Annotations{
+			DisplayHintAnnotation: DisplayHintOneOf,
+		},
+		PossibleValues: []PossibleValue{
+			{
+				Name:        "Easy",
+				Value:       ExpertiseLevelNameUser,
+				Description: "Easy application mode by hidding complex settings.",
+			},
+			{
+				Name:        "Expert",
+				Value:       ExpertiseLevelNameExpert,
+				Description: "Expert application mode. Allows access to almost all configuration options.",
+			},
+			{
+				Name:        "Developer",
+				Value:       ExpertiseLevelNameDeveloper,
+				Description: "Developer mode. Please be careful!",
+			},
+		},
 	}
 
 	err := Register(expertiseLevelOption)
