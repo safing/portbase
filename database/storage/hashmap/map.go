@@ -104,17 +104,16 @@ func (hm *HashMap) queryExecutor(queryIter *iterator.Iterator, q *query.Query, l
 
 mapLoop:
 	for key, record := range hm.db {
+		record.Lock()
+		if !q.MatchesKey(key) ||
+			!q.MatchesRecord(record) ||
+			!record.Meta().CheckValidity() ||
+			!record.Meta().CheckPermission(local, internal) {
 
-		switch {
-		case !q.MatchesKey(key):
-			continue
-		case !q.MatchesRecord(record):
-			continue
-		case !record.Meta().CheckValidity():
-			continue
-		case !record.Meta().CheckPermission(local, internal):
+			record.Unlock()
 			continue
 		}
+		record.Unlock()
 
 		select {
 		case <-queryIter.Done:

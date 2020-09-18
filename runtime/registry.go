@@ -202,23 +202,16 @@ func (r *Registry) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 			}
 
 			for _, r := range records {
-				// TODO(ppacher): do we need to lock r?
-				//                storage/hashmap does not lock the records
-				//                before sending them to the iterator but
-				//                better make sure that's correct.
+				r.Lock()
+				if q.MatchesKey(r.DatabaseKey()) ||
+					!r.Meta().CheckValidity() ||
+					!r.Meta().CheckPermission(local, internal) ||
+					!q.MatchesRecord(r) {
 
-				if !strings.HasPrefix(r.DatabaseKey(), searchPrefix) {
+					r.Unlock()
 					continue
 				}
-				if !r.Meta().CheckValidity() {
-					continue
-				}
-				if !r.Meta().CheckPermission(local, internal) {
-					continue
-				}
-				if !q.MatchesRecord(r) {
-					continue
-				}
+				r.Unlock()
 
 				select {
 				case iter.Next <- r:
