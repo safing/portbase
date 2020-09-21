@@ -22,10 +22,8 @@ func (s *Subscription) Cancel() error {
 		return err
 	}
 
-	c.readLock.Lock()
-	defer c.readLock.Unlock()
-	c.writeLock.Lock()
-	defer c.writeLock.Unlock()
+	c.exclusiveAccess.Lock()
+	defer c.exclusiveAccess.Unlock()
 
 	if s.canceled {
 		return nil
