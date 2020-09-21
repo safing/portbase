@@ -215,15 +215,17 @@ func (r *Registry) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 
 			for _, r := range records {
 				r.Lock()
-				if q.MatchesKey(r.DatabaseKey()) ||
-					!r.Meta().CheckValidity() ||
-					!r.Meta().CheckPermission(local, internal) ||
-					!q.MatchesRecord(r) {
+				var (
+					matchesKey    = q.MatchesKey(r.DatabaseKey())
+					isValid       = r.Meta().CheckValidity()
+					isAllowed     = r.Meta().CheckPermission(local, internal)
+					matchesRecord = q.MatchesRecord(r)
+				)
+				r.Unlock()
 
-					r.Unlock()
+				if !(matchesKey && isValid && isAllowed && matchesRecord) {
 					continue
 				}
-				r.Unlock()
 
 				select {
 				case iter.Next <- r:

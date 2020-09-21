@@ -5,7 +5,6 @@ import (
 
 	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/database/record"
-	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 )
 
@@ -66,19 +65,14 @@ type ModuleStatus struct {
 	FailureMsg    string
 }
 
-// Save saves the Subsystem Status to the database.
-func (sub *Subsystem) Save() {
-	if databaseKeySpace == "" {
-		return
-	}
+func (sub *Subsystem) addDependencies(module *modules.Module, seen map[string]struct{}) {
+	for _, module := range module.Dependencies() {
+		if _, ok := seen[module.Name]; !ok {
+			seen[module.Name] = struct{}{}
 
-	if !sub.KeyIsSet() {
-		sub.SetKey(databaseKeySpace + sub.ID)
-	}
-
-	err := db.Put(sub)
-	if err != nil {
-		log.Errorf("subsystems: could not save subsystem status to database: %s", err)
+			sub.Modules = append(sub.Modules, statusFromModule(module))
+			sub.addDependencies(module, seen)
+		}
 	}
 }
 
