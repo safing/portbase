@@ -40,6 +40,7 @@ var qtModule *Module
 func init() {
 	qtModule = initNewModule("task test module", nil, nil, nil)
 	qtModule.status = StatusOnline
+	close(qtModule.startComplete)
 }
 
 // functions

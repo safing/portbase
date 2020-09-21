@@ -274,11 +274,9 @@ func (t *Task) runWithLocking() {
 	}
 
 	// check if module was stopped
-	select {
-	case <-t.ctx.Done():
+	if t.ctx.Err() != nil {
 		t.lock.Unlock()
 		return
-	default:
 	}
 
 	// enter executing state
@@ -291,19 +289,15 @@ func (t *Task) runWithLocking() {
 	case <-time.After(maxTimeslotWait):
 	}
 
-	// wait for module start
-	if !t.module.Online() {
-		if t.module.OnlineSoon() {
-			// wait
-			<-t.module.StartCompleted()
-		} else {
-			// abort, module will not come online
-			t.lock.Lock()
-			t.executing = false
-			t.lock.Unlock()
-			return
-		}
+	if !t.module.OnlineSoon() {
+		// abort, module will not come online
+		t.lock.Lock()
+		t.executing = false
+		t.lock.Unlock()
+		return
 	}
+
+	<-t.module.StartCompleted()
 
 	// add to queue workgroup
 	queueWg.Add(1)
@@ -322,7 +316,7 @@ func (t *Task) runWithLocking() {
 func (t *Task) executeWithLocking() {
 	// start for module
 	// hint: only queueWg global var is important for scheduling, others can be set here
-	atomic.AddInt32(t.module.taskCnt, 1)
+	atomic.AddInt32(t.module.stats.taskCnt, 1)
 	t.module.waitGroup.Add(1)
 
 	defer func() {
@@ -335,7 +329,7 @@ func (t *Task) executeWithLocking() {
 		}
 
 		// finish for module
-		atomic.AddInt32(t.module.taskCnt, -1)
+		atomic.AddInt32(t.module.stats.taskCnt, -1)
 		t.module.waitGroup.Done()
 
 		t.lock.Lock()

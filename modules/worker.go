@@ -38,10 +38,10 @@ func (m *Module) RunWorker(name string, fn func(context.Context) error) error {
 		return errNoModule
 	}
 
-	atomic.AddInt32(m.workerCnt, 1)
+	atomic.AddInt32(m.stats.workerCnt, 1)
 	m.waitGroup.Add(1)
 	defer func() {
-		atomic.AddInt32(m.workerCnt, -1)
+		atomic.AddInt32(m.stats.workerCnt, -1)
 		m.waitGroup.Done()
 	}()
 
@@ -59,10 +59,10 @@ func (m *Module) StartServiceWorker(name string, backoffDuration time.Duration, 
 }
 
 func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn func(context.Context) error) {
-	atomic.AddInt32(m.workerCnt, 1)
+	atomic.AddInt32(m.stats.workerCnt, 1)
 	m.waitGroup.Add(1)
 	defer func() {
-		atomic.AddInt32(m.workerCnt, -1)
+		atomic.AddInt32(m.stats.workerCnt, -1)
 		m.waitGroup.Done()
 	}()
 
