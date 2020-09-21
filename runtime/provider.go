@@ -38,7 +38,7 @@ type (
 
 	// SimpleValueSetterFunc is a convenience type for implementing a
 	// write-only value provider.
-	SimpleValueSetterFunc func(record.Record) error
+	SimpleValueSetterFunc func(record.Record) (record.Record, error)
 
 	// SimpleValueGetterFunc is a convenience type for implementing a
 	// read-only value provider.
@@ -46,7 +46,7 @@ type (
 )
 
 // Set implements ValueProvider.Set and calls fn.
-func (fn SimpleValueSetterFunc) Set(r record.Record) error {
+func (fn SimpleValueSetterFunc) Set(r record.Record) (record.Record, error) {
 	return fn(r)
 }
 
@@ -56,11 +56,15 @@ func (SimpleValueSetterFunc) Get(_ string) ([]record.Record, error) {
 }
 
 // Set implements ValueProvider.Set and returns ErrReadOnly.
-func (SimpleValueGetterFunc) Set(r record.Record) error {
-	return ErrReadOnly
+func (SimpleValueGetterFunc) Set(r record.Record) (record.Record, error) {
+	return nil, ErrReadOnly
 }
 
 // Get implements ValueProvider.Get and calls fn.
 func (fn SimpleValueGetterFunc) Get(keyOrPrefix string) ([]record.Record, error) {
 	return fn(keyOrPrefix)
 }
+
+// compile time checks
+var _ ValueProvider = SimpleValueGetterFunc(nil)
+var _ ValueProvider = SimpleValueSetterFunc(nil)
