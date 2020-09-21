@@ -129,7 +129,7 @@ func (m *Module) RunLowPriorityMicroTask(name *string, fn func(context.Context) 
 func (m *Module) runMicroTask(name *string, fn func(context.Context) error) (err error) {
 	// start for module
 	// hint: only microTasks global var is important for scheduling, others can be set here
-	atomic.AddInt32(m.microTaskCnt, 1)
+	atomic.AddInt32(m.stats.microTaskCnt, 1)
 	m.waitGroup.Add(1)
 
 	// set up recovery
@@ -144,7 +144,7 @@ func (m *Module) runMicroTask(name *string, fn func(context.Context) error) (err
 		}
 
 		// finish for module
-		atomic.AddInt32(m.microTaskCnt, -1)
+		atomic.AddInt32(m.stats.microTaskCnt, -1)
 		m.waitGroup.Done()
 
 		// finish and possibly trigger next task

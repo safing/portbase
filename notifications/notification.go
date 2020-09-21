@@ -171,6 +171,10 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 		n.actionFunction = noOpAction
 	}
 
+	if n.State == "" {
+		n.State = Active
+	}
+
 	// Make sure we always have a reasonable expiration set.
 	if n.Expires == 0 {
 		n.Expires = time.Now().Add(72 * time.Hour).Unix()

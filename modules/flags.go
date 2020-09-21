@@ -36,7 +36,7 @@ func parseFlags() error {
 func printGraph() {
 	// mark roots
 	for _, module := range modules {
-		if len(module.depReverse) == 0 {
+		if len(module.dependencies.reverse) == 0 {
 			// is root, dont print deps in dep tree
 			module.stopFlag.Set()
 		}

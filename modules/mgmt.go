@@ -104,7 +104,7 @@ func buildEnabledTree() {
 }
 
 func (m *Module) markDependencies() {
-	for _, dep := range m.depModules {
+	for _, dep := range m.dependencies.modules {
 		if dep.enabledAsDependency.SetToIf(false, true) {
 			dep.markDependencies()
 		}

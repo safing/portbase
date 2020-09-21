@@ -113,7 +113,7 @@ func (m *Module) readyToPrep() uint8 {
 		return statusNothingToDo
 	}
 
-	for _, dep := range m.depModules {
+	for _, dep := range m.dependencies.modules {
 		if dep.Status() < StatusOffline {
 			return statusWaiting
 		}
@@ -137,7 +137,7 @@ func (m *Module) readyToStart() uint8 {
 	}
 
 	// check if all dependencies are ready
-	for _, dep := range m.depModules {
+	for _, dep := range m.dependencies.modules {
 		if dep.Status() < StatusOnline {
 			return statusWaiting
 		}
@@ -160,7 +160,7 @@ func (m *Module) readyToStop() uint8 {
 		return statusNothingToDo
 	}
 
-	for _, revDep := range m.depReverse {
+	for _, revDep := range m.dependencies.reverse {
 		// not ready if a reverse dependency was started, but not yet stopped
 		if revDep.Status() > StatusOffline {
 			return statusWaiting

@@ -21,55 +21,78 @@ var (
 
 	moduleStartTimeout = 2 * time.Minute
 	moduleStopTimeout  = 1 * time.Minute
+)
 
-	// ErrCleanExit is returned by Start() when the program is interrupted before starting. This can happen for example, when using the "--help" flag.
+var (
+	// ErrCleanExit is returned by Start() when the program is
+	// interrupted before starting. This can happen for example,
+	// when using the "--help" flag.
 	ErrCleanExit = errors.New("clean exit requested")
 )
 
-// Module represents a module.
-type Module struct { //nolint:maligned // not worth the effort
-	sync.RWMutex
+type (
+	// LiveCycleFunc is called at specific times during the live-cycle
+	// of a module.
+	LiveCycleFunc func() error
 
-	Name string
+	liveCycleHooks struct {
+		prepFunc  LiveCycleFunc
+		startFunc LiveCycleFunc
+		stopFunc  LiveCycleFunc
+	}
 
-	// status mgmt
-	enabled             *abool.AtomicBool
-	enabledAsDependency *abool.AtomicBool
-	status              uint8
+	depInfo struct {
+		names   []string
+		modules []*Module
+		reverse []*Module
+	}
 
-	// failure status
-	failureStatus uint8
-	failureID     string
-	failureMsg    string
+	failureInfo struct {
+		failureStatus uint8
+		failureID     string
+		failureMsg    string
+	}
 
-	// lifecycle callback functions
-	prepFn  func() error
-	startFn func() error
-	stopFn  func() error
+	taskStats struct {
+		workerCnt    *int32
+		taskCnt      *int32
+		microTaskCnt *int32
+	}
 
-	// lifecycle mgmt
-	// start
-	startComplete chan struct{}
-	// stop
-	Ctx       context.Context
-	cancelCtx func()
-	stopFlag  *abool.AtomicBool
+	// Module represents a module.
+	Module struct { //nolint:maligned // not worth the effort
+		sync.RWMutex
 
-	// workers/tasks
-	workerCnt    *int32
-	taskCnt      *int32
-	microTaskCnt *int32
-	waitGroup    sync.WaitGroup
+		// Name is the name of the module and is meant to be
+		// used for presentation purposes (i.e. user interface).
+		// Module names must be unique otherwise bad things will
+		// happen!
+		Name string
 
-	// events
-	eventHooks     map[string][]*eventHook
-	eventHooksLock sync.RWMutex
+		// status mgmt
+		enabled             *abool.AtomicBool
+		enabledAsDependency *abool.AtomicBool
+		status              uint8
 
-	// dependency mgmt
-	depNames   []string
-	depModules []*Module
-	depReverse []*Module
-}
+		failureInfo
+		hooks liveCycleHooks
+
+		// lifecycle mgmt
+		// start
+		startComplete chan struct{}
+		// stop
+		Ctx       context.Context
+		cancelCtx func()
+		stopFlag  *abool.AtomicBool
+
+		// workers/tasks
+		waitGroup sync.WaitGroup
+		stats     taskStats
+
+		events       eventHooks
+		dependencies depInfo
+	}
+)
 
 // StartCompleted returns a channel read that triggers when the module has finished starting.
 func (m *Module) StartCompleted() <-chan struct{} {
@@ -94,7 +117,7 @@ func (m *Module) IsStopping() bool {
 func (m *Module) Dependencies() []*Module {
 	m.RLock()
 	defer m.RUnlock()
-	return m.depModules
+	return m.dependencies.modules
 }
 
 func (m *Module) prep(reports chan *report) {
@@ -116,12 +139,12 @@ func (m *Module) prep(reports chan *report) {
 	// run prep function
 	go func() {
 		var err error
-		if m.prepFn != nil {
+		if m.hooks.prepFunc != nil {
 			// execute function
 			err = m.runCtrlFnWithTimeout(
 				"prep module",
 				moduleStartTimeout,
-				m.prepFn,
+				m.hooks.prepFunc,
 			)
 		}
 		// set status
@@ -172,12 +195,12 @@ func (m *Module) start(reports chan *report) {
 	// run start function
 	go func() {
 		var err error
-		if m.startFn != nil {
+		if m.hooks.startFunc != nil {
 			// execute function
 			err = m.runCtrlFnWithTimeout(
 				"start module",
 				moduleStartTimeout,
-				m.startFn,
+				m.hooks.startFunc,
 			)
 		}
 		// set status
@@ -232,10 +255,10 @@ func (m *Module) stopAllTasks(reports chan *report) {
 	// start shutdown function
 	stopFnFinished := abool.NewBool(false)
 	var stopFnError error
-	if m.stopFn != nil {
+	if m.hooks.stopFunc != nil {
 		m.waitGroup.Add(1)
 		go func() {
-			stopFnError = m.runCtrlFn("stop module", m.stopFn)
+			stopFnError = m.runCtrlFn("stop module", m.hooks.stopFunc)
 			stopFnFinished.Set()
 			m.waitGroup.Done()
 		}()
@@ -256,9 +279,9 @@ func (m *Module) stopAllTasks(reports chan *report) {
 			"%s: timed out while waiting for stopfn/workers/tasks to finish: stopFn=%v workers=%d tasks=%d microtasks=%d, continuing shutdown...",
 			m.Name,
 			stopFnFinished.IsSet(),
-			atomic.LoadInt32(m.workerCnt),
-			atomic.LoadInt32(m.taskCnt),
-			atomic.LoadInt32(m.microTaskCnt),
+			atomic.LoadInt32(m.stats.workerCnt),
+			atomic.LoadInt32(m.stats.taskCnt),
+			atomic.LoadInt32(m.stats.microTaskCnt),
 		)
 	}
 
@@ -307,27 +330,29 @@ func Register(name string, prep, start, stop func() error, dependencies ...strin
 
 func initNewModule(name string, prep, start, stop func() error, dependencies ...string) *Module {
 	ctx, cancelCtx := context.WithCancel(context.Background())
-	var workerCnt int32
-	var taskCnt int32
-	var microTaskCnt int32
 
 	newModule := &Module{
 		Name:                name,
 		enabled:             abool.NewBool(false),
 		enabledAsDependency: abool.NewBool(false),
-		prepFn:              prep,
-		startFn:             start,
-		stopFn:              stop,
-		startComplete:       make(chan struct{}),
-		Ctx:                 ctx,
-		cancelCtx:           cancelCtx,
-		stopFlag:            abool.NewBool(false),
-		workerCnt:           &workerCnt,
-		taskCnt:             &taskCnt,
-		microTaskCnt:        &microTaskCnt,
-		waitGroup:           sync.WaitGroup{},
-		eventHooks:          make(map[string][]*eventHook),
-		depNames:            dependencies,
+		hooks: liveCycleHooks{
+			prepFunc:  prep,
+			startFunc: start,
+			stopFunc:  stop,
+		},
+		startComplete: make(chan struct{}),
+		Ctx:           ctx,
+		cancelCtx:     cancelCtx,
+		stopFlag:      abool.NewBool(false),
+		stats: taskStats{
+			workerCnt:    new(int32),
+			taskCnt:      new(int32),
+			microTaskCnt: new(int32),
+		},
+		waitGroup: sync.WaitGroup{},
+		dependencies: depInfo{
+			names: dependencies,
+		},
 	}
 
 	return newModule
@@ -335,7 +360,7 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 
 func initDependencies() error {
 	for _, m := range modules {
-		for _, depName := range m.depNames {
+		for _, depName := range m.dependencies.names {
 
 			// get dependency
 			depModule, ok := modules[depName]
@@ -344,9 +369,8 @@ func initDependencies() error {
 			}
 
 			// link together
-			m.depModules = append(m.depModules, depModule)
-			depModule.depReverse = append(depModule.depReverse, m)
-
+			m.dependencies.modules = append(m.dependencies.modules, depModule)
+			depModule.dependencies.reverse = append(depModule.dependencies.reverse, m)
 		}
 	}
 
