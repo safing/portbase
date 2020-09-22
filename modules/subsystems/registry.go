@@ -70,7 +70,7 @@ func (mng *Manager) Start() error {
 		configKeyPrefixes[sub.ConfigKeySpace] = sub
 	}
 
-	// aggmngate all modules dependencies (and the subsystem module itself)
+	// aggregate all modules dependencies (and the subsystem module itself)
 	// into the Modules slice. Configuration options form dependened modules
 	// will be marked using config.SubsystemAnnotation if not already set.
 	for _, sub := range mng.subsys {
