@@ -50,6 +50,7 @@ func registerConfig() error {
 		RequiresRestart: true,
 		Annotations: config.Annotations{
 			config.DisplayOrderAnnotation: 128,
+			config.CategoryAnnotation:     "Development",
 		},
 	})
 	if err != nil {
