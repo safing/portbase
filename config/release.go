@@ -46,6 +46,7 @@ func registerReleaseLevelOption() {
 		DefaultValue:   ReleaseLevelNameStable,
 		Annotations: Annotations{
 			DisplayHintAnnotation: DisplayHintOneOf,
+			CategoryAnnotation:    "Expertise & Release",
 		},
 		PossibleValues: []PossibleValue{
 			{

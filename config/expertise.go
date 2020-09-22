@@ -48,6 +48,7 @@ func registerExpertiseLevelOption() {
 		DefaultValue:   ExpertiseLevelNameUser,
 		Annotations: Annotations{
 			DisplayHintAnnotation: DisplayHintOneOf,
+			CategoryAnnotation:    "Expertise & Release",
 		},
 		PossibleValues: []PossibleValue{
 			{
