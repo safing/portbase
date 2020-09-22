@@ -50,7 +50,7 @@ func TestSubsystems(t *testing.T) {
 			DefaultValue: false,
 		},
 	)
-	sub1 := subsystemsMap["Feature One"]
+	sub1 := DefaultManager.subsys["feature-one"]
 
 	feature2 := modules.Register("feature2", nil, nil, nil)
 	Register(

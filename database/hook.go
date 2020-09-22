@@ -35,10 +35,8 @@ func RegisterHook(q *query.Query, hook Hook) (*RegisteredHook, error) {
 		return nil, err
 	}
 
-	c.readLock.Lock()
-	defer c.readLock.Unlock()
-	c.writeLock.Lock()
-	defer c.writeLock.Unlock()
+	c.exclusiveAccess.Lock()
+	defer c.exclusiveAccess.Unlock()
 
 	rh := &RegisteredHook{
 		q: q,
@@ -55,10 +53,8 @@ func (h *RegisteredHook) Cancel() error {
 		return err
 	}
 
-	c.readLock.Lock()
-	defer c.readLock.Unlock()
-	c.writeLock.Lock()
-	defer c.writeLock.Unlock()
+	c.exclusiveAccess.Lock()
+	defer c.exclusiveAccess.Unlock()
 
 	for key, hook := range c.hooks {
 		if hook.q == h.q {

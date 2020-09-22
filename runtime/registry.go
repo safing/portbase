@@ -40,6 +40,7 @@ type Registry struct {
 	l            sync.RWMutex
 	providers    *radix.Tree
 	dbController *database.Controller
+	dbName       string
 }
 
 // keyedValueProvider simply wraps a value provider with it's
@@ -60,6 +61,16 @@ func isPrefixKey(key string) bool {
 	return strings.HasSuffix(key, "/")
 }
 
+// DatabaseName returns the name of the database where the
+// registry has been injected. It returns an empty string
+// if InjectAsDatabase has not been called.
+func (r *Registry) DatabaseName() string {
+	r.l.RLock()
+	defer r.l.RUnlock()
+
+	return r.dbName
+}
+
 // InjectAsDatabase injects the registry as the storage
 // database for name.
 func (r *Registry) InjectAsDatabase(name string) error {
@@ -75,6 +86,7 @@ func (r *Registry) InjectAsDatabase(name string) error {
 		return err
 	}
 
+	r.dbName = name
 	r.dbController = ctrl
 
 	return nil
@@ -203,15 +215,21 @@ func (r *Registry) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 
 			for _, r := range records {
 				r.Lock()
-				if q.MatchesKey(r.DatabaseKey()) ||
-					!r.Meta().CheckValidity() ||
-					!r.Meta().CheckPermission(local, internal) ||
-					!q.MatchesRecord(r) {
+				var (
+					matchesKey = q.MatchesKey(r.DatabaseKey())
+					isValid    = r.Meta().CheckValidity()
+					isAllowed  = r.Meta().CheckPermission(local, internal)
 
-					r.Unlock()
-					continue
+					allowed = matchesKey && isValid && isAllowed
+				)
+				if allowed {
+					allowed = q.MatchesRecord(r)
 				}
 				r.Unlock()
+
+				if !allowed {
+					continue
+				}
 
 				select {
 				case iter.Next <- r:
