@@ -16,7 +16,8 @@ import (
 
 // A Controller takes care of all the extra database logic.
 type Controller struct {
-	storage storage.Interface
+	storage      storage.Interface
+	shadowDelete bool
 
 	hooks         []*RegisteredHook
 	subscriptions []*Subscription
@@ -33,11 +34,12 @@ type Controller struct {
 }
 
 // newController creates a new controller for a storage.
-func newController(storageInt storage.Interface) *Controller {
+func newController(storageInt storage.Interface, shadowDelete bool) *Controller {
 	return &Controller{
-		storage:     storageInt,
-		migrating:   abool.NewBool(false),
-		hibernating: abool.NewBool(false),
+		storage:      storageInt,
+		shadowDelete: shadowDelete,
+		migrating:    abool.NewBool(false),
+		hibernating:  abool.NewBool(false),
 	}
 }
 
@@ -122,12 +124,21 @@ func (c *Controller) Put(r record.Record) (err error) {
 		}
 	}
 
-	r, err = c.storage.Put(r)
-	if err != nil {
-		return err
-	}
-	if r == nil {
-		return errors.New("storage returned nil record after successful put operation")
+	if !c.shadowDelete && r.Meta().IsDeleted() {
+		// Immediate delete.
+		err = c.storage.Delete(r.DatabaseKey())
+		if err != nil {
+			return err
+		}
+	} else {
+		// Put or shadow delete.
+		r, err = c.storage.Put(r)
+		if err != nil {
+			return err
+		}
+		if r == nil {
+			return errors.New("storage returned nil record after successful put operation")
+		}
 	}
 
 	// process subscriptions
@@ -161,7 +172,7 @@ func (c *Controller) PutMany() (chan<- record.Record, <-chan error) {
 	}
 
 	if batcher, ok := c.storage.(storage.Batcher); ok {
-		return batcher.PutMany()
+		return batcher.PutMany(c.shadowDelete)
 	}
 
 	errs := make(chan error, 1)
@@ -236,7 +247,10 @@ func (c *Controller) Maintain(ctx context.Context) error {
 		return nil
 	}
 
-	return c.storage.Maintain(ctx)
+	if maintenance, ok := c.storage.(storage.Maintenance); ok {
+		return maintenance.Maintain(ctx)
+	}
+	return nil
 }
 
 // MaintainThorough runs the MaintainThorough method on the storage.
@@ -248,7 +262,10 @@ func (c *Controller) MaintainThorough(ctx context.Context) error {
 		return nil
 	}
 
-	return c.storage.MaintainThorough(ctx)
+	if maintenance, ok := c.storage.(storage.Maintenance); ok {
+		return maintenance.MaintainThorough(ctx)
+	}
+	return nil
 }
 
 // MaintainRecordStates runs the record state lifecycle maintenance on the storage.
@@ -260,7 +277,10 @@ func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefor
 		return nil
 	}
 
-	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
+	if maintenance, ok := c.storage.(storage.Maintenance); ok {
+		return maintenance.MaintainRecordStates(ctx, purgeDeletedBefore)
+	}
+	return nil
 }
 
 // Shutdown shuts down the storage.

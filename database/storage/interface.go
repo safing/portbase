@@ -18,13 +18,17 @@ type Interface interface {
 
 	ReadOnly() bool
 	Injected() bool
+	Shutdown() error
+}
+
+// Maintenance defines the database storage API for backends that requ
+type Maintenance interface {
 	Maintain(ctx context.Context) error
 	MaintainThorough(ctx context.Context) error
 	MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error
-	Shutdown() error
 }
 
 // Batcher defines the database storage API for backends that support batch operations.
 type Batcher interface {
-	PutMany() (batch chan<- record.Record, errs <-chan error)
+	PutMany(shadowDelete bool) (batch chan<- record.Record, errs <-chan error)
 }

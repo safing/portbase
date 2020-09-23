@@ -31,10 +31,10 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 		dbName := fmt.Sprintf("testing-%s", storageType)
 		fmt.Println(dbName)
 		_, err := Register(&Database{
-			Name:        dbName,
-			Description: fmt.Sprintf("Unit Test Database for %s", storageType),
-			StorageType: storageType,
-			PrimaryAPI:  "",
+			Name:         dbName,
+			Description:  fmt.Sprintf("Unit Test Database for %s", storageType),
+			StorageType:  storageType,
+			ShadowDelete: true,
 		})
 		if err != nil {
 			t.Fatal(err)

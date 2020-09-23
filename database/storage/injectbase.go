@@ -28,7 +28,7 @@ func (i *InjectBase) Put(m record.Record) (record.Record, error) {
 }
 
 // PutMany stores many records in the database.
-func (i *InjectBase) PutMany() (batch chan record.Record, err chan error) {
+func (i *InjectBase) PutMany(shadowDelete bool) (batch chan record.Record, err chan error) {
 	batch = make(chan record.Record)
 	err = make(chan error, 1)
 	err <- errNotImplemented
