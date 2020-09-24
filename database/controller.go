@@ -247,8 +247,8 @@ func (c *Controller) Maintain(ctx context.Context) error {
 		return nil
 	}
 
-	if maintenance, ok := c.storage.(storage.Maintenance); ok {
-		return maintenance.Maintain(ctx)
+	if maintainer, ok := c.storage.(storage.Maintainer); ok {
+		return maintainer.Maintain(ctx)
 	}
 	return nil
 }
@@ -262,8 +262,8 @@ func (c *Controller) MaintainThorough(ctx context.Context) error {
 		return nil
 	}
 
-	if maintenance, ok := c.storage.(storage.Maintenance); ok {
-		return maintenance.MaintainThorough(ctx)
+	if maintainer, ok := c.storage.(storage.Maintainer); ok {
+		return maintainer.MaintainThorough(ctx)
 	}
 	return nil
 }
@@ -277,10 +277,7 @@ func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefor
 		return nil
 	}
 
-	if maintenance, ok := c.storage.(storage.Maintenance); ok {
-		return maintenance.MaintainRecordStates(ctx, purgeDeletedBefore)
-	}
-	return nil
+	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
 }
 
 // Shutdown shuts down the storage.

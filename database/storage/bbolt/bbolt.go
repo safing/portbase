@@ -245,16 +245,6 @@ func (b *BBolt) Injected() bool {
 	return false
 }
 
-// Maintain runs a light maintenance operation on the database.
-func (b *BBolt) Maintain(_ context.Context) error {
-	return nil
-}
-
-// MaintainThorough runs a thorough maintenance operation on the database.
-func (b *BBolt) MaintainThorough(_ context.Context) error {
-	return nil
-}
-
 // MaintainRecordStates maintains records states in the database.
 func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
 	now := time.Now().Unix()

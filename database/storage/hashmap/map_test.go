@@ -2,13 +2,20 @@
 package hashmap
 
 import (
-	"context"
 	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/safing/portbase/database/storage"
+
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
+)
+
+var (
+	// Compile time interface checks.
+	_ storage.Interface = &HashMap{}
+	_ storage.Batcher   = &HashMap{}
 )
 
 type TestRecord struct {
@@ -128,16 +135,6 @@ func TestHashMap(t *testing.T) {
 	_, err = db.Get("A")
 	if err == nil {
 		t.Fatal("should fail")
-	}
-
-	// maintenance
-	err = db.Maintain(context.TODO())
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.MaintainThorough(context.TODO())
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	// shutdown

@@ -150,16 +150,6 @@ func (hm *HashMap) Injected() bool {
 	return false
 }
 
-// Maintain runs a light maintenance operation on the database.
-func (hm *HashMap) Maintain(_ context.Context) error {
-	return nil
-}
-
-// MaintainThorough runs a thorough maintenance operation on the database.
-func (hm *HashMap) MaintainThorough(_ context.Context) error {
-	return nil
-}
-
 // MaintainRecordStates maintains records states in the database.
 func (hm *HashMap) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
 	hm.dbLock.Lock()

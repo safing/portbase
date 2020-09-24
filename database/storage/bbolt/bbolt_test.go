@@ -12,6 +12,13 @@ import (
 
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/database/storage"
+)
+
+var (
+	// Compile time interface checks.
+	_ storage.Interface = &BBolt{}
+	_ storage.Batcher   = &BBolt{}
 )
 
 type TestRecord struct {
@@ -146,14 +153,6 @@ func TestBBolt(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.Maintain(context.TODO())
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.MaintainThorough(context.TODO())
-	if err != nil {
-		t.Fatal(err)
-	}
 	err = db.MaintainRecordStates(context.TODO(), time.Now())
 	if err != nil {
 		t.Fatal(err)
