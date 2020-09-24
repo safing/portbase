@@ -36,3 +36,8 @@ type Maintainer interface {
 type Batcher interface {
 	PutMany(shadowDelete bool) (batch chan<- record.Record, errs <-chan error)
 }
+
+// Purger defines the database storage API for backends that support the purge operation.
+type Purger interface {
+	Purge(ctx context.Context, q *query.Query, local, internal, shadowDelete bool) (int, error)
+}

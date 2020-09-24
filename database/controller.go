@@ -244,7 +244,7 @@ func (c *Controller) Maintain(ctx context.Context) error {
 	defer c.writeLock.RUnlock()
 
 	if shuttingDown.IsSet() {
-		return nil
+		return ErrShuttingDown
 	}
 
 	if maintainer, ok := c.storage.(storage.Maintainer); ok {
@@ -259,7 +259,7 @@ func (c *Controller) MaintainThorough(ctx context.Context) error {
 	defer c.writeLock.RUnlock()
 
 	if shuttingDown.IsSet() {
-		return nil
+		return ErrShuttingDown
 	}
 
 	if maintainer, ok := c.storage.(storage.Maintainer); ok {
@@ -274,10 +274,25 @@ func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefor
 	defer c.writeLock.RUnlock()
 
 	if shuttingDown.IsSet() {
-		return nil
+		return ErrShuttingDown
 	}
 
 	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
+}
+
+// Purge deletes all records that match the given query. It returns the number of successful deletes and an error.
+func (c *Controller) Purge(ctx context.Context, q *query.Query, local, internal bool) (int, error) {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		return 0, ErrShuttingDown
+	}
+
+	if purger, ok := c.storage.(storage.Purger); ok {
+		return purger.Purge(ctx, q, local, internal, c.shadowDelete)
+	}
+	return 0, ErrNotImplemented
 }
 
 // Shutdown shuts down the storage.
