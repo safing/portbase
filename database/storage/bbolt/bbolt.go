@@ -297,6 +297,93 @@ func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore tim
 	})
 }
 
+// Purge deletes all records that match the given query. It returns the number of successful deletes and an error.
+func (b *BBolt) Purge(ctx context.Context, q *query.Query, local, internal, shadowDelete bool) (int, error) {
+	prefix := []byte(q.DatabaseKeyPrefix())
+
+	var cnt int
+	var done bool
+	for !done {
+		err := b.db.Update(func(tx *bbolt.Tx) error {
+			// Create a cursor for iteration.
+			bucket := tx.Bucket(bucketName)
+			c := bucket.Cursor()
+			for key, value := c.Seek(prefix); key != nil; key, value = c.Next() {
+				// Check if context has been cancelled.
+				select {
+				case <-ctx.Done():
+					done = true
+					return nil
+				default:
+				}
+
+				// Check if we still match the key prefix, if not, exit.
+				if !bytes.HasPrefix(key, prefix) {
+					done = true
+					return nil
+				}
+
+				// Wrap the value in a new wrapper to access the metadata.
+				wrapper, err := record.NewRawWrapper(b.name, string(key), value)
+				if err != nil {
+					return err
+				}
+
+				// Check if we have permission for this record.
+				if !wrapper.Meta().CheckPermission(local, internal) {
+					continue
+				}
+
+				// Check if record is already deleted.
+				if wrapper.Meta().IsDeleted() {
+					continue
+				}
+
+				// Check if the query matches this record.
+				if !q.MatchesRecord(wrapper) {
+					continue
+				}
+
+				// Delete record.
+				if shadowDelete {
+					// Shadow delete.
+					wrapper.Meta().Delete()
+					deleted, err := wrapper.MarshalRecord(wrapper)
+					if err != nil {
+						return err
+					}
+					err = bucket.Put(key, deleted)
+					if err != nil {
+						return err
+					}
+
+					// Reposition the cursor after we have edited the bucket.
+					c.Seek(key)
+				} else {
+					// Immediate delete.
+					err = c.Delete()
+					if err != nil {
+						return err
+					}
+				}
+
+				// Work in batches of 1000 changes in order to enable other operations in between.
+				cnt++
+				if cnt%1000 == 0 {
+					return nil
+				}
+			}
+			done = true
+			return nil
+		})
+		if err != nil {
+			return cnt, err
+		}
+	}
+
+	return cnt, nil
+}
+
 // Shutdown shuts down the database.
 func (b *BBolt) Shutdown() error {
 	return b.db.Close()

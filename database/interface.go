@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -398,6 +399,22 @@ func (i *Interface) Query(q *query.Query) (*iterator.Iterator, error) {
 	}
 
 	return db.Query(q, i.options.Local, i.options.Internal)
+}
+
+// Purge deletes all records that match the given query. It returns the number
+// of successful deletes and an error.
+func (i *Interface) Purge(ctx context.Context, q *query.Query) (int, error) {
+	_, err := q.Check()
+	if err != nil {
+		return 0, err
+	}
+
+	db, err := getController(q.DatabaseName())
+	if err != nil {
+		return 0, err
+	}
+
+	return db.Purge(ctx, q, i.options.Local, i.options.Internal)
 }
 
 // Subscribe subscribes to updates matching the given query.

@@ -19,6 +19,7 @@ var (
 	// Compile time interface checks.
 	_ storage.Interface = &BBolt{}
 	_ storage.Batcher   = &BBolt{}
+	_ storage.Purger    = &BBolt{}
 )
 
 type TestRecord struct {
@@ -156,6 +157,37 @@ func TestBBolt(t *testing.T) {
 	err = db.MaintainRecordStates(context.TODO(), time.Now())
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// purging
+	purger, ok := db.(storage.Purger)
+	if ok {
+		n, err := purger.Purge(context.TODO(), query.New("test:path/to/").MustBeValid(), true, true, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != 3 {
+			t.Fatalf("unexpected purge delete count: %d", n)
+		}
+	} else {
+		t.Fatal("should implement Purger")
+	}
+
+	// test query
+	q = query.New("test").MustBeValid()
+	it, err = db.Query(q, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cnt = 0
+	for range it.Next {
+		cnt++
+	}
+	if it.Err() != nil {
+		t.Fatal(it.Err())
+	}
+	if cnt != 1 {
+		t.Fatalf("unexpected query result count: %d", cnt)
 	}
 
 	// shutdown
