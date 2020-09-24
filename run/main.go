@@ -130,7 +130,7 @@ func inputSignals(signalCh chan os.Signal) {
 }
 
 func printStackTo(writer io.Writer, msg string) {
-	_, err := fmt.Fprintln(writer, fmt.Sprintf("===== %s =====", msg))
+	_, err := fmt.Fprintf(writer, "===== %s =====\n", msg)
 	if err == nil {
 		err = pprof.Lookup("goroutine").WriteTo(writer, 1)
 	}
