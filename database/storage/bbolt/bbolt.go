@@ -298,7 +298,7 @@ func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore tim
 }
 
 // Purge deletes all records that match the given query. It returns the number of successful deletes and an error.
-func (b *BBolt) Purge(ctx context.Context, q *query.Query, local, internal, shadowDelete bool) (int, error) {
+func (b *BBolt) Purge(ctx context.Context, q *query.Query, local, internal, shadowDelete bool) (int, error) { //nolint:gocognit
 	prefix := []byte(q.DatabaseKeyPrefix())
 
 	var cnt int

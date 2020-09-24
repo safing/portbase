@@ -280,6 +280,7 @@ func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefor
 	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
 }
 
+// Purge deletes all records that match the given query. It returns the number of successful deletes and an error.
 func (c *Controller) Purge(ctx context.Context, q *query.Query, local, internal bool) (int, error) {
 	c.writeLock.RLock()
 	defer c.writeLock.RUnlock()
