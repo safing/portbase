@@ -277,7 +277,7 @@ func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefor
 		return ErrShuttingDown
 	}
 
-	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
+	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore, c.shadowDelete)
 }
 
 // Purge deletes all records that match the given query. It returns the number of successful deletes and an error.

@@ -26,15 +26,15 @@ func makeKey(dbName, key string) string {
 	return fmt.Sprintf("%s:%s", dbName, key)
 }
 
-func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaintenance bool) { //nolint:gocognit,gocyclo
-	t.Run(fmt.Sprintf("TestStorage_%s", storageType), func(t *testing.T) {
-		dbName := fmt.Sprintf("testing-%s", storageType)
+func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolint:gocognit,gocyclo
+	t.Run(fmt.Sprintf("TestStorage_%s_%v", storageType, shadowDelete), func(t *testing.T) {
+		dbName := fmt.Sprintf("testing-%s-%v", storageType, shadowDelete)
 		fmt.Println(dbName)
 		_, err := Register(&Database{
 			Name:         dbName,
 			Description:  fmt.Sprintf("Unit Test Database for %s", storageType),
 			StorageType:  storageType,
-			ShadowDelete: true,
+			ShadowDelete: shadowDelete,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -107,7 +107,7 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 		}
 
 		// test putmany
-		if testPutMany {
+		if _, ok := dbController.storage.(storage.Batcher); ok {
 			batchPut := db.PutMany(dbName)
 			records := []record.Record{A, B, C, nil} // nil is to signify finish
 			for _, r := range records {
@@ -119,7 +119,7 @@ func testDatabase(t *testing.T, storageType string, testPutMany, testRecordMaint
 		}
 
 		// test maintenance
-		if testRecordMaintenance {
+		if _, ok := dbController.storage.(storage.Maintainer); ok {
 			now := time.Now().UTC()
 			nowUnix := now.Unix()
 
@@ -238,10 +238,13 @@ func TestDatabaseSystem(t *testing.T) {
 	}
 	defer os.RemoveAll(testDir) // clean up
 
-	testDatabase(t, "bbolt", true, true)
-	testDatabase(t, "hashmap", true, true)
-	testDatabase(t, "fstree", false, false)
-	testDatabase(t, "badger", false, false)
+	for _, shadowDelete := range []bool{false, true} {
+		testDatabase(t, "bbolt", shadowDelete)
+		testDatabase(t, "hashmap", shadowDelete)
+		testDatabase(t, "fstree", shadowDelete)
+		// testDatabase(t, "badger", shadowDelete)
+		// TODO: Fix badger tests
+	}
 
 	err = MaintainRecordStates(context.TODO())
 	if err != nil {
