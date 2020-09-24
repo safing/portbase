@@ -48,7 +48,6 @@ func registerAsDatabase() error {
 		Name:        "notifications",
 		Description: "Notifications",
 		StorageType: "injected",
-		PrimaryAPI:  "",
 	})
 	if err != nil {
 		return err

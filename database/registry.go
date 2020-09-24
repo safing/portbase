@@ -49,8 +49,8 @@ func Register(new *Database) (*Database, error) {
 			registeredDB.Description = new.Description
 			save = true
 		}
-		if registeredDB.PrimaryAPI != new.PrimaryAPI {
-			registeredDB.PrimaryAPI = new.PrimaryAPI
+		if registeredDB.ShadowDelete != new.ShadowDelete {
+			registeredDB.ShadowDelete = new.ShadowDelete
 			save = true
 		}
 	} else {

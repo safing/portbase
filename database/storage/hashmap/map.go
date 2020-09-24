@@ -54,7 +54,7 @@ func (hm *HashMap) Put(r record.Record) (record.Record, error) {
 }
 
 // PutMany stores many records in the database.
-func (hm *HashMap) PutMany() (chan<- record.Record, <-chan error) {
+func (hm *HashMap) PutMany(shadowDelete bool) (chan<- record.Record, <-chan error) {
 	hm.dbLock.Lock()
 	defer hm.dbLock.Unlock()
 	// we could lock for every record, but we want to have the same behaviour
@@ -66,7 +66,11 @@ func (hm *HashMap) PutMany() (chan<- record.Record, <-chan error) {
 	// start handler
 	go func() {
 		for r := range batch {
-			hm.db[r.DatabaseKey()] = r
+			if !shadowDelete && r.Meta().IsDeleted() {
+				delete(hm.db, r.DatabaseKey())
+			} else {
+				hm.db[r.DatabaseKey()] = r
+			}
 		}
 		errs <- nil
 	}()
@@ -144,16 +148,6 @@ func (hm *HashMap) ReadOnly() bool {
 // Injected returns whether the database is injected.
 func (hm *HashMap) Injected() bool {
 	return false
-}
-
-// Maintain runs a light maintenance operation on the database.
-func (hm *HashMap) Maintain(_ context.Context) error {
-	return nil
-}
-
-// MaintainThorough runs a thorough maintenance operation on the database.
-func (hm *HashMap) MaintainThorough(_ context.Context) error {
-	return nil
 }
 
 // MaintainRecordStates maintains records states in the database.

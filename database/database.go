@@ -7,13 +7,13 @@ import (
 
 // Database holds information about registered databases
 type Database struct {
-	Name        string
-	Description string
-	StorageType string
-	PrimaryAPI  string
-	Registered  time.Time
-	LastUpdated time.Time
-	LastLoaded  time.Time
+	Name         string
+	Description  string
+	StorageType  string
+	ShadowDelete bool // Whether deleted records should be kept until purged.
+	Registered   time.Time
+	LastUpdated  time.Time
+	LastLoaded   time.Time
 }
 
 // MigrateTo migrates the database to another storage type.

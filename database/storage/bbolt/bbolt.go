@@ -107,7 +107,7 @@ func (b *BBolt) Put(r record.Record) (record.Record, error) {
 }
 
 // PutMany stores many records in the database.
-func (b *BBolt) PutMany() (chan<- record.Record, <-chan error) {
+func (b *BBolt) PutMany(shadowDelete bool) (chan<- record.Record, <-chan error) {
 	batch := make(chan record.Record, 100)
 	errs := make(chan error, 1)
 
@@ -115,16 +115,26 @@ func (b *BBolt) PutMany() (chan<- record.Record, <-chan error) {
 		err := b.db.Batch(func(tx *bbolt.Tx) error {
 			bucket := tx.Bucket(bucketName)
 			for r := range batch {
-				// marshal
-				data, txErr := r.MarshalRecord(r)
-				if txErr != nil {
-					return txErr
-				}
+				if !shadowDelete && r.Meta().IsDeleted() {
+					// Immediate delete.
+					txErr := bucket.Delete([]byte(r.DatabaseKey()))
+					if txErr != nil {
+						return txErr
+					}
+				} else {
+					// Put or shadow delete.
 
-				// put
-				txErr = bucket.Put([]byte(r.DatabaseKey()), data)
-				if txErr != nil {
-					return txErr
+					// marshal
+					data, txErr := r.MarshalRecord(r)
+					if txErr != nil {
+						return txErr
+					}
+
+					// put
+					txErr = bucket.Put([]byte(r.DatabaseKey()), data)
+					if txErr != nil {
+						return txErr
+					}
 				}
 			}
 			return nil
@@ -233,16 +243,6 @@ func (b *BBolt) ReadOnly() bool {
 // Injected returns whether the database is injected.
 func (b *BBolt) Injected() bool {
 	return false
-}
-
-// Maintain runs a light maintenance operation on the database.
-func (b *BBolt) Maintain(_ context.Context) error {
-	return nil
-}
-
-// MaintainThorough runs a thorough maintenance operation on the database.
-func (b *BBolt) MaintainThorough(_ context.Context) error {
-	return nil
 }
 
 // MaintainRecordStates maintains records states in the database.
