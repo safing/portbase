@@ -151,7 +151,7 @@ func (hm *HashMap) Injected() bool {
 }
 
 // MaintainRecordStates maintains records states in the database.
-func (hm *HashMap) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (hm *HashMap) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error {
 	hm.dbLock.Lock()
 	defer hm.dbLock.Unlock()
 
@@ -159,23 +159,30 @@ func (hm *HashMap) MaintainRecordStates(ctx context.Context, purgeDeletedBefore 
 	purgeThreshold := purgeDeletedBefore.Unix()
 
 	for key, record := range hm.db {
-		meta := record.Meta()
-		switch {
-		case meta.Deleted > 0 && meta.Deleted < purgeThreshold:
-			// delete from storage
-			delete(hm.db, key)
-		case meta.Expires > 0 && meta.Expires < now:
-			// mark as deleted
-			record.Lock()
-			meta.Deleted = meta.Expires
-			record.Unlock()
-		}
-
 		// check if context is cancelled
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
+		}
+
+		meta := record.Meta()
+		switch {
+		case meta.Deleted == 0 && meta.Expires > 0 && meta.Expires < now:
+			if shadowDelete {
+				// mark as deleted
+				record.Lock()
+				meta.Deleted = meta.Expires
+				record.Unlock()
+
+				continue
+			}
+
+			// Immediately delete expired entries if shadowDelete is disabled.
+			fallthrough
+		case meta.Deleted > 0 && (!shadowDelete || meta.Deleted < purgeThreshold):
+			// delete from storage
+			delete(hm.db, key)
 		}
 	}
 

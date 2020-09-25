@@ -246,7 +246,7 @@ func (b *BBolt) Injected() bool {
 }
 
 // MaintainRecordStates maintains records states in the database.
-func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error { //nolint:gocognit
 	now := time.Now().Unix()
 	purgeThreshold := purgeDeletedBefore.Unix()
 
@@ -255,6 +255,13 @@ func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore tim
 		// Create a cursor for iteration.
 		c := bucket.Cursor()
 		for key, value := c.First(); key != nil; key, value = c.Next() {
+			// check if context is cancelled
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			// wrap value
 			wrapper, err := record.NewRawWrapper(b.name, string(key), value)
 			if err != nil {
@@ -264,33 +271,37 @@ func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore tim
 			// check if we need to do maintenance
 			meta := wrapper.Meta()
 			switch {
-			case meta.Deleted > 0 && meta.Deleted < purgeThreshold:
+			case meta.Deleted == 0 && meta.Expires > 0 && meta.Expires < now:
+				if shadowDelete {
+					// mark as deleted
+					meta.Deleted = meta.Expires
+					deleted, err := wrapper.MarshalRecord(wrapper)
+					if err != nil {
+						return err
+					}
+					err = bucket.Put(key, deleted)
+					if err != nil {
+						return err
+					}
+
+					// Cursor repositioning is required after modifying data.
+					// While the documentation states that this is also required after a
+					// delete, this actually makes the cursor skip a record with the
+					// following c.Next() call of the loop.
+					// Docs/Issue: https://github.com/boltdb/bolt/issues/426#issuecomment-141982984
+					c.Seek(key)
+
+					continue
+				}
+
+				// Immediately delete expired entries if shadowDelete is disabled.
+				fallthrough
+			case meta.Deleted > 0 && (!shadowDelete || meta.Deleted < purgeThreshold):
 				// delete from storage
 				err = c.Delete()
 				if err != nil {
 					return err
 				}
-			case meta.Expires > 0 && meta.Expires < now:
-				// mark as deleted
-				meta.Deleted = meta.Expires
-				deleted, err := wrapper.MarshalRecord(wrapper)
-				if err != nil {
-					return err
-				}
-				err = bucket.Put(key, deleted)
-				if err != nil {
-					return err
-				}
-
-				// reposition cursor
-				c.Seek(key)
-			}
-
-			// check if context is cancelled
-			select {
-			case <-ctx.Done():
-				return nil
-			default:
 			}
 		}
 		return nil
@@ -357,8 +368,13 @@ func (b *BBolt) Purge(ctx context.Context, q *query.Query, local, internal, shad
 						return err
 					}
 
-					// Reposition the cursor after we have edited the bucket.
+					// Cursor repositioning is required after modifying data.
+					// While the documentation states that this is also required after a
+					// delete, this actually makes the cursor skip a record with the
+					// following c.Next() call of the loop.
+					// Docs/Issue: https://github.com/boltdb/bolt/issues/426#issuecomment-141982984
 					c.Seek(key)
+
 				} else {
 					// Immediate delete.
 					err = c.Delete()

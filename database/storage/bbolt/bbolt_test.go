@@ -154,7 +154,13 @@ func TestBBolt(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.MaintainRecordStates(context.TODO(), time.Now())
+	err = db.MaintainRecordStates(context.TODO(), time.Now(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// maintenance
+	err = db.MaintainRecordStates(context.TODO(), time.Now(), false)
 	if err != nil {
 		t.Fatal(err)
 	}

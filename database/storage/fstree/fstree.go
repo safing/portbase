@@ -256,7 +256,7 @@ func (fst *FSTree) Injected() bool {
 }
 
 // MaintainRecordStates maintains records states in the database.
-func (fst *FSTree) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (fst *FSTree) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error {
 	// TODO: implement MaintainRecordStates
 	return nil
 }

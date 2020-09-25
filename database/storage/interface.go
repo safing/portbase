@@ -23,7 +23,7 @@ type Interface interface {
 	Shutdown() error
 
 	// Mandatory Record Maintenance
-	MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error
+	MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error
 }
 
 // Maintainer defines the database storage API for backends that require regular maintenance.
