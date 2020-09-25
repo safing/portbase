@@ -284,7 +284,11 @@ func (b *BBolt) MaintainRecordStates(ctx context.Context, purgeDeletedBefore tim
 						return err
 					}
 
-					// reposition cursor
+					// Cursor repositioning is required after modifying data.
+					// While the documentation states that this is also required after a
+					// delete, this actually makes the cursor skip a record with the
+					// following c.Next() call of the loop.
+					// Docs/Issue: https://github.com/boltdb/bolt/issues/426#issuecomment-141982984
 					c.Seek(key)
 
 					continue
@@ -364,8 +368,13 @@ func (b *BBolt) Purge(ctx context.Context, q *query.Query, local, internal, shad
 						return err
 					}
 
-					// Reposition the cursor after we have edited the bucket.
+					// Cursor repositioning is required after modifying data.
+					// While the documentation states that this is also required after a
+					// delete, this actually makes the cursor skip a record with the
+					// following c.Next() call of the loop.
+					// Docs/Issue: https://github.com/boltdb/bolt/issues/426#issuecomment-141982984
 					c.Seek(key)
+
 				} else {
 					// Immediate delete.
 					err = c.Delete()
