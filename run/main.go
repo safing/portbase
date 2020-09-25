@@ -38,7 +38,7 @@ func Run() int {
 		}
 
 		if printStackOnExit {
-			printStackTo(os.Stdout)
+			printStackTo(os.Stdout, "PRINTING STACK ON EXIT (STARTUP ERROR)")
 		}
 
 		_ = modules.Shutdown()
@@ -67,7 +67,7 @@ signalLoop:
 		case sig := <-signalCh:
 			// only print and continue to wait if SIGUSR1
 			if sig == sigUSR1 {
-				_ = pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+				printStackTo(os.Stderr, "PRINTING STACK ON REQUEST")
 				continue signalLoop
 			}
 
@@ -83,21 +83,19 @@ signalLoop:
 					if forceCnt > 0 {
 						fmt.Printf(" <INTERRUPT> again, but already shutting down. %d more to force.\n", forceCnt)
 					} else {
-						fmt.Fprintln(os.Stderr, "===== FORCED EXIT =====")
-						printStackTo(os.Stderr)
+						printStackTo(os.Stderr, "PRINTING STACK ON FORCED EXIT")
 						os.Exit(1)
 					}
 				}
 			}()
 
 			if printStackOnExit {
-				printStackTo(os.Stdout)
+				printStackTo(os.Stdout, "PRINTING STACK ON EXIT")
 			}
 
 			go func() {
 				time.Sleep(3 * time.Minute)
-				fmt.Fprintln(os.Stderr, "===== TAKING TOO LONG FOR SHUTDOWN =====")
-				printStackTo(os.Stderr)
+				printStackTo(os.Stderr, "PRINTING STACK - TAKING TOO LONG FOR SHUTDOWN")
 				os.Exit(1)
 			}()
 
@@ -131,13 +129,12 @@ func inputSignals(signalCh chan os.Signal) {
 	}
 }
 
-func printStackTo(writer io.Writer) {
-	fmt.Fprintln(writer, "=== PRINTING TRACES ===")
-	fmt.Fprintln(writer, "=== GOROUTINES ===")
-	_ = pprof.Lookup("goroutine").WriteTo(writer, 1)
-	fmt.Fprintln(writer, "=== BLOCKING ===")
-	_ = pprof.Lookup("block").WriteTo(writer, 1)
-	fmt.Fprintln(writer, "=== MUTEXES ===")
-	_ = pprof.Lookup("mutex").WriteTo(writer, 1)
-	fmt.Fprintln(writer, "=== END TRACES ===")
+func printStackTo(writer io.Writer, msg string) {
+	_, err := fmt.Fprintf(writer, "===== %s =====\n", msg)
+	if err == nil {
+		err = pprof.Lookup("goroutine").WriteTo(writer, 1)
+	}
+	if err != nil {
+		log.Errorf("main: failed to write stack trace: %s", err)
+	}
 }

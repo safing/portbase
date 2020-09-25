@@ -17,6 +17,9 @@ var (
 // InjectBase is a dummy base structure to reduce boilerplate code for injected storage interfaces.
 type InjectBase struct{}
 
+// Compile time interface check
+var _ Interface = &InjectBase{}
+
 // Get returns a database record.
 func (i *InjectBase) Get(key string) (record.Record, error) {
 	return nil, errNotImplemented
@@ -25,14 +28,6 @@ func (i *InjectBase) Get(key string) (record.Record, error) {
 // Put stores a record in the database.
 func (i *InjectBase) Put(m record.Record) (record.Record, error) {
 	return nil, errNotImplemented
-}
-
-// PutMany stores many records in the database.
-func (i *InjectBase) PutMany() (batch chan record.Record, err chan error) {
-	batch = make(chan record.Record)
-	err = make(chan error, 1)
-	err <- errNotImplemented
-	return
 }
 
 // Delete deletes a record from the database.
@@ -55,18 +50,8 @@ func (i *InjectBase) Injected() bool {
 	return true
 }
 
-// Maintain runs a light maintenance operation on the database.
-func (i *InjectBase) Maintain(ctx context.Context) error {
-	return nil
-}
-
-// MaintainThorough runs a thorough maintenance operation on the database.
-func (i *InjectBase) MaintainThorough(ctx context.Context) error {
-	return nil
-}
-
 // MaintainRecordStates maintains records states in the database.
-func (i *InjectBase) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (i *InjectBase) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error {
 	return nil
 }
 

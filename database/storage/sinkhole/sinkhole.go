@@ -16,6 +16,13 @@ type Sinkhole struct {
 	name string
 }
 
+var (
+	// Compile time interface check
+	_ storage.Interface  = &Sinkhole{}
+	_ storage.Maintainer = &Sinkhole{}
+	_ storage.Batcher    = &Sinkhole{}
+)
+
 func init() {
 	_ = storage.Register("sinkhole", NewSinkhole)
 }
@@ -43,7 +50,7 @@ func (s *Sinkhole) Put(r record.Record) (record.Record, error) {
 }
 
 // PutMany stores many records in the database.
-func (s *Sinkhole) PutMany() (chan<- record.Record, <-chan error) {
+func (s *Sinkhole) PutMany(shadowDelete bool) (chan<- record.Record, <-chan error) {
 	batch := make(chan record.Record, 100)
 	errs := make(chan error, 1)
 
@@ -89,7 +96,7 @@ func (s *Sinkhole) MaintainThorough(ctx context.Context) error {
 }
 
 // MaintainRecordStates maintains records states in the database.
-func (s *Sinkhole) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (s *Sinkhole) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error {
 	return nil
 }
 

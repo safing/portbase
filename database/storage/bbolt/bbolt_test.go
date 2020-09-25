@@ -12,6 +12,14 @@ import (
 
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/database/storage"
+)
+
+var (
+	// Compile time interface checks.
+	_ storage.Interface = &BBolt{}
+	_ storage.Batcher   = &BBolt{}
+	_ storage.Purger    = &BBolt{}
 )
 
 type TestRecord struct {
@@ -146,17 +154,46 @@ func TestBBolt(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.Maintain(context.TODO())
+	err = db.MaintainRecordStates(context.TODO(), time.Now(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.MaintainThorough(context.TODO())
+
+	// maintenance
+	err = db.MaintainRecordStates(context.TODO(), time.Now(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.MaintainRecordStates(context.TODO(), time.Now())
+
+	// purging
+	purger, ok := db.(storage.Purger)
+	if ok {
+		n, err := purger.Purge(context.TODO(), query.New("test:path/to/").MustBeValid(), true, true, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != 3 {
+			t.Fatalf("unexpected purge delete count: %d", n)
+		}
+	} else {
+		t.Fatal("should implement Purger")
+	}
+
+	// test query
+	q = query.New("test").MustBeValid()
+	it, err = db.Query(q, true, true)
 	if err != nil {
 		t.Fatal(err)
+	}
+	cnt = 0
+	for range it.Next {
+		cnt++
+	}
+	if it.Err() != nil {
+		t.Fatal(it.Err())
+	}
+	if cnt != 1 {
+		t.Fatalf("unexpected query result count: %d", cnt)
 	}
 
 	// shutdown

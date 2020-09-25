@@ -134,7 +134,6 @@ func registerAsDatabase() error {
 		Name:        "config",
 		Description: "Configuration Manager",
 		StorageType: "injected",
-		PrimaryAPI:  "",
 	})
 	if err != nil {
 		return err
