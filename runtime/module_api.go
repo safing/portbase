@@ -19,10 +19,10 @@ func init() {
 
 func startModule() error {
 	_, err := database.Register(&database.Database{
-		Name:        "runtime",
-		Description: "Runtime database",
-		StorageType: "injected",
-		PrimaryAPI:  "",
+		Name:         "runtime",
+		Description:  "Runtime database",
+		StorageType:  "injected",
+		ShadowDelete: false,
 	})
 	if err != nil {
 		return err
