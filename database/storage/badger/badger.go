@@ -208,7 +208,7 @@ func (b *Badger) MaintainThorough(_ context.Context) (err error) {
 }
 
 // MaintainRecordStates maintains records states in the database.
-func (b *Badger) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (b *Badger) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error {
 	// TODO: implement MaintainRecordStates
 	return nil
 }

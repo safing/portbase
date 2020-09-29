@@ -255,18 +255,8 @@ func (fst *FSTree) Injected() bool {
 	return false
 }
 
-// Maintain runs a light maintenance operation on the database.
-func (fst *FSTree) Maintain(_ context.Context) error {
-	return nil
-}
-
-// MaintainThorough runs a thorough maintenance operation on the database.
-func (fst *FSTree) MaintainThorough(_ context.Context) error {
-	return nil
-}
-
 // MaintainRecordStates maintains records states in the database.
-func (fst *FSTree) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time) error {
+func (fst *FSTree) MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error {
 	// TODO: implement MaintainRecordStates
 	return nil
 }
@@ -279,6 +269,7 @@ func (fst *FSTree) Shutdown() error {
 // writeFile mirrors ioutil.WriteFile, replacing an existing file with the same
 // name atomically. This is not atomic on Windows, but still an improvement.
 // TODO: Replace with github.com/google/renamio.WriteFile as soon as it is fixed on Windows.
+// TODO: This has become a wont-fix. Explore other options.
 // This function is forked from https://github.com/google/renameio/blob/a368f9987532a68a3d676566141654a81aa8100b/writefile.go.
 func writeFile(filename string, data []byte, perm os.FileMode) error {
 	t, err := renameio.TempFile("", filename)

@@ -51,7 +51,7 @@ func getController(name string) (*Controller, error) {
 		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
 	}
 
-	controller = newController(storageInt)
+	controller = newController(storageInt, registeredDB.ShadowDelete)
 	controllers[name] = controller
 	return controller, nil
 }
@@ -82,7 +82,7 @@ func InjectDatabase(name string, storageInt storage.Interface) (*Controller, err
 		return nil, fmt.Errorf(`database not of type "injected"`)
 	}
 
-	controller := newController(storageInt)
+	controller := newController(storageInt, false)
 	controllers[name] = controller
 	return controller, nil
 }

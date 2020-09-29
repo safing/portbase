@@ -11,6 +11,13 @@ import (
 
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/database/storage"
+)
+
+var (
+	// Compile time interface checks.
+	_ storage.Interface  = &Badger{}
+	_ storage.Maintainer = &Badger{}
 )
 
 type TestRecord struct {
@@ -117,13 +124,18 @@ func TestBadger(t *testing.T) {
 	}
 
 	// maintenance
-	err = db.Maintain(context.TODO())
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = db.MaintainThorough(context.TODO())
-	if err != nil {
-		t.Fatal(err)
+	maintainer, ok := db.(storage.Maintainer)
+	if ok {
+		err = maintainer.Maintain(context.TODO())
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = maintainer.MaintainThorough(context.TODO())
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatal("should implement Maintainer")
 	}
 
 	// shutdown

@@ -16,7 +16,8 @@ import (
 
 // A Controller takes care of all the extra database logic.
 type Controller struct {
-	storage storage.Interface
+	storage      storage.Interface
+	shadowDelete bool
 
 	hooks         []*RegisteredHook
 	subscriptions []*Subscription
@@ -28,11 +29,12 @@ type Controller struct {
 }
 
 // newController creates a new controller for a storage.
-func newController(storageInt storage.Interface) *Controller {
+func newController(storageInt storage.Interface, shadowDelete bool) *Controller {
 	return &Controller{
-		storage:     storageInt,
-		migrating:   abool.NewBool(false),
-		hibernating: abool.NewBool(false),
+		storage:      storageInt,
+		shadowDelete: shadowDelete,
+		migrating:    abool.NewBool(false),
+		hibernating:  abool.NewBool(false),
 	}
 }
 
@@ -117,12 +119,21 @@ func (c *Controller) Put(r record.Record) (err error) {
 		}
 	}
 
-	r, err = c.storage.Put(r)
-	if err != nil {
-		return err
-	}
-	if r == nil {
-		return errors.New("storage returned nil record after successful put operation")
+	if !c.shadowDelete && r.Meta().IsDeleted() {
+		// Immediate delete.
+		err = c.storage.Delete(r.DatabaseKey())
+		if err != nil {
+			return err
+		}
+	} else {
+		// Put or shadow delete.
+		r, err = c.storage.Put(r)
+		if err != nil {
+			return err
+		}
+		if r == nil {
+			return errors.New("storage returned nil record after successful put operation")
+		}
 	}
 
 	// process subscriptions
@@ -156,7 +167,7 @@ func (c *Controller) PutMany() (chan<- record.Record, <-chan error) {
 	}
 
 	if batcher, ok := c.storage.(storage.Batcher); ok {
-		return batcher.PutMany()
+		return batcher.PutMany(c.shadowDelete)
 	}
 
 	errs := make(chan error, 1)
@@ -230,10 +241,13 @@ func (c *Controller) Maintain(ctx context.Context) error {
 	defer c.exclusiveAccess.RUnlock()
 
 	if shuttingDown.IsSet() {
-		return nil
+		return ErrShuttingDown
 	}
 
-	return c.storage.Maintain(ctx)
+	if maintainer, ok := c.storage.(storage.Maintainer); ok {
+		return maintainer.Maintain(ctx)
+	}
+	return nil
 }
 
 // MaintainThorough runs the MaintainThorough method on the storage.
@@ -242,10 +256,13 @@ func (c *Controller) MaintainThorough(ctx context.Context) error {
 	defer c.exclusiveAccess.RUnlock()
 
 	if shuttingDown.IsSet() {
-		return nil
+		return ErrShuttingDown
 	}
 
-	return c.storage.MaintainThorough(ctx)
+	if maintainer, ok := c.storage.(storage.Maintainer); ok {
+		return maintainer.MaintainThorough(ctx)
+	}
+	return nil
 }
 
 // MaintainRecordStates runs the record state lifecycle maintenance on the storage.
@@ -254,10 +271,25 @@ func (c *Controller) MaintainRecordStates(ctx context.Context, purgeDeletedBefor
 	defer c.exclusiveAccess.RUnlock()
 
 	if shuttingDown.IsSet() {
-		return nil
+		return ErrShuttingDown
 	}
 
-	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore)
+	return c.storage.MaintainRecordStates(ctx, purgeDeletedBefore, c.shadowDelete)
+}
+
+// Purge deletes all records that match the given query. It returns the number of successful deletes and an error.
+func (c *Controller) Purge(ctx context.Context, q *query.Query, local, internal bool) (int, error) {
+	c.writeLock.RLock()
+	defer c.writeLock.RUnlock()
+
+	if shuttingDown.IsSet() {
+		return 0, ErrShuttingDown
+	}
+
+	if purger, ok := c.storage.(storage.Purger); ok {
+		return purger.Purge(ctx, q, local, internal, c.shadowDelete)
+	}
+	return 0, ErrNotImplemented
 }
 
 // Shutdown shuts down the storage.
