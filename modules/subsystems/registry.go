@@ -100,14 +100,12 @@ func (mng *Manager) Get(keyOrPrefix string) ([]record.Record, error) {
 	defer mng.l.RUnlock()
 
 	dbName := mng.runtime.DatabaseName()
-
 	records := make([]record.Record, 0, len(mng.subsys))
 	for _, subsys := range mng.subsys {
 		subsys.Lock()
 		if !subsys.KeyIsSet() {
 			subsys.SetKey(dbName + ":subsystems/" + subsys.ID)
 		}
-
 		if strings.HasPrefix(subsys.DatabaseKey(), keyOrPrefix) {
 			records = append(records, subsys)
 		}
@@ -151,6 +149,8 @@ func (mng *Manager) Register(id, name, description string, module *modules.Modul
 		module:         module,
 		toggleOption:   option,
 	}
+
+	s.CreateMeta()
 
 	if s.toggleOption != nil {
 		s.ToggleOptionKey = s.toggleOption.Key

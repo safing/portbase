@@ -28,3 +28,5 @@ func (sw *storageWrapper) Put(r record.Record) (record.Record, error) {
 func (sw *storageWrapper) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	return sw.Registry.Query(q, local, internal)
 }
+
+func (sw *storageWrapper) ReadOnly() bool { return false }

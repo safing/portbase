@@ -12,6 +12,7 @@ import (
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
+	"github.com/safing/portbase/log"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -121,9 +122,11 @@ func (r *Registry) Register(keyOrPrefix string, p ValueProvider) (PushFunc, erro
 	}
 
 	r.providers.Insert(keyOrPrefix, &keyedValueProvider{
-		ValueProvider: p,
+		ValueProvider: TraceProvider(p),
 		key:           keyOrPrefix,
 	})
+
+	log.Tracef("runtime: registered new provider at %s", keyOrPrefix)
 
 	return func(records ...record.Record) {
 		r.l.RLock()
@@ -149,6 +152,12 @@ func (r *Registry) Get(key string) (record.Record, error) {
 
 	records, err := provider.Get(key)
 	if err != nil {
+		// instead of returning ErrWriteOnly to the database interface
+		// we wrap it in ErrNotFound so the records effectively gets
+		// hidden.
+		if errors.Is(err, ErrWriteOnly) {
+			return nil, database.ErrNotFound
+		}
 		return nil, err
 	}
 
@@ -210,6 +219,9 @@ func (r *Registry) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 
 			records, err := p.Get(key)
 			if err != nil {
+				if errors.Is(err, ErrWriteOnly) {
+					return nil
+				}
 				return err
 			}
 
@@ -228,6 +240,7 @@ func (r *Registry) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 				r.Unlock()
 
 				if !allowed {
+					log.Tracef("runtime: not sending %s for query %s. matchesKey=%v isValid=%v isAllowed=%v", r.DatabaseKey(), searchPrefix, matchesKey, isValid, isAllowed)
 					continue
 				}
 
@@ -283,6 +296,21 @@ func (r *Registry) collectProviderByPrefix(prefix string) []*keyedValueProvider 
 	})
 
 	return providers
+}
+
+// GetRegistrationKeys returns a list of all provider registration
+// keys or prefixes.
+func (r *Registry) GetRegistrationKeys() []string {
+	r.l.RLock()
+	defer r.l.RUnlock()
+
+	var keys []string
+
+	r.providers.Walk(func(key string, p interface{}) bool {
+		keys = append(keys, key)
+		return false
+	})
+	return keys
 }
 
 // asStorage returns a storage.Interface compatible struct

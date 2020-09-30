@@ -352,6 +352,8 @@ func (t *Task) executeWithLocking() {
 		// notify that we finished
 		t.cancelCtx()
 		// refresh context
+
+		// RACE CONDITION with L314!
 		t.ctx, t.cancelCtx = context.WithCancel(t.module.Ctx)
 
 		t.lock.Unlock()

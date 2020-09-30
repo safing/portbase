@@ -22,7 +22,7 @@ func TraceProvider(vp ValueProvider) ValueProvider {
 
 func (tvp *traceValueProvider) Set(r record.Record) (res record.Record, err error) {
 	defer func(start time.Time) {
-		log.Tracef("runtime: settings record %q: duration=%s err=%v", r.Key(), time.Since(start), err)
+		log.Tracef("runtime: setting record %q: duration=%s err=%v", r.Key(), time.Since(start), err)
 	}(time.Now())
 
 	return tvp.ValueProvider.Set(r)
