@@ -33,6 +33,16 @@ import (
 // Severity describes a log level.
 type Severity uint32
 
+// Message describes a log level message and is implemented
+// by logLine.
+type Message interface {
+	Text() string
+	Severity() Severity
+	Time() time.Time
+	File() string
+	LineNumber() int
+}
+
 type logLine struct {
 	msg       string
 	tracer    *ContextTracer
@@ -40,6 +50,26 @@ type logLine struct {
 	timestamp time.Time
 	file      string
 	line      int
+}
+
+func (ll *logLine) Text() string {
+	return ll.msg
+}
+
+func (ll *logLine) Severity() Severity {
+	return ll.level
+}
+
+func (ll *logLine) Time() time.Time {
+	return ll.timestamp
+}
+
+func (ll *logLine) File() string {
+	return ll.file
+}
+
+func (ll *logLine) LineNumber() int {
+	return ll.line
 }
 
 func (ll *logLine) Equal(ol *logLine) bool {
