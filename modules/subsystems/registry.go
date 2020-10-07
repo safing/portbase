@@ -207,11 +207,12 @@ func (mng *Manager) handleModuleUpdate(m *modules.Module) {
 	}
 
 	subsys.Lock()
+	defer subsys.Unlock()
+
 	updated := compareAndUpdateStatus(m, ms)
 	if updated {
 		subsys.makeSummary()
 	}
-	subsys.Unlock()
 
 	if updated {
 		mng.pushUpdate(subsys)
