@@ -23,8 +23,8 @@ type singleRecordReader struct {
 //		pushUpdate, _ := runtime.Register("my/key", ProvideRecord(r))
 //		r.Lock()
 //		r.Value = "foobar"
-//		r.Unlock()
 //		pushUpdate(r)
+//		r.Unlock()
 //
 func ProvideRecord(r record.Record) ValueProvider {
 	return &singleRecordReader{r}
