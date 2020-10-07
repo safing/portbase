@@ -62,6 +62,8 @@ func isAllowedPossibleValue(opt *Option, value interface{}) error {
 	return fmt.Errorf("value is not allowed")
 }
 
+// validateValue ensures that value matches the expected type of option.
+// It does not create a copy of the value!
 func validateValue(option *Option, value interface{}) (*valueCache, error) { //nolint:gocyclo
 	if option.OptType != OptTypeStringArray {
 		if err := isAllowedPossibleValue(option, value); err != nil {

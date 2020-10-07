@@ -78,10 +78,6 @@ func registerExpertiseLevelOption() {
 }
 
 func updateExpertiseLevel() {
-	// check if already registered
-	if !expertiseLevelOptionFlag.IsSet() {
-		return
-	}
 	// get value
 	value := expertiseLevelOption.activeFallbackValue
 	if expertiseLevelOption.activeValue != nil {

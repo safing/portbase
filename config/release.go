@@ -76,10 +76,6 @@ func registerReleaseLevelOption() {
 }
 
 func updateReleaseLevel() {
-	// check if already registered
-	if !releaseLevelOptionFlag.IsSet() {
-		return
-	}
 	// get value
 	value := releaseLevelOption.activeFallbackValue
 	if releaseLevelOption.activeValue != nil {

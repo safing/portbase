@@ -18,23 +18,21 @@ type (
 func getValueCache(name string, option *Option, requestedType OptionType) (*Option, *valueCache) {
 	// get option
 	if option == nil {
-		var ok bool
-		optionsLock.RLock()
-		option, ok = options[name]
-		optionsLock.RUnlock()
-		if !ok {
+		var err error
+		option, err = GetOption(name)
+		if err != nil {
 			log.Errorf("config: request for unregistered option: %s", name)
 			return nil, nil
 		}
 	}
 
-	// check type
+	// Check the option type, no locking required as
+	// OptType is immutable once it is set
 	if requestedType != option.OptType {
 		log.Errorf("config: bad type: requested %s as %s, but is %s", name, getTypeName(requestedType), getTypeName(option.OptType))
 		return option, nil
 	}
 
-	// lock option
 	option.Lock()
 	defer option.Unlock()
 

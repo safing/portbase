@@ -27,7 +27,7 @@ func NewPerspective(config map[string]interface{}) (*Perspective, error) {
 	var firstErr error
 	var errCnt int
 
-	optionsLock.Lock()
+	optionsLock.RLock()
 optionsLoop:
 	for key, option := range options {
 		// get option key from config
@@ -51,7 +51,7 @@ optionsLoop:
 			valueCache: valueCache,
 		}
 	}
-	optionsLock.Unlock()
+	optionsLock.RUnlock()
 
 	if firstErr != nil {
 		if errCnt > 0 {
@@ -68,10 +68,7 @@ func (p *Perspective) getPerspectiveValueCache(name string, requestedType Option
 	pOption, ok := p.config[name]
 	if !ok {
 		// check if option exists at all
-		optionsLock.RLock()
-		_, ok = options[name]
-		optionsLock.RUnlock()
-		if !ok {
+		if _, err := GetOption(name); err != nil {
 			log.Errorf("config: request for unregistered option: %s", name)
 		}
 		return nil

@@ -7,22 +7,22 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-func parseAndSetConfig(jsonData string) error {
+func parseAndReplaceConfig(jsonData string) error {
 	m, err := JSONToMap([]byte(jsonData))
 	if err != nil {
 		return err
 	}
 
-	return setConfig(m)
+	return replaceConfig(m)
 }
 
-func parseAndSetDefaultConfig(jsonData string) error {
+func parseAndReplaceDefaultConfig(jsonData string) error {
 	m, err := JSONToMap([]byte(jsonData))
 	if err != nil {
 		return err
 	}
 
-	return SetDefaultConfig(m)
+	return replaceDefaultConfig(m)
 }
 
 func quickRegister(t *testing.T, key string, optType OptionType, defaultValue interface{}) {
@@ -55,7 +55,7 @@ func TestGet(t *testing.T) { //nolint:gocognit
 	quickRegister(t, "hot", OptTypeBool, false)
 	quickRegister(t, "cold", OptTypeBool, true)
 
-	err = parseAndSetConfig(`
+	err = parseAndReplaceConfig(`
 	{
 		"monkey": "a",
 		"zebras": {
@@ -70,7 +70,7 @@ func TestGet(t *testing.T) { //nolint:gocognit
 		t.Fatal(err)
 	}
 
-	err = parseAndSetDefaultConfig(`
+	err = parseAndReplaceDefaultConfig(`
 	{
 		"monkey": "b",
 		"snake": "0",
@@ -106,7 +106,7 @@ func TestGet(t *testing.T) { //nolint:gocognit
 		t.Errorf("cold should be false, is %v", cold())
 	}
 
-	err = parseAndSetConfig(`
+	err = parseAndReplaceConfig(`
 	{
 		"monkey": "3"
 	}
@@ -284,7 +284,7 @@ func BenchmarkGetAsStringCached(b *testing.B) {
 	options = make(map[string]*Option)
 
 	// Setup
-	err := parseAndSetConfig(`{
+	err := parseAndReplaceConfig(`{
 		"monkey": "banana"
 	}`)
 	if err != nil {
@@ -303,7 +303,7 @@ func BenchmarkGetAsStringCached(b *testing.B) {
 
 func BenchmarkGetAsStringRefetch(b *testing.B) {
 	// Setup
-	err := parseAndSetConfig(`{
+	err := parseAndReplaceConfig(`{
 		"monkey": "banana"
 	}`)
 	if err != nil {
@@ -321,7 +321,7 @@ func BenchmarkGetAsStringRefetch(b *testing.B) {
 
 func BenchmarkGetAsIntCached(b *testing.B) {
 	// Setup
-	err := parseAndSetConfig(`{
+	err := parseAndReplaceConfig(`{
 		"elephant": 1
 	}`)
 	if err != nil {
@@ -340,7 +340,7 @@ func BenchmarkGetAsIntCached(b *testing.B) {
 
 func BenchmarkGetAsIntRefetch(b *testing.B) {
 	// Setup
-	err := parseAndSetConfig(`{
+	err := parseAndReplaceConfig(`{
 		"elephant": 1
 	}`)
 	if err != nil {
