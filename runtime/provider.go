@@ -18,7 +18,9 @@ var (
 type (
 	// PushFunc is returned when registering a new value provider
 	// and can be used to inform the database system about the
-	// availability of a new runtime record value.
+	// availability of a new runtime record value. Similar to
+	// database.Controller.PushUpdate, the caller must hold
+	// the lock for each record passed to PushFunc.
 	PushFunc func(...record.Record)
 
 	// ValueProvider provides access to a runtime-computed

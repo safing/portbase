@@ -26,11 +26,9 @@ func getValidityFlag() *abool.AtomicBool {
 	return validityFlag
 }
 
+// signalChanges marks the configs validtityFlag as dirty and eventually
+// triggers a config change event.
 func signalChanges() {
-	// refetch and save release level and expertise level
-	updateReleaseLevel()
-	updateExpertiseLevel()
-
 	// reset validity flag
 	validityFlagLock.Lock()
 	validityFlag.SetTo(false)
@@ -40,14 +38,20 @@ func signalChanges() {
 	module.TriggerEvent(configChangeEvent, nil)
 }
 
-// setConfig sets the (prioritized) user defined config.
-func setConfig(newValues map[string]interface{}) error {
+// replaceConfig sets the (prioritized) user defined config.
+func replaceConfig(newValues map[string]interface{}) error {
 	var firstErr error
 	var errCnt int
 
-	optionsLock.Lock()
+	// RLock the options because we are not adding or removing
+	// options from the registration but rather only update the
+	// options value which is guarded by the option's lock itself
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
 	for key, option := range options {
 		newValue, ok := newValues[key]
+
 		option.Lock()
 		option.activeValue = nil
 		if ok {
@@ -61,12 +65,12 @@ func setConfig(newValues map[string]interface{}) error {
 				}
 			}
 		}
+
+		handleOptionUpdate(option, true)
 		option.Unlock()
 	}
-	optionsLock.Unlock()
 
 	signalChanges()
-	go pushFullUpdate()
 
 	if firstErr != nil {
 		if errCnt > 0 {
@@ -78,14 +82,20 @@ func setConfig(newValues map[string]interface{}) error {
 	return nil
 }
 
-// SetDefaultConfig sets the (fallback) default config.
-func SetDefaultConfig(newValues map[string]interface{}) error {
+// replaceDefaultConfig sets the (fallback) default config.
+func replaceDefaultConfig(newValues map[string]interface{}) error {
 	var firstErr error
 	var errCnt int
 
-	optionsLock.Lock()
+	// RLock the options because we are not adding or removing
+	// options from the registration but rather only update the
+	// options value which is guarded by the option's lock itself
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
 	for key, option := range options {
 		newValue, ok := newValues[key]
+
 		option.Lock()
 		option.activeDefaultValue = nil
 		if ok {
@@ -99,12 +109,11 @@ func SetDefaultConfig(newValues map[string]interface{}) error {
 				}
 			}
 		}
+		handleOptionUpdate(option, true)
 		option.Unlock()
 	}
-	optionsLock.Unlock()
 
 	signalChanges()
-	go pushFullUpdate()
 
 	if firstErr != nil {
 		if errCnt > 0 {
@@ -122,11 +131,9 @@ func SetConfigOption(key string, value interface{}) error {
 }
 
 func setConfigOption(key string, value interface{}, push bool) (err error) {
-	optionsLock.Lock()
-	option, ok := options[key]
-	optionsLock.Unlock()
-	if !ok {
-		return fmt.Errorf("config option %s does not exist", key)
+	option, err := GetOption(key)
+	if err != nil {
+		return err
 	}
 
 	option.Lock()
@@ -139,16 +146,17 @@ func setConfigOption(key string, value interface{}, push bool) (err error) {
 			option.activeValue = valueCache
 		}
 	}
+
+	handleOptionUpdate(option, push)
 	option.Unlock()
+
 	if err != nil {
 		return err
 	}
 
 	// finalize change, activate triggers
 	signalChanges()
-	if push {
-		go pushUpdate(option)
-	}
+
 	return saveConfig()
 }
 
@@ -158,11 +166,9 @@ func SetDefaultConfigOption(key string, value interface{}) error {
 }
 
 func setDefaultConfigOption(key string, value interface{}, push bool) (err error) {
-	optionsLock.Lock()
-	option, ok := options[key]
-	optionsLock.Unlock()
-	if !ok {
-		return fmt.Errorf("config option %s does not exist", key)
+	option, err := GetOption(key)
+	if err != nil {
+		return err
 	}
 
 	option.Lock()
@@ -175,15 +181,16 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 			option.activeDefaultValue = valueCache
 		}
 	}
+
+	handleOptionUpdate(option, push)
 	option.Unlock()
+
 	if err != nil {
 		return err
 	}
 
 	// finalize change, activate triggers
 	signalChanges()
-	if push {
-		go pushUpdate(option)
-	}
+
 	return saveConfig()
 }

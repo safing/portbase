@@ -195,6 +195,8 @@ func (c *Controller) Query(q *query.Query, local, internal bool) (*iterator.Iter
 }
 
 // PushUpdate pushes a record update to subscribers.
+// The caller must hold the record's lock when calling
+// PushUpdate.
 func (c *Controller) PushUpdate(r record.Record) {
 	if c != nil {
 		c.exclusiveAccess.RLock()
@@ -205,9 +207,7 @@ func (c *Controller) PushUpdate(r record.Record) {
 		}
 
 		for _, sub := range c.subscriptions {
-			r.Lock()
 			push := r.Meta().CheckPermission(sub.local, sub.internal) && sub.q.Matches(r)
-			r.Unlock()
 
 			if push {
 				select {

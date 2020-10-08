@@ -18,8 +18,8 @@ var (
 // iteration between multiple calles. ForEachOption does NOT lock
 // opt when calling fn.
 func ForEachOption(fn func(opt *Option) error) error {
-	optionsLock.Lock()
-	defer optionsLock.Unlock()
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
 
 	for _, opt := range options {
 		if err := fn(opt); err != nil {
@@ -27,6 +27,20 @@ func ForEachOption(fn func(opt *Option) error) error {
 		}
 	}
 	return nil
+}
+
+// GetOption returns the option with name or an error
+// if the option does not exist. The caller should lock
+// the returned option itself for further processing.
+func GetOption(name string) (*Option, error) {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	opt, ok := options[name]
+	if !ok {
+		return nil, fmt.Errorf("option %q does not exist", name)
+	}
+	return opt, nil
 }
 
 // Register registers a new configuration option.

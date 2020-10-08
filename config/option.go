@@ -222,6 +222,10 @@ func (option *Option) Export() (record.Record, error) {
 	option.Lock()
 	defer option.Unlock()
 
+	return option.export()
+}
+
+func (option *Option) export() (record.Record, error) {
 	data, err := json.Marshal(option)
 	if err != nil {
 		return nil, err
