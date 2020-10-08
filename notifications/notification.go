@@ -176,6 +176,11 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 		n.Expires = time.Now().Add(72 * time.Hour).Unix()
 	}
 
+	// Make sure we always have a notification state assigned.
+	if n.State == "" {
+		n.State = Active
+	}
+
 	// check key
 	if n.DatabaseKey() == "" {
 		n.SetKey(fmt.Sprintf("notifications:all/%s", n.EventID))
