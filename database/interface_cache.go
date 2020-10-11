@@ -24,28 +24,54 @@ func (i *Interface) DelayedCacheWriter(ctx context.Context) error {
 		return err
 	}
 
+	// percentThreshold defines the minimum percentage of entries in the write cache in relation to the cache size that need to be present in order for flushing the cache to the database storage.
+	percentThreshold := 25 // %
+	thresholdWriteTicker := time.NewTicker(5 * time.Second)
+	forceWriteTicker := time.NewTicker(5 * time.Minute)
+
 	for {
 		// Wait for trigger for writing the cache.
 		select {
 		case <-ctx.Done():
-			// Module is shutting down, flush write cache to database.
-			i.flushWriteCache()
+			// The caller is shutting down, flush the cache to storage and exit.
+			i.flushWriteCache(0)
 			return nil
 
 		case <-i.triggerCacheWrite:
-		case <-time.After(5 * time.Second):
+			// An entry from the cache was evicted that was also in the write cache.
+			// This makes it likely that other entries that are also present in the
+			// write cache will be evicted soon. Flush the write cache to storage
+			// immediately in order to reduce single writes.
+			i.flushWriteCache(0)
+
+		case <-thresholdWriteTicker.C:
+			// Often check if the the write cache has filled up to a certain degree and
+			// flush it to storage before we start evicting to-be-written entries and
+			// slow down the hot path again.
+			i.flushWriteCache(percentThreshold)
+
+		case <-forceWriteTicker.C:
+			// Once in a while, flush the write cache to storage no matter how much
+			// it is filled. We don't want entries lingering around in the write
+			// cache forever. This also reduces the amount of data loss in the event
+			// of a total crash.
+			i.flushWriteCache(0)
 		}
 
-		i.flushWriteCache()
 	}
 }
 
-func (i *Interface) flushWriteCache() {
+func (i *Interface) flushWriteCache(percentThreshold int) {
 	i.writeCacheLock.Lock()
 	defer i.writeCacheLock.Unlock()
 
 	// Check if there is anything to do.
 	if len(i.writeCache) == 0 {
+		return
+	}
+
+	// Check if we reach the given threshold for writing to storage.
+	if (len(i.writeCache)*100)/i.options.CacheSize < percentThreshold {
 		return
 	}
 
