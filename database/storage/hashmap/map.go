@@ -66,16 +66,23 @@ func (hm *HashMap) PutMany(shadowDelete bool) (chan<- record.Record, <-chan erro
 	// start handler
 	go func() {
 		for r := range batch {
-			if !shadowDelete && r.Meta().IsDeleted() {
-				delete(hm.db, r.DatabaseKey())
-			} else {
-				hm.db[r.DatabaseKey()] = r
-			}
+			hm.putOrDelete(shadowDelete, r)
 		}
 		errs <- nil
 	}()
 
 	return batch, errs
+}
+
+func (hm *HashMap) putOrDelete(shadowDelete bool, r record.Record) {
+	hm.dbLock.Lock()
+	defer hm.dbLock.Unlock()
+
+	if !shadowDelete && r.Meta().IsDeleted() {
+		delete(hm.db, r.DatabaseKey())
+	} else {
+		hm.db[r.DatabaseKey()] = r
+	}
 }
 
 // Delete deletes a record from the database.
