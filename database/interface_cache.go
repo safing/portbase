@@ -12,7 +12,7 @@ import (
 // DelayedCacheWriter must be run by the caller of an interface that uses delayed cache writing.
 func (i *Interface) DelayedCacheWriter(ctx context.Context) error {
 	// Check if the DelayedCacheWriter should be run at all.
-	if i.options.CacheSize <= 0 || len(i.options.DelayCachedWrites) == 0 {
+	if i.options.CacheSize <= 0 || i.options.DelayCachedWrites == "" {
 		return errors.New("delayed cache writer is not applicable to this database interface")
 	}
 
@@ -25,7 +25,7 @@ func (i *Interface) DelayedCacheWriter(ctx context.Context) error {
 	}
 
 	// percentThreshold defines the minimum percentage of entries in the write cache in relation to the cache size that need to be present in order for flushing the cache to the database storage.
-	percentThreshold := 25 // %
+	percentThreshold := 25
 	thresholdWriteTicker := time.NewTicker(5 * time.Second)
 	forceWriteTicker := time.NewTicker(5 * time.Minute)
 
@@ -105,12 +105,14 @@ func (i *Interface) cacheEvictHandler(keyData, _ interface{}) {
 	}
 
 	// Check if the evicted record is one that is to be written.
+	// Lock the write cache until the end of the function.
+	// The read cache is locked anyway for the whole duration.
 	i.writeCacheLock.Lock()
+	defer i.writeCacheLock.Unlock()
 	r, ok := i.writeCache[key]
 	if ok {
 		delete(i.writeCache, key)
 	}
-	i.writeCacheLock.Unlock()
 	if !ok {
 		return
 	}
@@ -122,6 +124,10 @@ func (i *Interface) cacheEvictHandler(keyData, _ interface{}) {
 		log.Warningf("database: failed to write evicted cache entry %q: database %q does not exist", key, r.DatabaseName())
 		return
 	}
+
+	r.Lock()
+	defer r.Unlock()
+
 	err = db.Put(r)
 	if err != nil {
 		log.Warningf("database: failed to write evicted cache entry %q to database: %s", key, err)
@@ -186,7 +192,7 @@ func (i *Interface) updateCache(r record.Record, write bool) (written bool) {
 	// 1. The record is being written.
 	// 2. Write delaying is active.
 	// 3. Write delaying is active for the database of this record.
-	if write && len(i.options.DelayCachedWrites) > 0 && r.DatabaseName() == i.options.DelayCachedWrites {
+	if write && r.DatabaseName() == i.options.DelayCachedWrites {
 		i.writeCacheLock.Lock()
 		defer i.writeCacheLock.Unlock()
 		i.writeCache[r.Key()] = r

@@ -32,12 +32,32 @@ type Interface struct {
 
 // Options holds options that may be set for an Interface instance.
 type Options struct {
-	Local                     bool
-	Internal                  bool
-	AlwaysMakeSecret          bool
-	AlwaysMakeCrownjewel      bool
+	// Local specifies if the interface is used by an actor on the local device.
+	// Setting both the Local and Internal flags will bring performance
+	// improvements because less checks are needed.
+	Local bool
+
+	// Internal specifies if the interface is used by an actor within the
+	// software. Setting both the Local and Internal flags will bring performance
+	// improvements because less checks are needed.
+	Internal bool
+
+	// AlwaysMakeSecret will have the interface mark all saved records as secret.
+	// This means that they will be only accessible by an internal interface.
+	AlwaysMakeSecret bool
+
+	// AlwaysMakeCrownjewel will have the interface mark all saved records as
+	// crown jewels. This means that they will be only accessible by a local
+	// interface.
+	AlwaysMakeCrownjewel bool
+
+	// AlwaysSetRelativateExpiry will have the interface set a relative expiry,
+	// based on the current time, on all saved records.
 	AlwaysSetRelativateExpiry int64
-	AlwaysSetAbsoluteExpiry   int64
+
+	// AlwaysSetAbsoluteExpiry will have the interface set an absolute expiry on
+	// all saved records.
+	AlwaysSetAbsoluteExpiry int64
 
 	// CacheSize defines that a cache should be used for this interface and
 	// defines it's size.
@@ -47,7 +67,7 @@ type Options struct {
 	// evicted from the cache.
 	CacheSize int
 
-	// DelayCachedWrites defines a database storage for which cache writes should
+	// DelayCachedWrites defines a database name for which cache writes should
 	// be cached and batched. The database backend must support the Batcher
 	// interface. This option is only valid if used with a cache.
 	// Additionally, this may only be used for internal and local interfaces.
@@ -72,6 +92,11 @@ func (o *Options) Apply(r record.Record) {
 	}
 }
 
+// HasAllPermissions returns whether the options specify the highest possible permissions for operations.
+func (o *Options) HasAllPermissions() bool {
+	return o.Local && o.Internal
+}
+
 // NewInterface returns a new Interface to the database.
 func NewInterface(opts *Options) *Interface {
 	if opts == nil {
@@ -83,9 +108,9 @@ func NewInterface(opts *Options) *Interface {
 	}
 	if opts.CacheSize > 0 {
 		cacheBuilder := gcache.New(opts.CacheSize).ARC()
-		if len(opts.DelayCachedWrites) > 0 {
+		if opts.DelayCachedWrites != "" {
 			cacheBuilder.EvictedFunc(new.cacheEvictHandler)
-			new.writeCache = make(map[string]record.Record)
+			new.writeCache = make(map[string]record.Record, opts.CacheSize/2)
 			new.triggerCacheWrite = make(chan struct{})
 		}
 		new.cache = cacheBuilder.Build()
@@ -97,10 +122,10 @@ func NewInterface(opts *Options) *Interface {
 func (i *Interface) Exists(key string) (bool, error) {
 	_, err := i.Get(key)
 	if err != nil {
-		switch err {
-		case ErrNotFound:
+		switch {
+		case errors.Is(err, ErrNotFound):
 			return false, nil
-		case ErrPermissionDenied:
+		case errors.Is(err, ErrPermissionDenied):
 			return true, nil
 		default:
 			return false, err
@@ -131,8 +156,13 @@ func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool)
 
 	r = i.checkCache(dbName + ":" + dbKey)
 	if r != nil {
-		if !r.Meta().CheckPermission(i.options.Local, i.options.Internal) {
-			return nil, db, ErrPermissionDenied
+		if !i.options.HasAllPermissions() {
+			r.Lock()
+			permitted := r.Meta().CheckPermission(i.options.Local, i.options.Internal)
+			r.Unlock()
+			if !permitted {
+				return nil, db, ErrPermissionDenied
+			}
 		}
 		return r, db, nil
 	}
@@ -183,7 +213,7 @@ func (i *Interface) InsertValue(key string, attribute string, value interface{})
 func (i *Interface) Put(r record.Record) (err error) {
 	// get record or only database
 	var db *Controller
-	if !i.options.Internal || !i.options.Local {
+	if !i.options.HasAllPermissions() {
 		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true)
 		if err != nil && err != ErrNotFound {
 			return err
@@ -216,7 +246,7 @@ func (i *Interface) Put(r record.Record) (err error) {
 func (i *Interface) PutNew(r record.Record) (err error) {
 	// get record or only database
 	var db *Controller
-	if !i.options.Internal || !i.options.Local {
+	if !i.options.HasAllPermissions() {
 		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true)
 		if err != nil && err != ErrNotFound {
 			return err
@@ -253,7 +283,7 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	interfaceBatch := make(chan record.Record, 100)
 
 	// permission check
-	if !i.options.Internal || !i.options.Local {
+	if !i.options.HasAllPermissions() {
 		return func(r record.Record) error {
 			return ErrPermissionDenied
 		}

@@ -35,7 +35,9 @@ func TestMain(m *testing.M) {
 
 	exitCode := m.Run()
 
-	os.RemoveAll(testDir) // clean up
+	// Clean up the test directory.
+	// Do not defer, as we end this function with a os.Exit call.
+	os.RemoveAll(testDir)
 
 	os.Exit(exitCode)
 }
@@ -239,9 +241,7 @@ func TestDatabaseSystem(t *testing.T) {
 
 	// panic after 10 seconds, to check for locks
 	finished := make(chan struct{})
-	defer func() {
-		close(finished)
-	}()
+	defer close(finished)
 	go func() {
 		select {
 		case <-finished:
