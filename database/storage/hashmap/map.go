@@ -66,7 +66,7 @@ func (hm *HashMap) PutMany(shadowDelete bool) (chan<- record.Record, <-chan erro
 	// start handler
 	go func() {
 		for r := range batch {
-			hm.putOrDelete(shadowDelete, r)
+			hm.batchPutOrDelete(shadowDelete, r)
 		}
 		errs <- nil
 	}()
@@ -74,7 +74,10 @@ func (hm *HashMap) PutMany(shadowDelete bool) (chan<- record.Record, <-chan erro
 	return batch, errs
 }
 
-func (hm *HashMap) putOrDelete(shadowDelete bool, r record.Record) {
+func (hm *HashMap) batchPutOrDelete(shadowDelete bool, r record.Record) {
+	r.Lock()
+	defer r.Unlock()
+
 	hm.dbLock.Lock()
 	defer hm.dbLock.Unlock()
 
