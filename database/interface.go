@@ -92,9 +92,26 @@ func (o *Options) Apply(r record.Record) {
 	}
 }
 
-// HasAllPermissions returns whether the options specify the highest possible permissions for operations.
+// HasAllPermissions returns whether the options specify the highest possible
+// permissions for operations.
 func (o *Options) HasAllPermissions() bool {
 	return o.Local && o.Internal
+}
+
+// hasAccessPermission checks if the interface options permit access to the
+// given record, locking the record for accessing it's attributes.
+func (o *Options) hasAccessPermission(r record.Record) bool {
+	// Check if the options specify all permissions, which makes checking the
+	// record unnecessary.
+	if o.HasAllPermissions() {
+		return true
+	}
+
+	r.Lock()
+	defer r.Unlock()
+
+	// Check permissions against record.
+	return r.Meta().CheckPermission(o.Local, o.Internal)
 }
 
 // NewInterface returns a new Interface to the database.
@@ -156,13 +173,8 @@ func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool)
 
 	r = i.checkCache(dbName + ":" + dbKey)
 	if r != nil {
-		if !i.options.HasAllPermissions() {
-			r.Lock()
-			permitted := r.Meta().CheckPermission(i.options.Local, i.options.Internal)
-			r.Unlock()
-			if !permitted {
-				return nil, db, ErrPermissionDenied
-			}
+		if !i.options.hasAccessPermission(r) {
+			return nil, db, ErrPermissionDenied
 		}
 		return r, db, nil
 	}
@@ -172,7 +184,7 @@ func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool)
 		return nil, db, err
 	}
 
-	if !r.Meta().CheckPermission(i.options.Local, i.options.Internal) {
+	if !i.options.hasAccessPermission(r) {
 		return nil, db, ErrPermissionDenied
 	}
 
