@@ -2,7 +2,6 @@ package record
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/safing/portbase/container"
 	"github.com/safing/portbase/database/accessor"
@@ -18,7 +17,7 @@ type Base struct {
 
 // Key returns the key of the database record.
 func (b *Base) Key() string {
-	return fmt.Sprintf("%s:%s", b.dbName, b.dbKey)
+	return b.dbName + ":" + b.dbKey
 }
 
 // KeyIsSet returns true if the database key is set.

@@ -115,26 +115,9 @@ func (b *BBolt) PutMany(shadowDelete bool) (chan<- record.Record, <-chan error) 
 		err := b.db.Batch(func(tx *bbolt.Tx) error {
 			bucket := tx.Bucket(bucketName)
 			for r := range batch {
-				if !shadowDelete && r.Meta().IsDeleted() {
-					// Immediate delete.
-					txErr := bucket.Delete([]byte(r.DatabaseKey()))
-					if txErr != nil {
-						return txErr
-					}
-				} else {
-					// Put or shadow delete.
-
-					// marshal
-					data, txErr := r.MarshalRecord(r)
-					if txErr != nil {
-						return txErr
-					}
-
-					// put
-					txErr = bucket.Put([]byte(r.DatabaseKey()), data)
-					if txErr != nil {
-						return txErr
-					}
+				txErr := b.batchPutOrDelete(bucket, shadowDelete, r)
+				if txErr != nil {
+					return txErr
 				}
 			}
 			return nil
@@ -143,6 +126,25 @@ func (b *BBolt) PutMany(shadowDelete bool) (chan<- record.Record, <-chan error) 
 	}()
 
 	return batch, errs
+}
+
+func (b *BBolt) batchPutOrDelete(bucket *bbolt.Bucket, shadowDelete bool, r record.Record) (err error) {
+	r.Lock()
+	defer r.Unlock()
+
+	if !shadowDelete && r.Meta().IsDeleted() {
+		// Immediate delete.
+		err = bucket.Delete([]byte(r.DatabaseKey()))
+	} else {
+		// Put or shadow delete.
+		var data []byte
+		data, err = r.MarshalRecord(r)
+		if err == nil {
+			err = bucket.Put([]byte(r.DatabaseKey()), data)
+		}
+	}
+
+	return err
 }
 
 // Delete deletes a record from the database.
