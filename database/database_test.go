@@ -22,6 +22,26 @@ import (
 	_ "github.com/safing/portbase/database/storage/hashmap"
 )
 
+func TestMain(m *testing.M) {
+	testDir, err := ioutil.TempDir("", "portbase-database-testing-")
+	if err != nil {
+		panic(err)
+	}
+
+	err = InitializeWithPath(testDir)
+	if err != nil {
+		panic(err)
+	}
+
+	exitCode := m.Run()
+
+	// Clean up the test directory.
+	// Do not defer, as we end this function with a os.Exit call.
+	os.RemoveAll(testDir)
+
+	os.Exit(exitCode)
+}
+
 func makeKey(dbName, key string) string {
 	return fmt.Sprintf("%s:%s", dbName, key)
 }
@@ -220,23 +240,17 @@ func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolin
 func TestDatabaseSystem(t *testing.T) {
 
 	// panic after 10 seconds, to check for locks
+	finished := make(chan struct{})
+	defer close(finished)
 	go func() {
-		time.Sleep(10 * time.Second)
-		fmt.Println("===== TAKING TOO LONG - PRINTING STACK TRACES =====")
-		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		os.Exit(1)
+		select {
+		case <-finished:
+		case <-time.After(10 * time.Second):
+			fmt.Println("===== TAKING TOO LONG - PRINTING STACK TRACES =====")
+			_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+			os.Exit(1)
+		}
 	}()
-
-	testDir, err := ioutil.TempDir("", "portbase-database-testing-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = InitializeWithPath(testDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir) // clean up
 
 	for _, shadowDelete := range []bool{false, true} {
 		testDatabase(t, "bbolt", shadowDelete)
@@ -246,7 +260,7 @@ func TestDatabaseSystem(t *testing.T) {
 		// TODO: Fix badger tests
 	}
 
-	err = MaintainRecordStates(context.TODO())
+	err := MaintainRecordStates(context.TODO())
 	if err != nil {
 		t.Fatal(err)
 	}
