@@ -146,7 +146,7 @@ func (api *DatabaseAPI) handler() {
 		parts := bytes.SplitN(msg, []byte("|"), 3)
 
 		// Handle special command "cancel"
-		if len(parts) == 2 && string(parts[1]) != "cancel" {
+		if len(parts) == 2 && string(parts[1]) == "cancel" {
 			// 125|cancel
 			// 127|cancel
 			go api.handleCancel(parts[0])
