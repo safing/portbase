@@ -159,14 +159,15 @@ func (i *Interface) checkCache(key string) record.Record {
 	return nil
 }
 
-func (i *Interface) updateCache(r record.Record, write bool) (written bool) {
+// updateCache updates an entry in the
+func (i *Interface) updateCache(r record.Record, write bool, remove bool, ttl int64) (written bool) {
 	// Check if cache is in use.
 	if i.cache == nil {
 		return false
 	}
 
 	// Check if record should be deleted
-	if r.Meta().IsDeleted() {
+	if remove {
 		// Remove entry from cache.
 		i.cache.Remove(r.Key())
 		// Let write through to database storage.
@@ -174,7 +175,6 @@ func (i *Interface) updateCache(r record.Record, write bool) (written bool) {
 	}
 
 	// Update cache with record.
-	ttl := r.Meta().GetRelativeExpiry()
 	if ttl >= 0 {
 		_ = i.cache.SetWithExpire(
 			r.Key(),

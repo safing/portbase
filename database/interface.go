@@ -188,6 +188,16 @@ func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool)
 		return nil, db, ErrPermissionDenied
 	}
 
+	r.Lock()
+	ttl := r.Meta().GetRelativeExpiry()
+	r.Unlock()
+	i.updateCache(
+		r,
+		false, // writing
+		false, // remove
+		ttl,   // expiry
+	)
+
 	return r, db, nil
 }
 
@@ -243,14 +253,19 @@ func (i *Interface) Put(r record.Record) (err error) {
 	}
 
 	r.Lock()
-	defer r.Unlock()
 	i.options.Apply(r)
+	remove := r.Meta().IsDeleted()
+	ttl := r.Meta().GetRelativeExpiry()
+	r.Unlock()
 
-	written := i.updateCache(r, true)
+	// The record may not be locked when updating the cache.
+	written := i.updateCache(r, true, remove, ttl)
 	if written {
 		return nil
 	}
 
+	r.Lock()
+	defer r.Unlock()
 	return db.Put(r)
 }
 
@@ -271,18 +286,22 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 	}
 
 	r.Lock()
-	defer r.Unlock()
-
 	if r.Meta() != nil {
 		r.Meta().Reset()
 	}
 	i.options.Apply(r)
+	remove := r.Meta().IsDeleted()
+	ttl := r.Meta().GetRelativeExpiry()
+	r.Unlock()
 
-	written := i.updateCache(r, true)
+	// The record may not be locked when updating the cache.
+	written := i.updateCache(r, true, remove, ttl)
 	if written {
 		return nil
 	}
 
+	r.Lock()
+	defer r.Unlock()
 	return db.Put(r)
 }
 
