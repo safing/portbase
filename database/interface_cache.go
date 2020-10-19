@@ -159,7 +159,11 @@ func (i *Interface) checkCache(key string) record.Record {
 	return nil
 }
 
-// updateCache updates an entry in the
+// updateCache updates an entry in the interface cache. The given record may
+// not be locked, as updating the cache might write an (unrelated) evicted
+// record to the database in the process. If this happens while the
+// DelayedCacheWriter flushes the write cache with the same record present,
+// this will deadlock.
 func (i *Interface) updateCache(r record.Record, write bool, remove bool, ttl int64) (written bool) {
 	// Check if cache is in use.
 	if i.cache == nil {
