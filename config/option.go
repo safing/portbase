@@ -84,6 +84,12 @@ const (
 	// SubsystemAnnotation can be used to mark an option as part
 	// of a module subsystem.
 	SubsystemAnnotation = "safing/portbase:module:subsystem"
+	// StackableAnnotation can be set on configuration options that
+	// stack on top of the default (or otherwise related) options.
+	// The value of StackableAnnotaiton is expected to be a boolean but
+	// may be extended to hold references to other options in the
+	// future.
+	StackableAnnotation = "safing/portbase:options:stackable"
 	// QuickSettingAnnotation can be used to add quick settings to
 	// a configuration option. A quick setting can support the user
 	// by switching between pre-configured values.

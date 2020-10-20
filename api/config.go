@@ -41,7 +41,7 @@ func registerConfig() error {
 	err := config.Register(&config.Option{
 		Name:            "API Address",
 		Key:             CfgDefaultListenAddressKey,
-		Description:     "Define on which IP and port the API should listen on.",
+		Description:     "Defines the IP address and port for the internal HTTP database API.",
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		ReleaseLevel:    config.ReleaseLevelStable,
