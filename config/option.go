@@ -84,7 +84,56 @@ const (
 	// SubsystemAnnotation can be used to mark an option as part
 	// of a module subsystem.
 	SubsystemAnnotation = "safing/portbase:module:subsystem"
+	// QuickSettingAnnotation can be used to add quick settings to
+	// a configuration option. A quick setting can support the user
+	// by switching between pre-configured values.
+	// The type of a quick-setting annotation is []QuickSetting or QuickSetting.
+	QuickSettingsAnnotation = "safing/portbase:ui:quick-setting"
+	// RequiresAnnotation can be used to mark another option as a
+	// requirement. The type of RequiresAnnotation is []ValueRequirement
+	// or ValueRequirement.
+	RequiresAnnotation = "safing/portbase:config:requires"
 )
+
+// QuickSettingsAction defines the action of a quick setting.
+type QuickSettingsAction string
+
+const (
+	// QuickReplace replaces the current setting with the one from
+	// the quick setting.
+	QuickReplace = QuickSettingsAction("replace")
+	// QuickMergeTop merges the value of the quick setting with the
+	// already configured one adding new values on the top. Merging
+	// is only supported for OptTypeStringArray.
+	QuickMergeTop = QuickSettingsAction("merge-top")
+	// QuickMergeBottom merges the value of the quick setting with the
+	// already configured one adding new values at the bottom. Merging
+	// is only supported for OptTypeStringArray.
+	QuickMergeBottom = QuickSettingsAction("merge-bottom")
+)
+
+// QuickSetting defines a quick setting for a configuration option and
+// should be used together with the QuickSettingsAnnotation.
+type QuickSetting struct {
+	// Name is the name of the quick setting.
+	Name string
+
+	// Value is the value that the quick-setting configures. It must match
+	// the expected value type of the annotated option.
+	Value interface{}
+
+	// Action defines the action of the quick setting.
+	Action QuickSettingsAction
+}
+
+// ValueRequirement defines a requirement on another configuraiton option.
+type ValueRequirement struct {
+	// Key is the key of the configuration option that is required.
+	Key string
+
+	// Value that is required.
+	Value interface{}
+}
 
 // Values for the DisplayHintAnnotation
 const (

@@ -26,6 +26,14 @@
   version = "v0.1"
 
 [[projects]]
+  digest = "1:5680f8c40e48f07cb77aece3165a866aaf8276305258b3b70db8ec7ad6ddb78d"
+  name = "github.com/armon/go-radix"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1a2de0c21c94309923825da3df33a4381872c795"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:baf770c4efa1883bb5e444614e85b8028bbad33913aca290a43298f65d9df485"
   name = "github.com/bluele/gcache"
@@ -214,7 +222,10 @@
 [[projects]]
   digest = "1:83fd2513b9f6ae0997bf646db6b74e9e00131e31002116fda597175f25add42d"
   name = "github.com/stretchr/testify"
-  packages = ["assert"]
+  packages = [
+    "assert",
+    "require",
+  ]
   pruneopts = ""
   revision = "f654a9112bbeac49ca2cd45bfbe11533c4666cf8"
   version = "v1.6.1"
@@ -280,6 +291,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:10d47e7094ce8dd202cca920e4c58a68ba1d113908c30fb0cc8590b7d333a348"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  pruneopts = ""
+  revision = "67f06af15bc961c363a7260195bcd53487529a21"
+
+[[projects]]
+  branch = "master"
   digest = "1:bf837d996e7dfe7b819cbe53c8c9733e93228577f0561e43996b9ef0ea8a68a9"
   name = "golang.org/x/sys"
   packages = [
@@ -339,6 +358,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/aead/serpent",
+    "github.com/armon/go-radix",
     "github.com/bluele/gcache",
     "github.com/davecgh/go-spew/spew",
     "github.com/dgraph-io/badger",
@@ -351,10 +371,12 @@
     "github.com/shirou/gopsutil/host",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
     "github.com/tevino/abool",
     "github.com/tidwall/gjson",
     "github.com/tidwall/sjson",
     "go.etcd.io/bbolt",
+    "golang.org/x/sync/errgroup",
     "golang.org/x/sys/windows",
   ]
   solver-name = "gps-cdcl"
