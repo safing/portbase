@@ -14,7 +14,7 @@ import (
 // Type describes the type of a notification.
 type Type uint8
 
-// Notification types
+// Notification types.
 const (
 	Info    Type = 0
 	Warning Type = 1
@@ -155,12 +155,14 @@ func (n *Notification) Save() *Notification {
 	return n.save(true)
 }
 
+// save saves the notification to the internal storage. It locks the
+// notification, so it must not be locked when save is called.
 func (n *Notification) save(pushUpdate bool) *Notification {
 	var id string
 
 	// Delete notification after processing deletion.
 	defer func() {
-		// Lock and delete from notification storage.
+		// Lock and save to notification storage.
 		notsLock.Lock()
 		defer notsLock.Unlock()
 		nots[id] = n
@@ -266,6 +268,8 @@ func (n *Notification) Delete() error {
 	return nil
 }
 
+// delete deletes the notification from the internal storage. It locks the
+// notification, so it must not be locked when delete is called.
 func (n *Notification) delete(pushUpdate bool) {
 	var id string
 
