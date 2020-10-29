@@ -60,6 +60,12 @@ type Notification struct {
 	GUID string
 	// Type is the notification type. It can be one of Info, Warning or Prompt.
 	Type Type
+	// Title is an optional and very short title for the message that gives a
+	// hint about what the notification is about.
+	Title string
+	// Category is an optional category for the notification that allows for
+	// tagging and grouping notifications by category.
+	Category string
 	// Message is the default message shown to the user if no localized version
 	// of the notification is available. Note that the message should already
 	// have any paramerized values replaced.
@@ -129,49 +135,65 @@ func NotifyPrompt(id, msg string, actions ...Action) *Notification {
 	return notify(Prompt, id, msg, actions...)
 }
 
-func notify(nType Type, id string, msg string, actions ...Action) *Notification {
+func notify(nType Type, id, msg string, actions ...Action) *Notification {
 	acts := make([]*Action, len(actions))
 	for idx := range actions {
 		a := actions[idx]
 		acts[idx] = &a
 	}
 
-	if id == "" {
-		id = utils.DerivedInstanceUUID(msg).String()
-	}
-
-	n := Notification{
+	return Notify(&Notification{
 		EventID:          id,
-		Message:          msg,
 		Type:             nType,
+		Message:          msg,
 		AvailableActions: acts,
-	}
-
-	return n.Save()
+	})
 }
 
-// Save saves the notification and returns it.
-func (n *Notification) Save() *Notification {
-	return n.save(true)
+// Notify sends the given notification.
+func Notify(n *Notification) *Notification {
+	// Derive missing information.
+	if n.Message == "" {
+		n.Title = n.Message
+	}
+	if n.EventID == "" {
+		n.EventID = utils.DerivedInstanceUUID(n.Message).String()
+	}
+
+	n.save(true)
+	return n
+}
+
+// Save saves the notification.
+func (n *Notification) Save() {
+	n.save(true)
 }
 
 // save saves the notification to the internal storage. It locks the
 // notification, so it must not be locked when save is called.
-func (n *Notification) save(pushUpdate bool) *Notification {
+func (n *Notification) save(pushUpdate bool) {
 	var id string
 
 	// Delete notification after processing deletion.
 	defer func() {
-		// Lock and save to notification storage.
-		notsLock.Lock()
-		defer notsLock.Unlock()
-		nots[id] = n
+		if id != "" {
+			// Lock and save to notification storage.
+			notsLock.Lock()
+			defer notsLock.Unlock()
+			nots[id] = n
+		}
 	}()
 
 	// We do not access EventData here, so it is enough to just lock the
 	// notification itself.
 	n.lock.Lock()
 	defer n.lock.Unlock()
+
+	// Check if required data is present.
+	if n.EventID == "" || n.Message == "" {
+		log.Warning("notifications: ignoring notification without EventID and Message")
+		return
+	}
 
 	// Save ID for deletion
 	id = n.EventID
@@ -209,8 +231,6 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 		log.Tracef("notifications: pushing update for %s to subscribers", n.Key())
 		dbController.PushUpdate(n)
 	}
-
-	return n
 }
 
 // SetActionFunction sets a trigger function to be executed when the user reacted on the notification.
