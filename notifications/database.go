@@ -54,21 +54,27 @@ func registerAsDatabase() error {
 
 // Get returns a database record.
 func (s *StorageInterface) Get(key string) (record.Record, error) {
-	notsLock.RLock()
-	defer notsLock.RUnlock()
-
-	// transform key
+	// Get EventID from key.
 	if !strings.HasPrefix(key, "all/") {
 		return nil, storage.ErrNotFound
 	}
 	key = strings.TrimPrefix(key, "all/")
 
-	// get notification
-	not, ok := nots[key]
+	// Get notification from storage.
+	n, ok := getNotification(key)
 	if !ok {
 		return nil, storage.ErrNotFound
 	}
-	return not, nil
+
+	return n, nil
+}
+
+func getNotification(eventID string) (n *Notification, ok bool) {
+	notsLock.RLock()
+	defer notsLock.RUnlock()
+
+	n, ok = nots[eventID]
+	return
 }
 
 // Query returns a an iterator for the supplied query.
@@ -81,16 +87,12 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 }
 
 func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
-	notsLock.RLock()
-	defer notsLock.RUnlock()
+	// Get a copy of the notification map.
+	notsCopy := getNotsCopy()
 
 	// send all notifications
-	for _, n := range nots {
-		if n.Meta().IsDeleted() {
-			continue
-		}
-
-		if q.MatchesKey(n.DatabaseKey()) && q.MatchesRecord(n) {
+	for _, n := range notsCopy {
+		if inQuery(n, q) {
 			select {
 			case it.Next <- n:
 			case <-it.Done:
@@ -101,6 +103,22 @@ func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
 	}
 
 	it.Finish(nil)
+}
+
+func inQuery(n *Notification, q *query.Query) bool {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	switch {
+	case n.Meta().IsDeleted():
+		return false
+	case !q.MatchesKey(n.DatabaseKey()):
+		return false
+	case !q.MatchesRecord(n):
+		return false
+	}
+
+	return true
 }
 
 // Put stores a record in the database.
@@ -125,12 +143,9 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 
 func applyUpdate(n *Notification, key string) (*Notification, error) {
 	// separate goroutine in order to correctly lock notsLock
-	notsLock.RLock()
-	existing, ok := nots[key]
-	notsLock.RUnlock()
+	existing, ok := getNotification(key)
 
 	// ignore if already deleted
-
 	if !ok || existing.Meta().IsDeleted() {
 		// this is a completely new notification
 		// we pass pushUpdate==false because the storage
@@ -139,14 +154,20 @@ func applyUpdate(n *Notification, key string) (*Notification, error) {
 		return n, nil
 	}
 
+	// Save when we're finished, if needed.
+	save := false
+	defer func() {
+		if save {
+			existing.save(false)
+		}
+	}()
+
 	existing.Lock()
 	defer existing.Unlock()
 
 	if existing.State == Executed {
 		return existing, fmt.Errorf("action already executed")
 	}
-
-	save := false
 
 	// check if the notification has been marked as
 	// "executed externally".
@@ -171,33 +192,25 @@ func applyUpdate(n *Notification, key string) (*Notification, error) {
 		save = true
 	}
 
-	if save {
-		existing.save(false)
-	}
-
 	return existing, nil
 }
 
 // Delete deletes a record from the database.
 func (s *StorageInterface) Delete(key string) error {
-	// transform key
+	// Get EventID from key.
 	if !strings.HasPrefix(key, "all/") {
 		return storage.ErrNotFound
 	}
 	key = strings.TrimPrefix(key, "all/")
 
-	notsLock.Lock()
-	defer notsLock.Unlock()
-
-	n, ok := nots[key]
+	// Get notification from storage.
+	n, ok := getNotification(key)
 	if !ok {
 		return storage.ErrNotFound
 	}
 
-	n.Lock()
-	defer n.Unlock()
-
-	return n.delete(true)
+	n.delete(true)
+	return nil
 }
 
 // ReadOnly returns whether the database is read only.

@@ -30,7 +30,7 @@ func init() {
 		module,
 		"config:template", // key space for configuration options registered
 		&config.Option{
-			Name:         "Enable Template Subsystem",
+			Name:         "Template Subsystem",
 			Key:          "config:subsystems/template",
 			Description:  "This option enables the Template Subsystem [TEMPLATE]",
 			OptType:      config.OptTypeBool,

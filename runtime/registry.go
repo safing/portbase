@@ -36,7 +36,7 @@ var (
 // package but may consider creating a dedicated
 // runtime registry on their own. Registry uses
 // a radix tree for value providers and their
-// choosen database key/prefix.
+// chosen database key/prefix.
 type Registry struct {
 	l            sync.RWMutex
 	providers    *radix.Tree

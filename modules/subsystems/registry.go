@@ -36,7 +36,7 @@ type Manager struct {
 	runtime        *runtime.Registry
 }
 
-// NewManager returns a new subsystem manager that registeres
+// NewManager returns a new subsystem manager that registers
 // itself at rtReg.
 func NewManager(rtReg *runtime.Registry) (*Manager, error) {
 	mng := &Manager{
@@ -71,7 +71,7 @@ func (mng *Manager) Start() error {
 	}
 
 	// aggregate all modules dependencies (and the subsystem module itself)
-	// into the Modules slice. Configuration options form dependened modules
+	// into the Modules slice. Configuration options form dependent modules
 	// will be marked using config.SubsystemAnnotation if not already set.
 	for _, sub := range mng.subsys {
 		sub.Modules = append(sub.Modules, statusFromModule(sub.module))
@@ -118,7 +118,7 @@ func (mng *Manager) Get(keyOrPrefix string) ([]record.Record, error) {
 	return records, nil
 }
 
-// Register registeres a new subsystem. The given option must be a bool option.
+// Register registers a new subsystem. The given option must be a bool option.
 // Should be called in init() directly after the modules.Register() function.
 // The config option must not yet be registered and will be registered for
 // you. Pass a nil option to force enable.

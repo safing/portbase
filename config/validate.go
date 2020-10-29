@@ -45,7 +45,7 @@ func isAllowedPossibleValue(opt *Option, value interface{}) error {
 		compareAgainst := val.Value
 		valueType := reflect.TypeOf(value)
 
-		// loading int's from the configuration JSON does not perserve the correct type
+		// loading int's from the configuration JSON does not preserve the correct type
 		// as we get float64 instead. Make sure to convert them before.
 		if reflect.TypeOf(val.Value).ConvertibleTo(valueType) {
 			compareAgainst = reflect.ValueOf(val.Value).Convert(valueType).Interface()

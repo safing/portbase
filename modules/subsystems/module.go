@@ -21,7 +21,7 @@ var (
 	printGraphFlag bool
 )
 
-// Register registeres a new subsystem. It's like Manager.Register
+// Register registers a new subsystem. It's like Manager.Register
 // but uses DefaultManager and panics on error.
 func Register(id, name, description string, module *modules.Module, configKeySpace string, option *config.Option) {
 	err := DefaultManager.Register(id, name, description, module, configKeySpace, option)
@@ -92,7 +92,7 @@ func prep() error {
 
 func start() error {
 	// Registration of subsystems is only allowed during
-	// preperation. Make sure any further call to Register()
+	// preparation. Make sure any further call to Register()
 	// panics.
 	if err := DefaultManager.Start(); err != nil {
 		return err
@@ -104,9 +104,9 @@ func start() error {
 }
 
 // PrintGraph prints the subsystem and module graph.
-func (reg *Manager) PrintGraph() {
-	reg.l.RLock()
-	defer reg.l.RUnlock()
+func (mng *Manager) PrintGraph() {
+	mng.l.RLock()
+	defer mng.l.RUnlock()
 
 	fmt.Println("subsystems dependency graph:")
 
@@ -114,17 +114,17 @@ func (reg *Manager) PrintGraph() {
 	module.Disable()
 
 	// mark roots
-	for _, sub := range reg.subsys {
+	for _, sub := range mng.subsys {
 		sub.module.Enable() // mark as tree root
 	}
 
-	for _, sub := range reg.subsys {
+	for _, sub := range mng.subsys {
 		printModuleGraph("", sub.module, true)
 	}
 
 	fmt.Println("\nsubsystem module groups:")
 	_ = start() // no errors for what we need here
-	for _, sub := range reg.subsys {
+	for _, sub := range mng.subsys {
 		fmt.Printf("├── %s\n", sub.Name)
 		for _, mod := range sub.Modules[1:] {
 			fmt.Printf("│   ├── %s\n", mod.Name)

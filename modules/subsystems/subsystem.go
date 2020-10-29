@@ -28,7 +28,7 @@ type Subsystem struct { //nolint:maligned // not worth the effort
 	// FailureStatus is the worst failure status that is currently
 	// set in one of the subsystem's dependencies.
 	FailureStatus uint8
-	// ToggleOptionKey holds the key of the configuraiton option
+	// ToggleOptionKey holds the key of the configuration option
 	// that is used to completely enable or disable this subsystem.
 	ToggleOptionKey string
 	// ExpertiseLevel defines the complexity of the subsystem and is

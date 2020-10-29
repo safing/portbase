@@ -75,7 +75,7 @@ func (p *Perspective) getPerspectiveValueCache(name string, requestedType Option
 	}
 
 	// check type
-	if requestedType != pOption.option.OptType {
+	if requestedType != pOption.option.OptType && requestedType != optTypeAny {
 		log.Errorf("config: bad type: requested %s as %s, but is %s", name, getTypeName(requestedType), getTypeName(pOption.option.OptType))
 		return nil
 	}
@@ -86,6 +86,12 @@ func (p *Perspective) getPerspectiveValueCache(name string, requestedType Option
 	}
 
 	return pOption.valueCache
+}
+
+// Has returns whether the given option is set in the perspective.
+func (p *Perspective) Has(name string) bool {
+	valueCache := p.getPerspectiveValueCache(name, optTypeAny)
+	return valueCache != nil
 }
 
 // GetAsString returns a function that returns the wanted string with high performance.

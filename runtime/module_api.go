@@ -9,12 +9,10 @@ var (
 	// DefaultRegistry is the default registry
 	// that is used by the module-level API.
 	DefaultRegistry = NewRegistry()
-
-	module *modules.Module
 )
 
 func init() {
-	module = modules.Register("runtime", nil, startModule, nil, "database")
+	modules.Register("runtime", nil, startModule, nil, "database")
 }
 
 func startModule() error {

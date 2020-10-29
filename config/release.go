@@ -39,7 +39,7 @@ func registerReleaseLevelOption() {
 	releaseLevelOption = &Option{
 		Name:           "Release Level",
 		Key:            releaseLevelKey,
-		Description:    "The Release Level changes which features are available to you. Some beta or experimental features are also available in the stable release channel. Unavailable settings are set to the default value.",
+		Description:    "Controls the amount of available settings. Hidden settings revert to default - unlike with the UI Mode.",
 		OptType:        OptTypeString,
 		ExpertiseLevel: ExpertiseLevelExpert,
 		ReleaseLevel:   ReleaseLevelStable,
@@ -62,7 +62,7 @@ func registerReleaseLevelOption() {
 			{
 				Name:        "Experimental",
 				Value:       ReleaseLevelNameExperimental,
-				Description: "Show experimental features",
+				Description: "Show all features",
 			},
 		},
 	}
