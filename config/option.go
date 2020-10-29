@@ -16,6 +16,7 @@ type OptionType uint8
 
 // Various attribute options. Use ExternalOptType for extended types in the frontend.
 const (
+	optTypeAny         OptionType = 0
 	OptTypeString      OptionType = 1
 	OptTypeStringArray OptionType = 2
 	OptTypeInt         OptionType = 3
@@ -24,6 +25,8 @@ const (
 
 func getTypeName(t OptionType) string {
 	switch t {
+	case optTypeAny:
+		return "any"
 	case OptTypeString:
 		return "string"
 	case OptTypeStringArray:
