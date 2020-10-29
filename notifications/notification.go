@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -22,6 +23,10 @@ const (
 
 // State describes the state of a notification.
 type State string
+
+// NotificationActionFn defines the function signature for notification action
+// functions.
+type NotificationActionFn func(context.Context, *Notification) error
 
 // Possible notification states.
 // State transitions can only happen from top to bottom.
@@ -81,9 +86,9 @@ type Notification struct {
 	SelectedActionID string
 
 	lock           sync.Mutex
-	actionFunction func(*Notification) // call function to process action
-	actionTrigger  chan string         // and/or send to a channel
-	expiredTrigger chan struct{}       // closed on expire
+	actionFunction NotificationActionFn // call function to process action
+	actionTrigger  chan string          // and/or send to a channel
+	expiredTrigger chan struct{}        // closed on expire
 }
 
 // Action describes an action that can be taken for a notification.
@@ -91,8 +96,6 @@ type Action struct {
 	ID   string
 	Text string
 }
-
-func noOpAction(n *Notification) {}
 
 // Get returns the notification identifed by the given id or nil if it doesn't exist.
 func Get(id string) *Notification {
@@ -149,18 +152,34 @@ func notify(nType Type, id string, msg string, actions ...Action) *Notification 
 
 // Save saves the notification and returns it.
 func (n *Notification) Save() *Notification {
-	n.Lock()
-	defer n.Unlock()
-
 	return n.save(true)
 }
 
 func (n *Notification) save(pushUpdate bool) *Notification {
+	var id string
+
+	// Delete notification after processing deletion.
+	defer func() {
+		// Lock and delete from notification storage.
+		notsLock.Lock()
+		defer notsLock.Unlock()
+		nots[id] = n
+	}()
+
+	// We do not access EventData here, so it is enough to just lock the
+	// notification itself.
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	// Save ID for deletion
+	id = n.EventID
+
+	// Generate random GUID if not set.
 	if n.GUID == "" {
 		n.GUID = utils.RandomUUID(n.EventID).String()
 	}
 
-	// make ack notification if there are no defined actions
+	// Make ack notification if there are no defined actions.
 	if len(n.AvailableActions) == 0 {
 		n.AvailableActions = []*Action{
 			{
@@ -168,12 +187,6 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 				Text: "OK",
 			},
 		}
-		n.actionFunction = noOpAction
-	}
-
-	// Make sure we always have a reasonable expiration set.
-	if n.Expires == 0 {
-		n.Expires = time.Now().Add(72 * time.Hour).Unix()
 	}
 
 	// Make sure we always have a notification state assigned.
@@ -182,17 +195,14 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 	}
 
 	// check key
-	if n.DatabaseKey() == "" {
+	if !n.KeyIsSet() {
 		n.SetKey(fmt.Sprintf("notifications:all/%s", n.EventID))
 	}
 
+	// Update meta data.
 	n.UpdateMeta()
 
-	// store the notification inside or map
-	notsLock.Lock()
-	nots[n.EventID] = n
-	notsLock.Unlock()
-
+	// Push update via the database system if needed.
 	if pushUpdate {
 		log.Tracef("notifications: pushing update for %s to subscribers", n.Key())
 		dbController.PushUpdate(n)
@@ -203,7 +213,7 @@ func (n *Notification) save(pushUpdate bool) *Notification {
 
 // SetActionFunction sets a trigger function to be executed when the user reacted on the notification.
 // The provided function will be started as its own goroutine and will have to lock everything it accesses, even the provided notification.
-func (n *Notification) SetActionFunction(fn func(*Notification)) *Notification {
+func (n *Notification) SetActionFunction(fn NotificationActionFn) *Notification {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	n.actionFunction = fn
@@ -224,43 +234,70 @@ func (n *Notification) Response() <-chan string {
 
 // Update updates/resends a notification if it was not already responded to.
 func (n *Notification) Update(expires int64) {
+	// Save when we're finished, if needed.
+	save := false
+	defer func() {
+		if save {
+			n.save(true)
+		}
+	}()
+
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.State == Active {
-		n.Expires = expires
-		n.save(true)
+	// Don't update if notification isn't active.
+	if n.State != Active {
+		return
 	}
+
+	// Don't update too quickly.
+	if n.Meta().Modified > time.Now().Add(-10*time.Second).Unix() {
+		return
+	}
+
+	// Update expiry and save.
+	n.Expires = expires
+	save = true
 }
 
 // Delete (prematurely) cancels and deletes a notification.
 func (n *Notification) Delete() error {
-	notsLock.Lock()
-	defer notsLock.Unlock()
-	n.Lock()
-	defer n.Unlock()
-
-	return n.delete(true)
+	n.delete(true)
+	return nil
 }
 
-func (n *Notification) delete(pushUpdate bool) error {
-	// mark as deleted
+func (n *Notification) delete(pushUpdate bool) {
+	var id string
+
+	// Delete notification after processing deletion.
+	defer func() {
+		// Lock and delete from notification storage.
+		notsLock.Lock()
+		defer notsLock.Unlock()
+		delete(nots, id)
+	}()
+
+	// We do not access EventData here, so it is enough to just lock the
+	// notification itself.
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	// Save ID for deletion
+	id = n.EventID
+
+	// Mark notification as deleted.
 	n.Meta().Delete()
 
-	// delete from internal storage
-	delete(nots, n.EventID)
-
-	// close expired
+	// Close expiry channel if available.
 	if n.expiredTrigger != nil {
 		close(n.expiredTrigger)
 		n.expiredTrigger = nil
 	}
 
+	// Push update via the database system if needed.
 	if pushUpdate {
 		dbController.PushUpdate(n)
 	}
-
-	return nil
 }
 
 // Expired notifies the caller when the notification has expired.
@@ -286,7 +323,9 @@ func (n *Notification) selectAndExecuteAction(id string) {
 
 	executed := false
 	if n.actionFunction != nil {
-		go n.actionFunction(n)
+		module.StartWorker("notification action execution", func(ctx context.Context) error {
+			return n.actionFunction(ctx, n)
+		})
 		executed = true
 	}
 
@@ -335,15 +374,4 @@ func (n *Notification) Unlock() {
 	if locker, ok := n.EventData.(sync.Locker); ok {
 		locker.Unlock()
 	}
-}
-
-func duplicateActions(original []*Action) (duplicate []*Action) {
-	duplicate = make([]*Action, len(original))
-	for _, action := range original {
-		duplicate = append(duplicate, &Action{
-			ID:   action.ID,
-			Text: action.Text,
-		})
-	}
-	return
 }
