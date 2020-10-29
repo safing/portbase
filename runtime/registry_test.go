@@ -43,7 +43,7 @@ func getTestRegistry(t *testing.T) *Registry {
 	r := NewRegistry()
 
 	providers := []testProvider{
-		testProvider{
+		{
 			k: "p1/",
 			r: []record.Record{
 				makeTestRecord("p1/f1/v1", "p1.1"),
@@ -51,7 +51,7 @@ func getTestRegistry(t *testing.T) *Registry {
 				makeTestRecord("p1/v3", "p1.3"),
 			},
 		},
-		testProvider{
+		{
 			k: "p2/f1",
 			r: []record.Record{
 				makeTestRecord("p2/f1/v1", "p2.1"),
@@ -104,7 +104,7 @@ func TestRegistryQuery(t *testing.T) {
 	iter, err := reg.Query(q, true, true)
 	require.NoError(t, err)
 	require.NotNil(t, iter)
-	var records []record.Record
+	var records []record.Record //nolint:prealloc
 	for r := range iter.Next {
 		records = append(records, r)
 	}

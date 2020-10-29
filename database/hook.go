@@ -17,7 +17,7 @@ type Hook interface {
 	// the underlying storage. A PreGet hookd may be used to
 	// implement more advanced access control on database keys.
 	PreGet(dbKey string) error
-	// UsesPostGet should returnd true if the hook's PostGet
+	// UsesPostGet should return true if the hook's PostGet
 	// should be called after loading a database record from
 	// the underlying storage.
 	UsesPostGet() bool

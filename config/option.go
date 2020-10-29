@@ -177,7 +177,7 @@ type Option struct {
 	// been created.
 	Description string
 	// Help may hold a long version of the description providing
-	// assistence with the configuration option.
+	// assistance with the configuration option.
 	// Help is considered immutable after the option has
 	// been created.
 	Help string
