@@ -39,9 +39,9 @@ func init() {
 
 func registerExpertiseLevelOption() {
 	expertiseLevelOption = &Option{
-		Name:           "Expertise Level",
+		Name:           "UI Mode",
 		Key:            expertiseLevelKey,
-		Description:    "The Expertise Level controls the perceived complexity. Higher settings will enable more complex settings and information. This might also affect various other things relying on this setting. Modified settings in higher expertise levels stay in effect when switching back. (Unlike the Release Level)",
+		Description:    "Controls the amount of settings and information shown. Hidden settings are still in effect - unlike with the Release Level.",
 		OptType:        OptTypeString,
 		ExpertiseLevel: ExpertiseLevelUser,
 		ReleaseLevel:   ReleaseLevelStable,
@@ -54,12 +54,12 @@ func registerExpertiseLevelOption() {
 			{
 				Name:        "Simple",
 				Value:       ExpertiseLevelNameUser,
-				Description: "Simple application mode by hidding complex settings.",
+				Description: "Hide complex settings and information.",
 			},
 			{
-				Name:        "Expert",
+				Name:        "Advanced",
 				Value:       ExpertiseLevelNameExpert,
-				Description: "Expert application mode. Allows access to almost all configuration options.",
+				Description: "Show technical details.",
 			},
 			{
 				Name:        "Developer",
