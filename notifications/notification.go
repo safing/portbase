@@ -152,13 +152,9 @@ func notify(nType Type, id, msg string, actions ...Action) *Notification {
 
 // Notify sends the given notification.
 func Notify(n *Notification) *Notification {
-	// Derive missing information.
-	if n.Message == "" {
-		n.Title = n.Message
-	}
-	if n.EventID == "" {
-		n.EventID = utils.DerivedInstanceUUID(n.Message).String()
-	}
+	// While this function is very similar to Save(), it is much nicer to use in
+	// order to just fire off one notification, as it does not require some more
+	// uncommon Go syntax.
 
 	n.save(true)
 	return n
@@ -174,7 +170,7 @@ func (n *Notification) Save() {
 func (n *Notification) save(pushUpdate bool) {
 	var id string
 
-	// Delete notification after processing deletion.
+	// Save notification after pre-save processing.
 	defer func() {
 		if id != "" {
 			// Lock and save to notification storage.
@@ -189,10 +185,24 @@ func (n *Notification) save(pushUpdate bool) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
+	// Move Title to Message, as that is the required field.
+	if n.Message == "" {
+		n.Message = n.Title
+		n.Title = ""
+	}
+
 	// Check if required data is present.
-	if n.EventID == "" || n.Message == "" {
-		log.Warning("notifications: ignoring notification without EventID and Message")
+	if n.Message == "" {
+		log.Warning("notifications: ignoring notification without Message")
 		return
+	}
+
+	// Derive EventID from Message if not given.
+	if n.EventID == "" {
+		n.EventID = fmt.Sprintf(
+			"unknown:%s",
+			utils.DerivedInstanceUUID(n.Message).String(),
+		)
 	}
 
 	// Save ID for deletion
