@@ -135,7 +135,7 @@ type QuickSetting struct {
 	Action QuickSettingsAction
 }
 
-// ValueRequirement defines a requirement on another configuraiton option.
+// ValueRequirement defines a requirement on another configuration option.
 type ValueRequirement struct {
 	// Key is the key of the configuration option that is required.
 	Key string
