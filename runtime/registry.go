@@ -168,7 +168,8 @@ func (r *Registry) Get(key string) (record.Record, error) {
 			return r, nil
 		}
 	}
-	return nil, nil
+
+	return nil, database.ErrNotFound
 }
 
 // Put stores the record m in the runtime database. Note that
