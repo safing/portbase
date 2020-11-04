@@ -9,7 +9,7 @@ import (
 
 // Config Keys
 const (
-	CfgDefaultListenAddressKey = "api/listenAddress"
+	CfgDefaultListenAddressKey = "core/listenAddress"
 )
 
 var (
@@ -49,14 +49,14 @@ func registerConfig() error {
 		ValidationRegex: "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,5}|\\[[:0-9A-Fa-f]+\\]:[0-9]{1,5})$",
 		RequiresRestart: true,
 		Annotations: config.Annotations{
-			config.DisplayOrderAnnotation: 128,
+			config.DisplayOrderAnnotation: 513,
 			config.CategoryAnnotation:     "Development",
 		},
 	})
 	if err != nil {
 		return err
 	}
-	listenAddressConfig = config.GetAsString("api/listenAddress", getDefaultListenAddress())
+	listenAddressConfig = config.GetAsString(CfgDefaultListenAddressKey, getDefaultListenAddress())
 
 	return nil
 }

@@ -41,14 +41,15 @@ func registerExpertiseLevelOption() {
 	expertiseLevelOption = &Option{
 		Name:           "UI Mode",
 		Key:            expertiseLevelKey,
-		Description:    "Controls the amount of settings and information shown. Hidden settings are still in effect - unlike with the Release Level.",
+		Description:    "Control the default amount of settings and information shown. Hidden settings are still in effect. Can be changed temporarily in the top right corner.",
 		OptType:        OptTypeString,
 		ExpertiseLevel: ExpertiseLevelUser,
 		ReleaseLevel:   ReleaseLevelStable,
 		DefaultValue:   ExpertiseLevelNameUser,
 		Annotations: Annotations{
-			DisplayHintAnnotation: DisplayHintOneOf,
-			CategoryAnnotation:    "Expertise & Release",
+			DisplayOrderAnnotation: -16,
+			DisplayHintAnnotation:  DisplayHintOneOf,
+			CategoryAnnotation:     "User Interface",
 		},
 		PossibleValues: []PossibleValue{
 			{
