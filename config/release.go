@@ -37,16 +37,17 @@ func init() {
 
 func registerReleaseLevelOption() {
 	releaseLevelOption = &Option{
-		Name:           "Release Level",
+		Name:           "Feature Stability",
 		Key:            releaseLevelKey,
-		Description:    "Controls the amount of available settings. Hidden settings revert to default - unlike with the UI Mode.",
+		Description:    `May break things. Decide if you want to experiment with unstable features. "Beta" has been tested roughly by the Safing team while "Experimental" is really raw. When "Beta" or "Experimental" are disabled, their settings use the default again.`,
 		OptType:        OptTypeString,
 		ExpertiseLevel: ExpertiseLevelExpert,
 		ReleaseLevel:   ReleaseLevelStable,
 		DefaultValue:   ReleaseLevelNameStable,
 		Annotations: Annotations{
-			DisplayHintAnnotation: DisplayHintOneOf,
-			CategoryAnnotation:    "Expertise & Release",
+			DisplayOrderAnnotation: -8,
+			DisplayHintAnnotation:  DisplayHintOneOf,
+			CategoryAnnotation:     "Updates",
 		},
 		PossibleValues: []PossibleValue{
 			{
