@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const powershellGetFileDescription = `Get-ItemProperty "%s" | Format-List`
+const powershellGetFileDescription = `Get-ItemProperty %q | Format-List`
 
 // GetBinaryNameFromSystem queries the operating system for a human readable
 // name for the given binary path.
@@ -44,7 +44,7 @@ func GetBinaryNameFromSystem(path string) (string, error) {
 }
 
 const powershellGetIcon = `Add-Type -AssemblyName System.Drawing
-$Icon = [System.Drawing.Icon]::ExtractAssociatedIcon("%s")
+$Icon = [System.Drawing.Icon]::ExtractAssociatedIcon(%q)
 $MemoryStream = New-Object System.IO.MemoryStream
 $Icon.save($MemoryStream)
 $Bytes = $MemoryStream.ToArray()
@@ -84,7 +84,7 @@ $MemoryStream.Dispose()
 */
 
 // GetBinaryIconFromSystem queries the operating system for the associated icon
-// for a given binary path.
+// for a given binary path and returns it as a data-URL.
 func GetBinaryIconFromSystem(path string) (string, error) {
 	// Get Associated File Icon via Powershell call.
 	output, err := runPowershellCmd(fmt.Sprintf(powershellGetIcon, path))
