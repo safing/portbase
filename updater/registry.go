@@ -171,6 +171,14 @@ func (reg *ResourceRegistry) Purge(keep int) {
 	}
 }
 
+// Reset resets the internal state of the registry, removing all added resources.
+func (reg *ResourceRegistry) Reset() {
+	reg.Lock()
+	defer reg.Unlock()
+
+	reg.resources = make(map[string]*Resource)
+}
+
 // Cleanup removes temporary files.
 func (reg *ResourceRegistry) Cleanup() error {
 	// delete download tmp dir
