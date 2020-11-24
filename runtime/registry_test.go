@@ -89,11 +89,11 @@ func TestRegistryGet(t *testing.T) {
 	assert.Equal(t, "p1.3", r.(*testRecord).Value)
 
 	r, err = reg.Get("p1/v4")
-	require.NoError(t, err)
+	require.Error(t, err)
 	assert.Nil(t, r)
 
 	r, err = reg.Get("no-provider/foo")
-	require.NoError(t, err)
+	require.Error(t, err)
 	assert.Nil(t, r)
 }
 
