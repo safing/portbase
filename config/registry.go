@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -10,6 +11,37 @@ var (
 	optionsLock sync.RWMutex
 	options     = make(map[string]*Option)
 )
+
+// ForEachOption calls fn for each defined option. If fn returns
+// and error the iteration is stopped and the error is returned.
+// Note that ForEachOption does not guarantee a stable order of
+// iteration between multiple calles. ForEachOption does NOT lock
+// opt when calling fn.
+func ForEachOption(fn func(opt *Option) error) error {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	for _, opt := range options {
+		if err := fn(opt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetOption returns the option with name or an error
+// if the option does not exist. The caller should lock
+// the returned option itself for further processing.
+func GetOption(name string) (*Option, error) {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	opt, ok := options[name]
+	if !ok {
+		return nil, fmt.Errorf("option %q does not exist", name)
+	}
+	return opt, nil
+}
 
 // Register registers a new configuration option.
 func Register(option *Option) error {
@@ -26,8 +58,15 @@ func Register(option *Option) error {
 		return fmt.Errorf("failed to register option: please set option.OptType")
 	}
 
-	var err error
+	if option.ValidationRegex == "" && option.PossibleValues != nil {
+		values := make([]string, len(option.PossibleValues))
+		for idx, val := range option.PossibleValues {
+			values[idx] = fmt.Sprintf("%v", val.Value)
+		}
+		option.ValidationRegex = fmt.Sprintf("^(%s)$", strings.Join(values, "|"))
+	}
 
+	var err error
 	if option.ValidationRegex != "" {
 		option.compiledRegex, err = regexp.Compile(option.ValidationRegex)
 		if err != nil {

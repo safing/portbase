@@ -3,66 +3,49 @@ package notifications
 import (
 	"context"
 	"time"
-
-	"github.com/safing/portbase/log"
 )
 
-//nolint:unparam // must conform to interface
-func cleaner(ctx context.Context) error {
+func cleaner(ctx context.Context) error { //nolint:unparam // Conforms to worker interface
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(5 * time.Second):
-			cleanNotifications()
+		case <-ticker.C:
+			deleteExpiredNotifs()
 		}
 	}
 }
 
-func cleanNotifications() {
-	now := time.Now().Unix()
-	finishedThreshhold := time.Now().Add(-10 * time.Second).Unix()
-	executionTimelimit := time.Now().Add(-24 * time.Hour).Unix()
-	fallbackTimelimit := time.Now().Add(-72 * time.Hour).Unix()
+func deleteExpiredNotifs() {
+	// Get a copy of the notification map.
+	notsCopy := getNotsCopy()
 
-	notsLock.Lock()
-	defer notsLock.Unlock()
+	// Delete all expired notifications.
+	for _, n := range notsCopy {
+		if n.isExpired() {
+			n.delete(true)
+		}
+	}
+}
 
+func (n *Notification) isExpired() bool {
+	n.Lock()
+	defer n.Unlock()
+
+	return n.Expires > 0 && n.Expires < time.Now().Unix()
+}
+
+func getNotsCopy() []*Notification {
+	notsLock.RLock()
+	defer notsLock.RUnlock()
+
+	notsCopy := make([]*Notification, 0, len(nots))
 	for _, n := range nots {
-		n.Lock()
-		switch {
-		case n.Executed != 0: // notification was fully handled
-			// wait for a short time before deleting
-			if n.Executed < finishedThreshhold {
-				go deleteNotification(n)
-			}
-		case n.Responded != 0:
-			// waiting for execution
-			if n.Responded < executionTimelimit {
-				go deleteNotification(n)
-			}
-		case n.Expires != 0:
-			// expired without response
-			if n.Expires < now {
-				go deleteNotification(n)
-			}
-		case n.Created != 0:
-			// fallback: delete after 3 days after creation
-			if n.Created < fallbackTimelimit {
-				go deleteNotification(n)
-
-			}
-		default:
-			// invalid, impossible to determine cleanup timeframe, delete now
-			go deleteNotification(n)
-		}
-		n.Unlock()
+		notsCopy = append(notsCopy, n)
 	}
-}
 
-func deleteNotification(n *Notification) {
-	err := n.Delete()
-	if err != nil {
-		log.Debugf("notifications: failed to delete %s: %s", n.ID, err)
-	}
+	return notsCopy
 }

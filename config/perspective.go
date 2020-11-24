@@ -27,7 +27,7 @@ func NewPerspective(config map[string]interface{}) (*Perspective, error) {
 	var firstErr error
 	var errCnt int
 
-	optionsLock.Lock()
+	optionsLock.RLock()
 optionsLoop:
 	for key, option := range options {
 		// get option key from config
@@ -51,7 +51,7 @@ optionsLoop:
 			valueCache: valueCache,
 		}
 	}
-	optionsLock.Unlock()
+	optionsLock.RUnlock()
 
 	if firstErr != nil {
 		if errCnt > 0 {
@@ -63,22 +63,19 @@ optionsLoop:
 	return perspective, nil
 }
 
-func (p *Perspective) getPerspectiveValueCache(name string, requestedType uint8) *valueCache {
+func (p *Perspective) getPerspectiveValueCache(name string, requestedType OptionType) *valueCache {
 	// get option
 	pOption, ok := p.config[name]
 	if !ok {
 		// check if option exists at all
-		optionsLock.RLock()
-		_, ok = options[name]
-		optionsLock.RUnlock()
-		if !ok {
+		if _, err := GetOption(name); err != nil {
 			log.Errorf("config: request for unregistered option: %s", name)
 		}
 		return nil
 	}
 
 	// check type
-	if requestedType != pOption.option.OptType {
+	if requestedType != pOption.option.OptType && requestedType != optTypeAny {
 		log.Errorf("config: bad type: requested %s as %s, but is %s", name, getTypeName(requestedType), getTypeName(pOption.option.OptType))
 		return nil
 	}
@@ -89,6 +86,12 @@ func (p *Perspective) getPerspectiveValueCache(name string, requestedType uint8)
 	}
 
 	return pOption.valueCache
+}
+
+// Has returns whether the given option is set in the perspective.
+func (p *Perspective) Has(name string) bool {
+	valueCache := p.getPerspectiveValueCache(name, optTypeAny)
+	return valueCache != nil
 }
 
 // GetAsString returns a function that returns the wanted string with high performance.

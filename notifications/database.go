@@ -19,9 +19,6 @@ var (
 	notsLock sync.RWMutex
 
 	dbController *database.Controller
-	dbInterface  *database.Interface
-
-	persistentBasePath string
 )
 
 // Storage interface errors
@@ -30,13 +27,6 @@ var (
 	ErrInvalidPath = errors.New("invalid path")
 	ErrNoDelete    = errors.New("notifications may not be deleted, they must be handled")
 )
-
-// SetPersistenceBasePath sets the base path for persisting persistent notifications.
-func SetPersistenceBasePath(dbBasePath string) {
-	if persistentBasePath == "" {
-		persistentBasePath = dbBasePath
-	}
-}
 
 // StorageInterface provices a storage.Interface to the configuration manager.
 type StorageInterface struct {
@@ -64,22 +54,27 @@ func registerAsDatabase() error {
 
 // Get returns a database record.
 func (s *StorageInterface) Get(key string) (record.Record, error) {
-	notsLock.RLock()
-	defer notsLock.RUnlock()
+	// Get EventID from key.
+	if !strings.HasPrefix(key, "all/") {
+		return nil, storage.ErrNotFound
+	}
+	key = strings.TrimPrefix(key, "all/")
 
-	// transform key
-	if strings.HasPrefix(key, "all/") {
-		key = strings.TrimPrefix(key, "all/")
-	} else {
+	// Get notification from storage.
+	n, ok := getNotification(key)
+	if !ok {
 		return nil, storage.ErrNotFound
 	}
 
-	// get notification
-	not, ok := nots[key]
-	if ok {
-		return not, nil
-	}
-	return nil, storage.ErrNotFound
+	return n, nil
+}
+
+func getNotification(eventID string) (n *Notification, ok bool) {
+	notsLock.RLock()
+	defer notsLock.RUnlock()
+
+	n, ok = nots[eventID]
+	return
 }
 
 // Query returns a an iterator for the supplied query.
@@ -92,21 +87,38 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 }
 
 func (s *StorageInterface) processQuery(q *query.Query, it *iterator.Iterator) {
-	notsLock.RLock()
-	defer notsLock.RUnlock()
+	// Get a copy of the notification map.
+	notsCopy := getNotsCopy()
 
 	// send all notifications
-	for _, n := range nots {
-		if n.Meta().IsDeleted() {
-			continue
-		}
-
-		if q.MatchesKey(n.DatabaseKey()) && q.MatchesRecord(n) {
-			it.Next <- n
+	for _, n := range notsCopy {
+		if inQuery(n, q) {
+			select {
+			case it.Next <- n:
+			case <-it.Done:
+				// make sure we don't leak this goroutine if the iterator get's cancelled
+				return
+			}
 		}
 	}
 
 	it.Finish(nil)
+}
+
+func inQuery(n *Notification, q *query.Query) bool {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	switch {
+	case n.Meta().IsDeleted():
+		return false
+	case !q.MatchesKey(n.DatabaseKey()):
+		return false
+	case !q.MatchesRecord(n):
+		return false
+	}
+
+	return true
 }
 
 // Put stores a record in the database.
@@ -126,76 +138,79 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 		return nil, ErrInvalidPath
 	}
 
-	// continue in goroutine
-	go UpdateNotification(n, key)
-
-	return n, nil
+	return applyUpdate(n, key)
 }
 
-// UpdateNotification updates a notification with input from a database action. Notification will not be saved/propagated if there is no valid change.
-func UpdateNotification(n *Notification, key string) {
-	n.Lock()
-	defer n.Unlock()
-
+func applyUpdate(n *Notification, key string) (*Notification, error) {
 	// separate goroutine in order to correctly lock notsLock
-	notsLock.RLock()
-	origN, ok := nots[key]
-	notsLock.RUnlock()
-
-	save := false
+	existing, ok := getNotification(key)
 
 	// ignore if already deleted
-	if ok && origN.Meta().IsDeleted() {
-		ok = false
+	if !ok || existing.Meta().IsDeleted() {
+		// this is a completely new notification
+		// we pass pushUpdate==false because the storage
+		// controller will push an update on put anyway.
+		n.save(false)
+		return n, nil
 	}
 
-	if ok {
-		// existing notification
-		// only update select attributes
-		origN.Lock()
-		defer origN.Unlock()
-	} else {
-		// new notification (from external source): old == new
-		origN = n
+	// Save when we're finished, if needed.
+	save := false
+	defer func() {
+		if save {
+			existing.save(false)
+		}
+	}()
+
+	existing.Lock()
+	defer existing.Unlock()
+
+	if existing.State == Executed {
+		return existing, fmt.Errorf("action already executed")
+	}
+
+	// check if the notification has been marked as
+	// "executed externally".
+	if n.State == Executed {
+		log.Tracef("notifications: action for %s executed externally", n.EventID)
+		existing.State = Executed
+		save = true
+
+		// in case the action has been executed immediately by the
+		// sender we may need to update the SelectedActionID.
+		// Though, we guard the assignments with value check
+		// so partial updates that only change the
+		// State property do not overwrite existing values.
+		if n.SelectedActionID != "" {
+			existing.SelectedActionID = n.SelectedActionID
+		}
+	}
+
+	if n.SelectedActionID != "" && existing.State == Active {
+		log.Tracef("notifications: selected action for %s: %s", n.EventID, n.SelectedActionID)
+		existing.selectAndExecuteAction(n.SelectedActionID)
 		save = true
 	}
 
-	switch {
-	case n.SelectedActionID != "" && n.Responded == 0:
-		// select action, if not yet already handled
-		log.Tracef("notifications: selected action for %s: %s", n.ID, n.SelectedActionID)
-		origN.selectAndExecuteAction(n.SelectedActionID)
-		save = true
-	case origN.Executed == 0 && n.Executed != 0:
-		log.Tracef("notifications: action for %s executed externally", n.ID)
-		origN.Executed = n.Executed
-		save = true
-	}
-
-	if save {
-		// we may be locking
-		go origN.Save()
-	}
+	return existing, nil
 }
 
 // Delete deletes a record from the database.
 func (s *StorageInterface) Delete(key string) error {
-	// transform key
-	if strings.HasPrefix(key, "all/") {
-		key = strings.TrimPrefix(key, "all/")
-	} else {
+	// Get EventID from key.
+	if !strings.HasPrefix(key, "all/") {
 		return storage.ErrNotFound
 	}
+	key = strings.TrimPrefix(key, "all/")
 
-	// get notification
-	notsLock.Lock()
-	n, ok := nots[key]
-	notsLock.Unlock()
+	// Get notification from storage.
+	n, ok := getNotification(key)
 	if !ok {
 		return storage.ErrNotFound
 	}
-	// delete
-	return n.Delete()
+
+	n.delete(true)
+	return nil
 }
 
 // ReadOnly returns whether the database is read only.

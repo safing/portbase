@@ -24,7 +24,7 @@ func TestLayersGetters(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = setConfig(mapData)
+	err = replaceConfig(mapData)
 	if err != nil {
 		t.Fatal(err)
 	}

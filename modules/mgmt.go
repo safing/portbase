@@ -12,17 +12,20 @@ var (
 	modulesChangeNotifyFn func(*Module)
 )
 
-// Enable enables the module. Only has an effect if module management is enabled.
+// Enable enables the module. Only has an effect if module management
+// is enabled.
 func (m *Module) Enable() (changed bool) {
 	return m.enabled.SetToIf(false, true)
 }
 
-// Disable disables the module. Only has an effect if module management is enabled.
+// Disable disables the module. Only has an effect if module management
+// is enabled.
 func (m *Module) Disable() (changed bool) {
 	return m.enabled.SetToIf(true, false)
 }
 
-// SetEnabled sets the module to the desired enabled state. Only has an effect if module management is enabled.
+// SetEnabled sets the module to the desired enabled state. Only has
+// an effect if module management is enabled.
 func (m *Module) SetEnabled(enable bool) (changed bool) {
 	if enable {
 		return m.Enable()
@@ -35,16 +38,36 @@ func (m *Module) Enabled() bool {
 	return m.enabled.IsSet()
 }
 
-// EnabledAsDependency returns whether or not the module is currently enabled as a dependency.
+// EnabledAsDependency returns whether or not the module is currently
+// enabled as a dependency.
 func (m *Module) EnabledAsDependency() bool {
 	return m.enabledAsDependency.IsSet()
 }
 
-// EnableModuleManagement enables the module management functionality within modules. The supplied notify function will be called whenever the status of a module changes. The affected module will be in the parameter. You will need to manually enable modules, else nothing will start.
-func EnableModuleManagement(changeNotifyFn func(*Module)) {
+// EnableModuleManagement enables the module management functionality
+// within modules. The supplied notify function will be called whenever
+// the status of a module changes. The affected module will be in the
+// parameter. You will need to manually enable modules, else nothing
+// will start.
+// EnableModuleManagement returns true if changeNotifyFn has been set
+// and it has been called for the first time.
+//
+// Example:
+//
+// 		EnableModuleManagement(func(m *modules.Module) {
+//			// some module has changed ...
+//			// do what ever you like
+//
+//			// Run the built-in module management
+//			modules.ManageModules()
+//		})
+//
+func EnableModuleManagement(changeNotifyFn func(*Module)) bool {
 	if moduleMgmtEnabled.SetToIf(false, true) {
 		modulesChangeNotifyFn = changeNotifyFn
+		return true
 	}
+	return false
 }
 
 func (m *Module) notifyOfChange() {
@@ -56,7 +79,8 @@ func (m *Module) notifyOfChange() {
 	}
 }
 
-// ManageModules triggers the module manager to react to recent changes of enabled modules.
+// ManageModules triggers the module manager to react to recent changes of
+// enabled modules.
 func ManageModules() error {
 	// check if enabled
 	if !moduleMgmtEnabled.IsSet() {

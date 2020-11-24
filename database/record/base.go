@@ -9,6 +9,22 @@ import (
 	"github.com/safing/portbase/log"
 )
 
+// TODO(ppacher):
+//		we can reduce the record.Record interface a lot by moving
+//		most of those functions that require the Record as it's first
+//		parameter to static package functions
+//		(i.e. Marshal, MarshalRecord, GetAccessor, ...).
+//		We should also consider given Base a GetBase() *Base method
+//		that returns itself. This way we can remove almost all Base
+//		only methods from the record.Record interface. That is, we can
+//		remove all those CreateMeta, UpdateMeta, ... stuff from the
+//		interface definition (not the actual functions!). This would make
+// 		the record.Record interface slim and only provide methods that
+//		most users actually need. All those database/storage related methods
+// 		can still be accessed by using GetBase().XXX() instead. We can also
+//		expose the dbName and dbKey and meta properties directly which would
+// 		make a nice JSON blob when marshalled.
+
 // Base provides a quick way to comply with the Model interface.
 type Base struct {
 	dbName string

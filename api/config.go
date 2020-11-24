@@ -9,7 +9,7 @@ import (
 
 // Config Keys
 const (
-	CfgDefaultListenAddressKey = "api/listenAddress"
+	CfgDefaultListenAddressKey = "core/listenAddress"
 )
 
 var (
@@ -41,19 +41,22 @@ func registerConfig() error {
 	err := config.Register(&config.Option{
 		Name:            "API Address",
 		Key:             CfgDefaultListenAddressKey,
-		Description:     "Define on which IP and port the API should listen on.",
-		Order:           128,
+		Description:     "Defines the IP address and port for the internal API.",
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		ReleaseLevel:    config.ReleaseLevelStable,
 		DefaultValue:    getDefaultListenAddress(),
 		ValidationRegex: "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{1,5}|\\[[:0-9A-Fa-f]+\\]:[0-9]{1,5})$",
 		RequiresRestart: true,
+		Annotations: config.Annotations{
+			config.DisplayOrderAnnotation: 513,
+			config.CategoryAnnotation:     "Development",
+		},
 	})
 	if err != nil {
 		return err
 	}
-	listenAddressConfig = config.GetAsString("api/listenAddress", getDefaultListenAddress())
+	listenAddressConfig = config.GetAsString(CfgDefaultListenAddressKey, getDefaultListenAddress())
 
 	return nil
 }
