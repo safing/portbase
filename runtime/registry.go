@@ -147,7 +147,7 @@ func (r *Registry) Register(keyOrPrefix string, p ValueProvider) (PushFunc, erro
 func (r *Registry) Get(key string) (record.Record, error) {
 	provider := r.getMatchingProvider(key)
 	if provider == nil {
-		return nil, nil
+		return nil, database.ErrNotFound
 	}
 
 	records, err := provider.Get(key)
