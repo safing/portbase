@@ -26,6 +26,7 @@ type ResourceRegistry struct {
 	UpdateURLs       []string
 	UserAgent        string
 	MandatoryUpdates []string
+	AutoUnpack       []string
 
 	Beta    bool
 	DevMode bool
