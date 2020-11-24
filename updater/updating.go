@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/safing/portbase/utils"
 
@@ -45,31 +47,48 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 	}
 
 	// parse
-	new := make(map[string]string)
-	err = json.Unmarshal(data, &new)
+	newIndexData := make(map[string]string)
+	err = json.Unmarshal(data, &newIndexData)
 	if err != nil {
 		return fmt.Errorf("failed to parse index %s: %w", idx.Path, err)
 	}
 
 	// check for content
-	if len(new) == 0 {
+	if len(newIndexData) == 0 {
 		return fmt.Errorf("index %s is empty", idx.Path)
 	}
 
+	// Check if all resources are within the indexes' authority.
+	authoritativePath := path.Dir(idx.Path) + "/"
+	if authoritativePath == "./" {
+		// Fix path for indexes at the storage root.
+		authoritativePath = ""
+	}
+	cleanedData := make(map[string]string, len(newIndexData))
+	for key, version := range newIndexData {
+		if strings.HasPrefix(key, authoritativePath) {
+			cleanedData[key] = version
+		} else {
+			log.Warningf("%s: index %s oversteps it's authority by defining version for %s", reg.Name, idx.Path, key)
+		}
+	}
+
 	// add resources to registry
-	err = reg.AddResources(new, false, idx.Stable, idx.Beta)
+	err = reg.AddResources(cleanedData, false, idx.Stable, idx.Beta)
 	if err != nil {
 		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
 	}
 
 	// check if dest dir exists
-	err = reg.storageDir.EnsureRelPath(filepath.Dir(idx.Path))
+	indexDir := filepath.FromSlash(path.Dir(idx.Path))
+	err = reg.storageDir.EnsureRelPath(indexDir)
 	if err != nil {
 		log.Warningf("%s: failed to ensure directory for updated index %s: %s", reg.Name, idx.Path, err)
 	}
 
 	// save index
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, idx.Path), data, 0644)
+	indexPath := filepath.FromSlash(idx.Path)
+	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, indexPath), data, 0644)
 	if err != nil {
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}
