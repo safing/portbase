@@ -141,6 +141,22 @@
   version = "v1.4.2"
 
 [[projects]]
+  digest = "1:eaed935e3637c60ad9897e54ab3419c18b91775d6e3af339dec54aeefb48b8d6"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = ""
+  revision = "7b00e5db719c64d14dd0caaacbd13e76254d02c0"
+  version = "v1.1.0"
+
+[[projects]]
+  digest = "1:c6e569ffa34fcd24febd3562bff0520a104d15d1a600199cb3141debf2e58c89"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2004d9dba6b07a5b8d133209244f376680f9d472"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:2f0c811248aeb64978037b357178b1593372439146bda860cb16f2c80785ea93"
   name = "github.com/hashicorp/go-version"
   packages = ["."]
@@ -366,6 +382,7 @@
     "github.com/google/renameio",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
+    "github.com/hashicorp/go-multierror",
     "github.com/hashicorp/go-version",
     "github.com/seehuhn/fortuna",
     "github.com/shirou/gopsutil/host",
