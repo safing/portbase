@@ -273,12 +273,14 @@ func (m *Module) stopAllTasks(reports chan *report) {
 			"module-failed-stop",
 			fmt.Sprintf("failed to stop module: %s", err.Error()),
 		)
-	} else {
-		m.Lock()
-		m.status = StatusOffline
-		m.Unlock()
-		m.notifyOfChange()
 	}
+
+	// Always set to offline in order to let other modules shutdown in order.
+	m.Lock()
+	m.status = StatusOffline
+	m.Unlock()
+	m.notifyOfChange()
+
 	// send report
 	reports <- &report{
 		module: m,

@@ -10,7 +10,6 @@ type Subscription struct {
 	q        *query.Query
 	local    bool
 	internal bool
-	canceled bool
 
 	Feed chan record.Record
 }
@@ -22,20 +21,13 @@ func (s *Subscription) Cancel() error {
 		return err
 	}
 
-	c.readLock.Lock()
-	defer c.readLock.Unlock()
-	c.writeLock.Lock()
-	defer c.writeLock.Unlock()
-
-	if s.canceled {
-		return nil
-	}
-	s.canceled = true
-	close(s.Feed)
+	c.subscriptionLock.Lock()
+	defer c.subscriptionLock.Unlock()
 
 	for key, sub := range c.subscriptions {
 		if sub.q == s.q {
 			c.subscriptions = append(c.subscriptions[:key], c.subscriptions[key+1:]...)
+			close(s.Feed) // this close is guarded by the controllers subscriptionLock.
 			return nil
 		}
 	}

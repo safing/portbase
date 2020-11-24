@@ -338,65 +338,101 @@ func (res *Resource) Blacklist(version string) error {
 
 // Purge deletes old updates, retaining a certain amount, specified by
 // the keep parameter. Purge will always keep at least 2 versions so
-// specifying a smaller keep value will have no effect. Note that
-// blacklisted versions are not counted for the keep parameter.
-// After purging a new version will be selected.
-func (res *Resource) Purge(keep int) {
+// specifying a smaller keep value will have no effect.
+func (res *Resource) Purge(keepExtra int) { //nolint:gocognit
 	res.Lock()
 	defer res.Unlock()
 
-	// safeguard
-	if keep < 2 {
-		keep = 2
+	// If there is any blacklisted version within the resource, pause purging.
+	// In this case we may need extra available versions beyond what would be
+	// available after purging.
+	for _, rv := range res.Versions {
+		if rv.Blacklisted {
+			log.Debugf(
+				"%s: pausing purging of resource %s, as it contains blacklisted items",
+				res.registry.Name,
+				rv.resource.Identifier,
+			)
+			return
+		}
 	}
 
-	// keep versions
-	var validVersions int
+	// Safeguard the amount of extra version to keep.
+	if keepExtra < 2 {
+		keepExtra = 2
+	}
+
+	// Search for purge boundary.
+	var purgeBoundary int
 	var skippedActiveVersion bool
 	var skippedSelectedVersion bool
-	var purgeFrom int
+	var skippedStableVersion bool
+boundarySearch:
 	for i, rv := range res.Versions {
-		// continue to purging?
-		if validVersions >= keep && // skip at least <keep> versions
-			skippedActiveVersion && // skip until active version
-			skippedSelectedVersion { // skip until selected version
-			purgeFrom = i
-			break
+		// Check if required versions are already skipped.
+		switch {
+		case !skippedActiveVersion && res.ActiveVersion != nil:
+			// Skip versions until the active version, if it's set.
+		case !skippedSelectedVersion && res.SelectedVersion != nil:
+			// Skip versions until the selected version, if it's set.
+		case !skippedStableVersion:
+			// Skip versions until the stable version.
+		default:
+			// All required version skipped, set purge boundary.
+			purgeBoundary = i + keepExtra
+			break boundarySearch
 		}
 
-		// keep active version
-		if !skippedActiveVersion && rv == res.ActiveVersion {
+		// Check if current instance is a required version.
+		if rv == res.ActiveVersion {
 			skippedActiveVersion = true
 		}
-
-		// keep selected version
-		if !skippedSelectedVersion && rv == res.SelectedVersion {
+		if rv == res.SelectedVersion {
 			skippedSelectedVersion = true
 		}
-
-		// count valid (not blacklisted) versions
-		if !rv.Blacklisted {
-			validVersions++
+		if rv.StableRelease {
+			skippedStableVersion = true
 		}
 	}
 
-	// check if there is anything to purge
-	if purgeFrom < keep || purgeFrom > len(res.Versions) {
+	// Check if there is anything to purge at all.
+	if purgeBoundary <= keepExtra || purgeBoundary >= len(res.Versions) {
 		return
 	}
 
-	// purge phase
-	for _, rv := range res.Versions[purgeFrom:] {
-		// delete
-		err := os.Remove(rv.storagePath())
+	// Purge everything beyond the purge boundary.
+	for _, rv := range res.Versions[purgeBoundary:] {
+		storagePath := rv.storagePath()
+		// Remove resource file.
+		err := os.Remove(storagePath)
 		if err != nil {
-			log.Warningf("%s: failed to purge old resource %s: %s", res.registry.Name, rv.storagePath(), err)
+			log.Warningf("%s: failed to purge resource %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)
+		} else {
+			log.Tracef("%s: purged resource %s v%s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber)
+		}
+
+		// Remove unpacked version of resource.
+		ext := filepath.Ext(storagePath)
+		if ext == "" {
+			// Nothing to do if file does not have an extension.
+			continue
+		}
+		unpackedPath := strings.TrimSuffix(storagePath, ext)
+
+		// Remove if it exists, or an error occurs on access.
+		_, err = os.Stat(unpackedPath)
+		if err == nil || !os.IsNotExist(err) {
+			err = os.Remove(unpackedPath)
+			if err != nil {
+				log.Warningf("%s: failed to purge unpacked resource %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			} else {
+				log.Tracef("%s: purged unpacked resource %s v%s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber)
+			}
 		}
 	}
-	// remove entries of deleted files
-	res.Versions = res.Versions[purgeFrom:]
 
-	res.selectVersion()
+	// remove entries of deleted files
+	res.Versions = res.Versions[purgeBoundary:]
 }
 
 func (rv *ResourceVersion) versionedPath() string {

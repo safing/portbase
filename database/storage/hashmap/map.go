@@ -66,16 +66,26 @@ func (hm *HashMap) PutMany(shadowDelete bool) (chan<- record.Record, <-chan erro
 	// start handler
 	go func() {
 		for r := range batch {
-			if !shadowDelete && r.Meta().IsDeleted() {
-				delete(hm.db, r.DatabaseKey())
-			} else {
-				hm.db[r.DatabaseKey()] = r
-			}
+			hm.batchPutOrDelete(shadowDelete, r)
 		}
 		errs <- nil
 	}()
 
 	return batch, errs
+}
+
+func (hm *HashMap) batchPutOrDelete(shadowDelete bool, r record.Record) {
+	r.Lock()
+	defer r.Unlock()
+
+	hm.dbLock.Lock()
+	defer hm.dbLock.Unlock()
+
+	if !shadowDelete && r.Meta().IsDeleted() {
+		delete(hm.db, r.DatabaseKey())
+	} else {
+		hm.db[r.DatabaseKey()] = r
+	}
 }
 
 // Delete deletes a record from the database.
@@ -108,17 +118,16 @@ func (hm *HashMap) queryExecutor(queryIter *iterator.Iterator, q *query.Query, l
 
 mapLoop:
 	for key, record := range hm.db {
+		record.Lock()
+		if !q.MatchesKey(key) ||
+			!q.MatchesRecord(record) ||
+			!record.Meta().CheckValidity() ||
+			!record.Meta().CheckPermission(local, internal) {
 
-		switch {
-		case !q.MatchesKey(key):
-			continue
-		case !q.MatchesRecord(record):
-			continue
-		case !record.Meta().CheckValidity():
-			continue
-		case !record.Meta().CheckPermission(local, internal):
+			record.Unlock()
 			continue
 		}
+		record.Unlock()
 
 		select {
 		case <-queryIter.Done:

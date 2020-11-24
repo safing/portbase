@@ -4,119 +4,127 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"strings"
 
-	"github.com/safing/portbase/database"
+	"github.com/safing/portbase/config"
 	_ "github.com/safing/portbase/database/dbmodule" // database module is required
 	"github.com/safing/portbase/modules"
+	"github.com/safing/portbase/runtime"
 )
 
-const (
-	configChangeEvent      = "config change"
-	subsystemsStatusChange = "status change"
-)
+const configChangeEvent = "config change"
 
 var (
+	// DefaultManager is the default subsystem registry.
+	DefaultManager *Manager
+
 	module         *modules.Module
 	printGraphFlag bool
-
-	databaseKeySpace string
-	db               = database.NewInterface(nil)
 )
 
-func init() {
-	// enable partial starting
-	modules.EnableModuleManagement(handleModuleChanges)
+// Register registers a new subsystem. It's like Manager.Register
+// but uses DefaultManager and panics on error.
+func Register(id, name, description string, module *modules.Module, configKeySpace string, option *config.Option) {
+	err := DefaultManager.Register(id, name, description, module, configKeySpace, option)
+	if err != nil {
+		panic(err)
+	}
+}
 
-	// register module and enable it for starting
-	module = modules.Register("subsystems", prep, start, nil, "config", "database", "base")
+func init() {
+	// The subsystem layer takes over module management. Note that
+	// no one must have called EnableModuleManagement. Otherwise
+	// the subsystem layer will silently fail managing module
+	// dependencies!
+	// TODO(ppacher): we SHOULD panic here!
+	// TASK(#1431)
+
+	modules.EnableModuleManagement(func(m *modules.Module) {
+		if DefaultManager == nil {
+			return
+		}
+		DefaultManager.handleModuleUpdate(m)
+	})
+
+	module = modules.Register("subsystems", prep, start, nil, "config", "database", "runtime", "base")
 	module.Enable()
 
-	// register event for changes in the subsystem
-	module.RegisterEvent(subsystemsStatusChange)
+	// TODO(ppacher): can we create the default registry during prep phase?
+	var err error
+	DefaultManager, err = NewManager(runtime.DefaultRegistry)
+	if err != nil {
+		panic("Failed to create default registry: " + err.Error())
+	}
 
 	flag.BoolVar(&printGraphFlag, "print-subsystem-graph", false, "print the subsystem module dependency graph")
 }
 
 func prep() error {
 	if printGraphFlag {
-		printGraph()
+		DefaultManager.PrintGraph()
 		return modules.ErrCleanExit
 	}
 
-	return module.RegisterEventHook("config", configChangeEvent, "control subsystems", handleConfigChanges)
-}
-
-func start() error {
-	// lock registration
-	subsystemsLocked.Set()
-
-	// lock slice and map
-	subsystemsLock.Lock()
-	// go through all dependencies
-	seen := make(map[string]struct{})
-	for _, sub := range subsystems {
-		// mark subsystem module as seen
-		seen[sub.module.Name] = struct{}{}
+	// We need to listen for configuration changes so we can
+	// start/stop dependend modules in case a subsystem is
+	// (de-)activated.
+	if err := module.RegisterEventHook(
+		"config",
+		configChangeEvent,
+		"control subsystems",
+		func(ctx context.Context, _ interface{}) error {
+			err := DefaultManager.CheckConfig(ctx)
+			if err != nil {
+				module.Error(
+					"modulemgmt-failed",
+					fmt.Sprintf("The subsystem framework failed to start or stop one or more modules.\nError: %s\nCheck logs for more information.", err),
+				)
+				return nil
+			}
+			module.Resolve("modulemgmt-failed")
+			return nil
+		},
+	); err != nil {
+		return fmt.Errorf("register event hook: %w", err)
 	}
-	for _, sub := range subsystems {
-		// add main module
-		sub.Modules = append(sub.Modules, statusFromModule(sub.module))
-		// add dependencies
-		sub.addDependencies(sub.module, seen)
-	}
-	// unlock
-	subsystemsLock.Unlock()
 
-	// apply config
-	module.StartWorker("initial subsystem configuration", func(ctx context.Context) error {
-		return handleConfigChanges(module.Ctx, nil)
-	})
 	return nil
 }
 
-func (sub *Subsystem) addDependencies(module *modules.Module, seen map[string]struct{}) {
-	for _, module := range module.Dependencies() {
-		_, ok := seen[module.Name]
-		if !ok {
-			// add dependency to modules
-			sub.Modules = append(sub.Modules, statusFromModule(module))
-			// mark as seen
-			seen[module.Name] = struct{}{}
-			// add further dependencies
-			sub.addDependencies(module, seen)
-		}
+func start() error {
+	// Registration of subsystems is only allowed during
+	// preparation. Make sure any further call to Register()
+	// panics.
+	if err := DefaultManager.Start(); err != nil {
+		return err
 	}
+
+	module.StartWorker("initial subsystem configuration", DefaultManager.CheckConfig)
+
+	return nil
 }
 
-// SetDatabaseKeySpace sets a key space where subsystem status
-func SetDatabaseKeySpace(keySpace string) {
-	if databaseKeySpace == "" {
-		databaseKeySpace = keySpace
+// PrintGraph prints the subsystem and module graph.
+func (mng *Manager) PrintGraph() {
+	mng.l.RLock()
+	defer mng.l.RUnlock()
 
-		if !strings.HasSuffix(databaseKeySpace, "/") {
-			databaseKeySpace += "/"
-		}
-	}
-}
-
-func printGraph() {
 	fmt.Println("subsystems dependency graph:")
 
 	// unmark subsystems module
 	module.Disable()
+
 	// mark roots
-	for _, sub := range subsystems {
+	for _, sub := range mng.subsys {
 		sub.module.Enable() // mark as tree root
 	}
-	// print
-	for _, sub := range subsystems {
+
+	for _, sub := range mng.subsys {
 		printModuleGraph("", sub.module, true)
 	}
 
 	fmt.Println("\nsubsystem module groups:")
 	_ = start() // no errors for what we need here
-	for _, sub := range subsystems {
+	for _, sub := range mng.subsys {
 		fmt.Printf("├── %s\n", sub.Name)
 		for _, mod := range sub.Modules[1:] {
 			fmt.Printf("│   ├── %s\n", mod.Name)

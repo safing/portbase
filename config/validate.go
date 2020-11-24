@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 )
 
 type valueCache struct {
@@ -28,7 +29,50 @@ func (vc *valueCache) getData(opt *Option) interface{} {
 	}
 }
 
+// isAllowedPossibleValue checks if value is defined as a PossibleValue
+// in opt. If there are not possible values defined value is considered
+// allowed and nil is returned. isAllowedPossibleValue ensure the actual
+// value is an allowed primitiv value by using reflection to convert
+// value and each PossibleValue to a comparable primitiv if possible.
+// In case of complex value types isAllowedPossibleValue uses
+// reflect.DeepEqual as a fallback.
+func isAllowedPossibleValue(opt *Option, value interface{}) error {
+	if opt.PossibleValues == nil {
+		return nil
+	}
+
+	for _, val := range opt.PossibleValues {
+		compareAgainst := val.Value
+		valueType := reflect.TypeOf(value)
+
+		// loading int's from the configuration JSON does not preserve the correct type
+		// as we get float64 instead. Make sure to convert them before.
+		if reflect.TypeOf(val.Value).ConvertibleTo(valueType) {
+			compareAgainst = reflect.ValueOf(val.Value).Convert(valueType).Interface()
+		}
+		if compareAgainst == value {
+			return nil
+		}
+
+		if reflect.DeepEqual(val.Value, value) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("value is not allowed")
+}
+
+// validateValue ensures that value matches the expected type of option.
+// It does not create a copy of the value!
 func validateValue(option *Option, value interface{}) (*valueCache, error) { //nolint:gocyclo
+	if option.OptType != OptTypeStringArray {
+		if err := isAllowedPossibleValue(option, value); err != nil {
+			return nil, fmt.Errorf("validation of option %s failed for %v: %w", option.Key, value, err)
+		}
+	}
+
+	reflect.TypeOf(value).ConvertibleTo(reflect.TypeOf(""))
+
 	switch v := value.(type) {
 	case string:
 		if option.OptType != OptTypeString {
@@ -60,6 +104,10 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 			for pos, entry := range v {
 				if !option.compiledRegex.MatchString(entry) {
 					return nil, fmt.Errorf("validation of option %s failed: string \"%s\" at index %d did not match validation regex", option.Key, entry, pos)
+				}
+
+				if err := isAllowedPossibleValue(option, entry); err != nil {
+					return nil, fmt.Errorf("validation of option %s failed: string %q at index %d is not allowed", option.Key, entry, pos)
 				}
 			}
 		}

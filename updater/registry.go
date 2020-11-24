@@ -26,6 +26,7 @@ type ResourceRegistry struct {
 	UpdateURLs       []string
 	UserAgent        string
 	MandatoryUpdates []string
+	AutoUnpack       []string
 
 	Beta    bool
 	DevMode bool
@@ -168,6 +169,14 @@ func (reg *ResourceRegistry) Purge(keep int) {
 	for _, res := range reg.resources {
 		res.Purge(keep)
 	}
+}
+
+// Reset resets the internal state of the registry, removing all added resources.
+func (reg *ResourceRegistry) Reset() {
+	reg.Lock()
+	defer reg.Unlock()
+
+	reg.resources = make(map[string]*Resource)
 }
 
 // Cleanup removes temporary files.

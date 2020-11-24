@@ -5,6 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
+
+	"github.com/tidwall/sjson"
+
+	"github.com/safing/portbase/database/iterator"
+	"github.com/safing/portbase/formats/varint"
 
 	"github.com/gorilla/websocket"
 	"github.com/tevino/abool"
@@ -43,7 +49,12 @@ func init() {
 type DatabaseAPI struct {
 	conn      *websocket.Conn
 	sendQueue chan []byte
-	subs      map[string]*database.Subscription
+
+	queriesLock sync.Mutex
+	queries     map[string]*iterator.Iterator
+
+	subsLock sync.Mutex
+	subs     map[string]*database.Subscription
 
 	shutdownSignal chan struct{}
 	shuttingDown   *abool.AtomicBool
@@ -72,6 +83,7 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 	new := &DatabaseAPI{
 		conn:           wsConn,
 		sendQueue:      make(chan []byte, 100),
+		queries:        make(map[string]*iterator.Iterator),
 		subs:           make(map[string]*database.Subscription),
 		shutdownSignal: make(chan struct{}),
 		shuttingDown:   abool.NewBool(false),
@@ -94,11 +106,13 @@ func (api *DatabaseAPI) handler() {
 	//    124|done
 	//    124|error|<message>
 	//    124|warning|<message> // error with single record, operation continues
+	// 124|cancel
 	// 125|sub|<query>
 	//    125|upd|<key>|<data>
 	//    125|new|<key>|<data>
 	//    127|del|<key>
 	//    125|warning|<message> // error with single record, operation continues
+	// 125|cancel
 	// 127|qsub|<query>
 	//    127|ok|<key>|<data>
 	//    127|done
@@ -107,6 +121,7 @@ func (api *DatabaseAPI) handler() {
 	//    127|new|<key>|<data>
 	//    127|del|<key>
 	//    127|warning|<message> // error with single record, operation continues
+	// 127|cancel
 
 	// 128|create|<key>|<data>
 	//    128|success
@@ -141,6 +156,16 @@ func (api *DatabaseAPI) handler() {
 		}
 
 		parts := bytes.SplitN(msg, []byte("|"), 3)
+
+		// Handle special command "cancel"
+		if len(parts) == 2 && string(parts[1]) == "cancel" {
+			// 124|cancel
+			// 125|cancel
+			// 127|cancel
+			go api.handleCancel(parts[0])
+			continue
+		}
+
 		if len(parts) != 3 {
 			api.send(nil, dbMsgTypeError, "bad request: malformed message", nil)
 			continue
@@ -253,7 +278,7 @@ func (api *DatabaseAPI) handleGet(opID []byte, key string) {
 
 	r, err := api.db.Get(key)
 	if err == nil {
-		data, err = r.Marshal(r, record.JSON)
+		data, err = marshalRecord(r)
 	}
 	if err != nil {
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
@@ -269,6 +294,7 @@ func (api *DatabaseAPI) handleQuery(opID []byte, queryText string) {
 	//    124|warning|<message>
 	//    124|error|<message>
 	//    124|warning|<message> // error with single record, operation continues
+	// 124|cancel
 
 	var err error
 
@@ -288,19 +314,17 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 		return false
 	}
 
-	for r := range it.Next {
-		r.Lock()
-		data, err := r.Marshal(r, record.JSON)
-		r.Unlock()
-		if err != nil {
-			api.send(opID, dbMsgTypeWarning, err.Error(), nil)
-		}
-		api.send(opID, dbMsgTypeOk, r.Key(), data)
-	}
-	if it.Err() != nil {
-		api.send(opID, dbMsgTypeError, it.Err().Error(), nil)
-		return false
-	}
+	// Save query iterator.
+	api.queriesLock.Lock()
+	api.queries[string(opID)] = it
+	api.queriesLock.Unlock()
+
+	// Remove query iterator after it ended.
+	defer func() {
+		api.queriesLock.Lock()
+		defer api.queriesLock.Unlock()
+		delete(api.queries, string(opID))
+	}()
 
 	for {
 		select {
@@ -312,9 +336,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 			// process query feed
 			if r != nil {
 				// process record
-				r.Lock()
-				data, err := r.Marshal(r, record.JSON)
-				r.Unlock()
+				data, err := marshalRecord(r)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 				}
@@ -340,6 +362,7 @@ func (api *DatabaseAPI) handleSub(opID []byte, queryText string) {
 	//    125|new|<key>|<data>
 	//    125|delete|<key>
 	//    125|warning|<message> // error with single record, operation continues
+	// 125|cancel
 	var err error
 
 	q, err := query.ParseQuery(queryText)
@@ -362,10 +385,23 @@ func (api *DatabaseAPI) registerSub(opID []byte, q *query.Query) (sub *database.
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
 		return nil, false
 	}
+
 	return sub, true
 }
 
 func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
+	// Save subscription.
+	api.subsLock.Lock()
+	api.subs[string(opID)] = sub
+	api.subsLock.Unlock()
+
+	// Remove subscription after it ended.
+	defer func() {
+		api.subsLock.Lock()
+		defer api.subsLock.Unlock()
+		delete(api.subs, string(opID))
+	}()
+
 	for {
 		select {
 		case <-api.shutdownSignal:
@@ -376,9 +412,7 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 			// process sub feed
 			if r != nil {
 				// process record
-				r.Lock()
-				data, err := r.Marshal(r, record.JSON)
-				r.Unlock()
+				data, err := marshalRecord(r)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 					continue
@@ -414,6 +448,7 @@ func (api *DatabaseAPI) handleQsub(opID []byte, queryText string) {
 	//    127|new|<key>|<data>
 	//    127|delete|<key>
 	//    127|warning|<message> // error with single record, operation continues
+	// 127|cancel
 
 	var err error
 
@@ -432,6 +467,48 @@ func (api *DatabaseAPI) handleQsub(opID []byte, queryText string) {
 		return
 	}
 	api.processSub(opID, sub)
+}
+
+func (api *DatabaseAPI) handleCancel(opID []byte) {
+	api.cancelQuery(opID)
+	api.cancelSub(opID)
+}
+
+func (api *DatabaseAPI) cancelQuery(opID []byte) {
+	api.queriesLock.Lock()
+	defer api.queriesLock.Unlock()
+
+	// Get subscription from api.
+	it, ok := api.queries[string(opID)]
+	if !ok {
+		// Fail silently as quries end by themselves when finished.
+		return
+	}
+
+	// End query.
+	it.Cancel()
+
+	// The query handler will end the communication with a done message.
+}
+
+func (api *DatabaseAPI) cancelSub(opID []byte) {
+	api.subsLock.Lock()
+	defer api.subsLock.Unlock()
+
+	// Get subscription from api.
+	sub, ok := api.subs[string(opID)]
+	if !ok {
+		api.send(opID, dbMsgTypeError, "could not find subscription", nil)
+		return
+	}
+
+	// End subscription.
+	err := sub.Cancel()
+	if err != nil {
+		api.send(opID, dbMsgTypeError, fmt.Sprintf("failed to cancel subscription: %s", err), nil)
+	}
+
+	// The subscription handler will end the communication with a done message.
 }
 
 func (api *DatabaseAPI) handlePut(opID []byte, key string, data []byte, create bool) {
@@ -544,4 +621,40 @@ func (api *DatabaseAPI) shutdown() {
 		close(api.shutdownSignal)
 		api.conn.Close()
 	}
+}
+
+// marsharlRecords locks and marshals the given record, additionally adding
+// metadata and returning it as json.
+func marshalRecord(r record.Record) ([]byte, error) {
+	r.Lock()
+	defer r.Unlock()
+
+	// Pour record into JSON.
+	jsonData, err := r.Marshal(r, record.JSON)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove JSON identifier for manual editing.
+	jsonData = bytes.TrimPrefix(jsonData, varint.Pack8(record.JSON))
+
+	// Add metadata.
+	jsonData, err = sjson.SetBytes(jsonData, "_meta", r.Meta())
+	if err != nil {
+		return nil, err
+	}
+
+	// Add database key.
+	jsonData, err = sjson.SetBytes(jsonData, "_meta.Key", r.Key())
+	if err != nil {
+		return nil, err
+	}
+
+	// Add JSON identifier again.
+	formatID := varint.Pack8(record.JSON)
+	finalData := make([]byte, 0, len(formatID)+len(jsonData))
+	finalData = append(finalData, formatID...)
+	finalData = append(finalData, jsonData...)
+
+	return finalData, nil
 }

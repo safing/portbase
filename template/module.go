@@ -30,7 +30,7 @@ func init() {
 		module,
 		"config:template", // key space for configuration options registered
 		&config.Option{
-			Name:         "Enable Template Subsystem",
+			Name:         "Template Subsystem",
 			Key:          "config:subsystems/template",
 			Description:  "This option enables the Template Subsystem [TEMPLATE]",
 			OptType:      config.OptTypeBool,
@@ -46,7 +46,7 @@ func prep() error {
 	// register options
 	err := config.Register(&config.Option{
 		Name:            "language",
-		Key:             "config:template/language",
+		Key:             "template/language",
 		Description:     "Sets the language for the template [TEMPLATE]",
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelUser, // default

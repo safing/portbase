@@ -7,10 +7,70 @@ import (
 	"time"
 )
 
+type (
+	// Adapter is used to write logs.
+	Adapter interface {
+		// Write is called for each log message.
+		Write(msg Message, duplicates uint64)
+	}
+
+	// AdapterFunc is a convenience type for implementing
+	// Adapter.
+	AdapterFunc func(msg Message, duplciates uint64)
+
+	// FormatFunc formats msg into a string.
+	FormatFunc func(msg Message, duplciates uint64) string
+
+	// SimpleFileAdapter implements Adapter and writes all
+	// messages to File.
+	SimpleFileAdapter struct {
+		Format FormatFunc
+		File   *os.File
+	}
+)
+
 var (
+	// StdoutAdapter is a simple file adapter that writes
+	// all logs to os.Stdout using a predefined format.
+	StdoutAdapter = &SimpleFileAdapter{
+		File:   os.Stdout,
+		Format: defaultColorFormater,
+	}
+
+	// StderrAdapter is a simple file adapter that writes
+	// all logs to os.Stdout using a predefined format.
+	StderrAdapter = &SimpleFileAdapter{
+		File:   os.Stderr,
+		Format: defaultColorFormater,
+	}
+)
+
+var (
+	adapter Adapter = StdoutAdapter
+
 	schedulingEnabled = false
 	writeTrigger      = make(chan struct{})
 )
+
+// SetAdapter configures the logging adapter to use.
+// This must be called before the log package is initialized.
+func SetAdapter(a Adapter) {
+	if initializing.IsSet() || a == nil {
+		return
+	}
+
+	adapter = a
+}
+
+// Write implements Adapter and calls fn.
+func (fn AdapterFunc) Write(msg Message, duplicates uint64) {
+	fn(msg, duplicates)
+}
+
+// Write implements Adapter and writes msg the underlying file.
+func (fileAdapter *SimpleFileAdapter) Write(msg Message, duplicates uint64) {
+	fmt.Fprintln(fileAdapter.File, fileAdapter.Format(msg, duplicates))
+}
 
 // EnableScheduling enables external scheduling of the logger. This will require to manually trigger writes via TriggerWrite whenevery logs should be written. Please note that full buffers will also trigger writing. Must be called before Start() to have an effect.
 func EnableScheduling() {
@@ -34,10 +94,8 @@ func TriggerWriterChannel() chan struct{} {
 	return writeTrigger
 }
 
-func writeLine(line *logLine, duplicates uint64) {
-	fmt.Println(formatLine(line, duplicates, true))
-	// TODO: implement file logging and setting console/file logging
-	// TODO: use https://github.com/natefinch/lumberjack
+func defaultColorFormater(line Message, duplicates uint64) string {
+	return formatLine(line.(*logLine), duplicates, true)
 }
 
 func startWriter() {
@@ -132,7 +190,7 @@ StackTrace:
 				}
 
 				// if currentLine and line are _not_ equal, output currentLine
-				writeLine(currentLine, duplicates)
+				adapter.Write(currentLine, duplicates)
 				// reset duplicate counter
 				duplicates = 0
 				// set new currentLine
@@ -144,7 +202,7 @@ StackTrace:
 
 		// write final line
 		if currentLine != nil {
-			writeLine(currentLine, duplicates)
+			adapter.Write(currentLine, duplicates)
 		}
 		// reset state
 		currentLine = nil //nolint:ineffassign
@@ -166,7 +224,7 @@ func finalizeWriting() {
 	for {
 		select {
 		case line := <-logBuffer:
-			writeLine(line, 0)
+			adapter.Write(line, 0)
 		case <-time.After(10 * time.Millisecond):
 			fmt.Printf("%s%s %s EOF%s\n", InfoLevel.color(), time.Now().Format(timeFormat), leftArrow, endColor())
 			return

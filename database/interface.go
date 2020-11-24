@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
-	"github.com/tevino/abool"
-
 	"github.com/bluele/gcache"
+	"github.com/tevino/abool"
 
 	"github.com/safing/portbase/database/accessor"
 	"github.com/safing/portbase/database/iterator"
@@ -24,17 +24,56 @@ const (
 type Interface struct {
 	options *Options
 	cache   gcache.Cache
+
+	writeCache        map[string]record.Record
+	writeCacheLock    sync.Mutex
+	triggerCacheWrite chan struct{}
 }
 
 // Options holds options that may be set for an Interface instance.
 type Options struct {
-	Local                     bool
-	Internal                  bool
-	AlwaysMakeSecret          bool
-	AlwaysMakeCrownjewel      bool
+	// Local specifies if the interface is used by an actor on the local device.
+	// Setting both the Local and Internal flags will bring performance
+	// improvements because less checks are needed.
+	Local bool
+
+	// Internal specifies if the interface is used by an actor within the
+	// software. Setting both the Local and Internal flags will bring performance
+	// improvements because less checks are needed.
+	Internal bool
+
+	// AlwaysMakeSecret will have the interface mark all saved records as secret.
+	// This means that they will be only accessible by an internal interface.
+	AlwaysMakeSecret bool
+
+	// AlwaysMakeCrownjewel will have the interface mark all saved records as
+	// crown jewels. This means that they will be only accessible by a local
+	// interface.
+	AlwaysMakeCrownjewel bool
+
+	// AlwaysSetRelativateExpiry will have the interface set a relative expiry,
+	// based on the current time, on all saved records.
 	AlwaysSetRelativateExpiry int64
-	AlwaysSetAbsoluteExpiry   int64
-	CacheSize                 int
+
+	// AlwaysSetAbsoluteExpiry will have the interface set an absolute expiry on
+	// all saved records.
+	AlwaysSetAbsoluteExpiry int64
+
+	// CacheSize defines that a cache should be used for this interface and
+	// defines it's size.
+	// Caching comes with an important caveat: If database records are changed
+	// from another interface, the cache will not be invalidated for these
+	// records. It will therefore serve outdated data until that record is
+	// evicted from the cache.
+	CacheSize int
+
+	// DelayCachedWrites defines a database name for which cache writes should
+	// be cached and batched. The database backend must support the Batcher
+	// interface. This option is only valid if used with a cache.
+	// Additionally, this may only be used for internal and local interfaces.
+	// Please note that this means that other interfaces will not be able to
+	// guarantee to serve the latest record if records are written this way.
+	DelayCachedWrites string
 }
 
 // Apply applies options to the record metadata.
@@ -53,6 +92,28 @@ func (o *Options) Apply(r record.Record) {
 	}
 }
 
+// HasAllPermissions returns whether the options specify the highest possible
+// permissions for operations.
+func (o *Options) HasAllPermissions() bool {
+	return o.Local && o.Internal
+}
+
+// hasAccessPermission checks if the interface options permit access to the
+// given record, locking the record for accessing it's attributes.
+func (o *Options) hasAccessPermission(r record.Record) bool {
+	// Check if the options specify all permissions, which makes checking the
+	// record unnecessary.
+	if o.HasAllPermissions() {
+		return true
+	}
+
+	r.Lock()
+	defer r.Unlock()
+
+	// Check permissions against record.
+	return r.Meta().CheckPermission(o.Local, o.Internal)
+}
+
 // NewInterface returns a new Interface to the database.
 func NewInterface(opts *Options) *Interface {
 	if opts == nil {
@@ -63,57 +124,40 @@ func NewInterface(opts *Options) *Interface {
 		options: opts,
 	}
 	if opts.CacheSize > 0 {
-		new.cache = gcache.New(opts.CacheSize).ARC().Expiration(time.Hour).Build()
+		cacheBuilder := gcache.New(opts.CacheSize).ARC()
+		if opts.DelayCachedWrites != "" {
+			cacheBuilder.EvictedFunc(new.cacheEvictHandler)
+			new.writeCache = make(map[string]record.Record, opts.CacheSize/2)
+			new.triggerCacheWrite = make(chan struct{})
+		}
+		new.cache = cacheBuilder.Build()
 	}
 	return new
 }
 
-func (i *Interface) checkCache(key string) (record.Record, bool) {
-	if i.cache != nil {
-		cacheVal, err := i.cache.Get(key)
-		if err == nil {
-			r, ok := cacheVal.(record.Record)
-			if ok {
-				return r, true
-			}
-		}
-	}
-	return nil, false
-}
-
-func (i *Interface) updateCache(r record.Record) {
-	if i.cache != nil {
-		_ = i.cache.Set(r.Key(), r)
-	}
-}
-
 // Exists return whether a record with the given key exists.
 func (i *Interface) Exists(key string) (bool, error) {
-	_, _, err := i.getRecord(getDBFromKey, key, false, false)
+	_, err := i.Get(key)
 	if err != nil {
-		if err == ErrNotFound {
+		switch {
+		case errors.Is(err, ErrNotFound):
 			return false, nil
+		case errors.Is(err, ErrPermissionDenied):
+			return true, nil
+		default:
+			return false, err
 		}
-		return false, err
 	}
 	return true, nil
 }
 
 // Get return the record with the given key.
 func (i *Interface) Get(key string) (record.Record, error) {
-	r, ok := i.checkCache(key)
-	if ok {
-		if !r.Meta().CheckPermission(i.options.Local, i.options.Internal) {
-			return nil, ErrPermissionDenied
-		}
-		return r, nil
-	}
-
-	r, _, err := i.getRecord(getDBFromKey, key, true, false)
+	r, _, err := i.getRecord(getDBFromKey, key, false)
 	return r, err
 }
 
-func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
+func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
 	if dbName == "" {
 		dbName, dbKey = record.ParseKey(dbKey)
 	}
@@ -124,27 +168,42 @@ func (i *Interface) getRecord(dbName string, dbKey string, check bool, mustBeWri
 	}
 
 	if mustBeWriteable && db.ReadOnly() {
-		return nil, nil, ErrReadOnly
+		return nil, db, ErrReadOnly
+	}
+
+	r = i.checkCache(dbName + ":" + dbKey)
+	if r != nil {
+		if !i.options.hasAccessPermission(r) {
+			return nil, db, ErrPermissionDenied
+		}
+		return r, db, nil
 	}
 
 	r, err = db.Get(dbKey)
 	if err != nil {
-		if err == ErrNotFound {
-			return nil, db, err
-		}
-		return nil, nil, err
+		return nil, db, err
 	}
 
-	if check && !r.Meta().CheckPermission(i.options.Local, i.options.Internal) {
-		return nil, nil, ErrPermissionDenied
+	if !i.options.hasAccessPermission(r) {
+		return nil, db, ErrPermissionDenied
 	}
+
+	r.Lock()
+	ttl := r.Meta().GetRelativeExpiry()
+	r.Unlock()
+	i.updateCache(
+		r,
+		false, // writing
+		false, // remove
+		ttl,   // expiry
+	)
 
 	return r, db, nil
 }
 
 // InsertValue inserts a value into a record.
 func (i *Interface) InsertValue(key string, attribute string, value interface{}) error {
-	r, db, err := i.getRecord(getDBFromKey, key, true, true)
+	r, db, err := i.getRecord(getDBFromKey, key, true)
 	if err != nil {
 		return err
 	}
@@ -176,8 +235,46 @@ func (i *Interface) InsertValue(key string, attribute string, value interface{})
 func (i *Interface) Put(r record.Record) (err error) {
 	// get record or only database
 	var db *Controller
-	if !i.options.Internal || !i.options.Local {
-		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true, true)
+	if !i.options.HasAllPermissions() {
+		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true)
+		if err != nil && err != ErrNotFound {
+			return err
+		}
+	} else {
+		db, err = getController(r.DatabaseName())
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check if database is read only before we add to the cache.
+	if db.ReadOnly() {
+		return ErrReadOnly
+	}
+
+	r.Lock()
+	i.options.Apply(r)
+	remove := r.Meta().IsDeleted()
+	ttl := r.Meta().GetRelativeExpiry()
+	r.Unlock()
+
+	// The record may not be locked when updating the cache.
+	written := i.updateCache(r, true, remove, ttl)
+	if written {
+		return nil
+	}
+
+	r.Lock()
+	defer r.Unlock()
+	return db.Put(r)
+}
+
+// PutNew saves a record to the database as a new record (ie. with new timestamps).
+func (i *Interface) PutNew(r record.Record) (err error) {
+	// get record or only database
+	var db *Controller
+	if !i.options.HasAllPermissions() {
+		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true)
 		if err != nil && err != ErrNotFound {
 			return err
 		}
@@ -189,38 +286,22 @@ func (i *Interface) Put(r record.Record) (err error) {
 	}
 
 	r.Lock()
-	defer r.Unlock()
-
-	i.options.Apply(r)
-
-	i.updateCache(r)
-	return db.Put(r)
-}
-
-// PutNew saves a record to the database as a new record (ie. with new timestamps).
-func (i *Interface) PutNew(r record.Record) (err error) {
-	// get record or only database
-	var db *Controller
-	if !i.options.Internal || !i.options.Local {
-		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true, true)
-		if err != nil && err != ErrNotFound {
-			return err
-		}
-	} else {
-		db, err = getController(r.DatabaseKey())
-		if err != nil {
-			return err
-		}
-	}
-
-	r.Lock()
-	defer r.Unlock()
-
 	if r.Meta() != nil {
 		r.Meta().Reset()
 	}
 	i.options.Apply(r)
-	i.updateCache(r)
+	remove := r.Meta().IsDeleted()
+	ttl := r.Meta().GetRelativeExpiry()
+	r.Unlock()
+
+	// The record may not be locked when updating the cache.
+	written := i.updateCache(r, true, remove, ttl)
+	if written {
+		return nil
+	}
+
+	r.Lock()
+	defer r.Unlock()
 	return db.Put(r)
 }
 
@@ -233,7 +314,7 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	interfaceBatch := make(chan record.Record, 100)
 
 	// permission check
-	if !i.options.Internal || !i.options.Local {
+	if !i.options.HasAllPermissions() {
 		return func(r record.Record) error {
 			return ErrPermissionDenied
 		}
@@ -316,7 +397,7 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 
 // SetAbsoluteExpiry sets an absolute record expiry.
 func (i *Interface) SetAbsoluteExpiry(key string, time int64) error {
-	r, db, err := i.getRecord(getDBFromKey, key, true, true)
+	r, db, err := i.getRecord(getDBFromKey, key, true)
 	if err != nil {
 		return err
 	}
@@ -331,7 +412,7 @@ func (i *Interface) SetAbsoluteExpiry(key string, time int64) error {
 
 // SetRelativateExpiry sets a relative (self-updating) record expiry.
 func (i *Interface) SetRelativateExpiry(key string, duration int64) error {
-	r, db, err := i.getRecord(getDBFromKey, key, true, true)
+	r, db, err := i.getRecord(getDBFromKey, key, true)
 	if err != nil {
 		return err
 	}
@@ -346,7 +427,7 @@ func (i *Interface) SetRelativateExpiry(key string, duration int64) error {
 
 // MakeSecret marks the record as a secret, meaning interfacing processes, such as an UI, are denied access to the record.
 func (i *Interface) MakeSecret(key string) error {
-	r, db, err := i.getRecord(getDBFromKey, key, true, true)
+	r, db, err := i.getRecord(getDBFromKey, key, true)
 	if err != nil {
 		return err
 	}
@@ -361,7 +442,7 @@ func (i *Interface) MakeSecret(key string) error {
 
 // MakeCrownJewel marks a record as a crown jewel, meaning it will only be accessible locally.
 func (i *Interface) MakeCrownJewel(key string) error {
-	r, db, err := i.getRecord(getDBFromKey, key, true, true)
+	r, db, err := i.getRecord(getDBFromKey, key, true)
 	if err != nil {
 		return err
 	}
@@ -376,7 +457,7 @@ func (i *Interface) MakeCrownJewel(key string) error {
 
 // Delete deletes a record from the database.
 func (i *Interface) Delete(key string) error {
-	r, db, err := i.getRecord(getDBFromKey, key, true, true)
+	r, db, err := i.getRecord(getDBFromKey, key, true)
 	if err != nil {
 		return err
 	}

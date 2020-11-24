@@ -31,11 +31,16 @@ func loadConfig() error {
 		return err
 	}
 
-	// apply
-	return setConfig(newValues)
+	return replaceConfig(newValues)
 }
 
+// saveConfig saves the current configuration to file.
+// It will acquire a read-lock on the global options registry
+// lock and must lock each option!
 func saveConfig() error {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
 	// check if persistence is configured
 	if configFilePath == "" {
 		return nil
@@ -43,15 +48,18 @@ func saveConfig() error {
 
 	// extract values
 	activeValues := make(map[string]interface{})
-	optionsLock.RLock()
 	for key, option := range options {
+		// we cannot immedately unlock the option afger
+		// getData() because someone could lock and change it
+		// while we are marshaling the value (i.e. for string slices).
+		// We NEED to keep the option locks until we finsihed.
 		option.Lock()
+		defer option.Unlock()
+
 		if option.activeValue != nil {
 			activeValues[key] = option.activeValue.getData(option)
 		}
-		option.Unlock()
 	}
-	optionsLock.RUnlock()
 
 	// convert to JSON
 	data, err := MapToJSON(activeValues)

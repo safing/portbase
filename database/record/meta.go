@@ -31,9 +31,10 @@ func (m *Meta) GetAbsoluteExpiry() int64 {
 }
 
 // GetRelativeExpiry returns the current relative expiry time - ie. seconds until expiry.
+// A negative value signifies that the record does not expire.
 func (m *Meta) GetRelativeExpiry() int64 {
-	if m.Deleted < 0 {
-		return -m.Deleted
+	if m.Expires == 0 {
+		return -1
 	}
 
 	abs := m.Expires - time.Now().Unix()

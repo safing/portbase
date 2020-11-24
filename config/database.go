@@ -24,11 +24,8 @@ type StorageInterface struct {
 
 // Get returns a database record.
 func (s *StorageInterface) Get(key string) (record.Record, error) {
-	optionsLock.Lock()
-	defer optionsLock.Unlock()
-
-	opt, ok := options[key]
-	if !ok {
+	opt, err := GetOption(key)
+	if err != nil {
 		return nil, storage.ErrNotFound
 	}
 
@@ -55,11 +52,9 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 		return s.Get(r.DatabaseKey())
 	}
 
-	optionsLock.RLock()
-	option, ok := options[r.DatabaseKey()]
-	optionsLock.RUnlock()
-	if !ok {
-		return nil, errors.New("config option does not exist")
+	option, err := GetOption(r.DatabaseKey())
+	if err != nil {
+		return nil, err
 	}
 
 	var value interface{}
@@ -77,8 +72,7 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 		return nil, errors.New("received invalid value in \"Value\"")
 	}
 
-	err := setConfigOption(r.DatabaseKey(), value, false)
-	if err != nil {
+	if err := setConfigOption(r.DatabaseKey(), value, false); err != nil {
 		return nil, err
 	}
 	return option.Export()
@@ -91,9 +85,8 @@ func (s *StorageInterface) Delete(key string) error {
 
 // Query returns a an iterator for the supplied query.
 func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
-
-	optionsLock.Lock()
-	defer optionsLock.Unlock()
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
 
 	it := iterator.New()
 	var opts []*Option
@@ -109,8 +102,7 @@ func (s *StorageInterface) Query(q *query.Query, local, internal bool) (*iterato
 }
 
 func (s *StorageInterface) processQuery(it *iterator.Iterator, opts []*Option) {
-
-	sort.Sort(sortableOptions(opts))
+	sort.Sort(sortByKey(opts))
 
 	for _, opt := range opts {
 		r, err := opt.Export()
@@ -148,17 +140,27 @@ func registerAsDatabase() error {
 	return nil
 }
 
-func pushFullUpdate() {
-	optionsLock.RLock()
-	defer optionsLock.RUnlock()
+// handleOptionUpdate updates the expertise and release level options,
+// if required, and eventually pushes a update for the option.
+// The caller must hold the option lock.
+func handleOptionUpdate(option *Option, push bool) {
+	if expertiseLevelOptionFlag.IsSet() && option == expertiseLevelOption {
+		updateExpertiseLevel()
+	}
 
-	for _, option := range options {
+	if releaseLevelOptionFlag.IsSet() && option == releaseLevelOption {
+		updateReleaseLevel()
+	}
+
+	if push {
 		pushUpdate(option)
 	}
 }
 
+// pushUpdate pushes an database update notification for option.
+// The caller must hold the option lock.
 func pushUpdate(option *Option) {
-	r, err := option.Export()
+	r, err := option.export()
 	if err != nil {
 		log.Errorf("failed to export option to push update: %s", err)
 	} else {
