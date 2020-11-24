@@ -39,9 +39,20 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 
 	// walk fs
 	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		// skip tmp dir (including errors trying to read it)
+		if strings.HasPrefix(path, reg.tmpDir.Path) {
+			return filepath.SkipDir
+		}
+
+		// handle walker error
 		if err != nil {
 			lastError = fmt.Errorf("%s: could not read %s: %w", reg.Name, path, err)
 			log.Warning(lastError.Error())
+			return nil
+		}
+
+		// ignore directories
+		if info.IsDir() {
 			return nil
 		}
 
@@ -50,10 +61,6 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 		if err != nil {
 			lastError = fmt.Errorf("%s: could not get relative path of %s: %w", reg.Name, path, err)
 			log.Warning(lastError.Error())
-			return nil
-		}
-		// ignore files in tmp dir
-		if strings.HasPrefix(relativePath, reg.tmpDir.Path) {
 			return nil
 		}
 
