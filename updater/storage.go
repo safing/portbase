@@ -51,11 +51,6 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 			return nil
 		}
 
-		// ignore directories
-		if info.IsDir() {
-			return nil
-		}
-
 		// get relative path to storage
 		relativePath, err := filepath.Rel(reg.storageDir.Path, path)
 		if err != nil {
@@ -70,6 +65,11 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 		if !ok {
 			// file does not conform to format
 			return nil
+		}
+
+		// fully ignore directories that also have an identifier - these will be unpacked resources
+		if info.IsDir() {
+			return filepath.SkipDir
 		}
 
 		// save
