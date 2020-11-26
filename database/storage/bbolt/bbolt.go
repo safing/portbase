@@ -32,8 +32,18 @@ func init() {
 
 // NewBBolt opens/creates a bbolt database.
 func NewBBolt(name, location string) (storage.Interface, error) {
+	// Create options for bbolt database.
+	dbFile := filepath.Join(location, "db.bbolt")
+	dbOptions := &bbolt.Options{
+		Timeout: 1 * time.Second,
+	}
 
-	db, err := bbolt.Open(filepath.Join(location, "db.bbolt"), 0600, nil)
+	// Open/Create database, retry if there is a timeout.
+	db, err := bbolt.Open(dbFile, 0600, dbOptions)
+	for i := 0; i < 5 && err != nil; i++ {
+		// Try again if there is an error.
+		db, err = bbolt.Open(dbFile, 0600, dbOptions)
+	}
 	if err != nil {
 		return nil, err
 	}
