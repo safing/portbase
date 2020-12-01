@@ -187,6 +187,11 @@ func (mng *Manager) shouldServeUpdates() bool {
 // CheckConfig checks subsystem configuration values and enables
 // or disables subsystems and their dependencies as required.
 func (mng *Manager) CheckConfig(ctx context.Context) error {
+	// DEBUG SNIPPET
+	// Slow-start for non-attributable performance issues.
+	// You'll need the snippet in the modules too.
+	// time.Sleep(11 * time.Second)
+	// END DEBUG SNIPPET
 	return mng.handleConfigChanges(ctx)
 }
 
