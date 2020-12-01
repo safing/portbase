@@ -173,6 +173,13 @@ func startModules() error {
 			case statusReady:
 				execCnt++
 				m.start(reports)
+				// DEBUG SNIPPET
+				// Slow-start for non-attributable performance issues.
+				// If you use subsystems, you'll need the snippet there too.
+				// log.Errorf("modules: starting %s", m.Name)
+				// time.Sleep(10 * time.Second)
+				// break
+				// END DEBUG SNIPPET
 			}
 		}
 
