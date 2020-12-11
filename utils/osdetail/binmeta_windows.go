@@ -1,13 +1,10 @@
 package osdetail
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"strings"
 )
 
-const powershellGetFileDescription = `Get-ItemProperty %q | Format-List`
+const powershellGetFileDescription = `Get-ItemProperty %q | Select -ExpandProperty VersionInfo | Select -ExpandProperty FileDescription`
 
 // GetBinaryNameFromSystem queries the operating system for a human readable
 // name for the given binary path.
@@ -18,25 +15,10 @@ func GetBinaryNameFromSystem(path string) (string, error) {
 		return "", fmt.Errorf("failed to get file properties of %s: %s", path, err)
 	}
 
-	// Create scanner for the output.
-	scanner := bufio.NewScanner(bytes.NewBufferString(output))
-	scanner.Split(bufio.ScanLines)
-
-	// Search for the FileDescription line.
-	for scanner.Scan() {
-		// Split line up into fields.
-		fields := strings.Fields(scanner.Text())
-		// Discard lines with less than two fields.
-		if len(fields) < 2 {
-			continue
-		}
-		// Skip all lines that we aren't looking for.
-		if fields[0] != "FileDescription:" {
-			continue
-		}
-
-		// Clean and return.
-		return cleanFileDescription(fields[1:]), nil
+	// Clean name.
+	binName := cleanFileDescription(output)
+	if binName != "" {
+		return binName, nil
 	}
 
 	// Generate a default name as default.

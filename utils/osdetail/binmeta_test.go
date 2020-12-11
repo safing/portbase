@@ -1,7 +1,6 @@
 package osdetail
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,15 +20,19 @@ func TestGenerateBinaryNameFromPath(t *testing.T) {
 }
 
 func TestCleanFileDescription(t *testing.T) {
-	assert.Equal(t, "Product Name", cleanFileDescription(strings.Fields("Product Name. Does this and that.")))
-	assert.Equal(t, "Product Name", cleanFileDescription(strings.Fields("Product Name - Does this and that.")))
-	assert.Equal(t, "Product Name", cleanFileDescription(strings.Fields("Product Name / Does this and that.")))
-	assert.Equal(t, "Product Name", cleanFileDescription(strings.Fields("Product Name :: Does this and that.")))
-	assert.Equal(t, "/ Product Name", cleanFileDescription(strings.Fields("/ Product Name")))
-	assert.Equal(t, "Product", cleanFileDescription(strings.Fields("Product / Name")))
+	assert.Equal(t, "Product Name", cleanFileDescription("Product Name. Does this and that."))
+	assert.Equal(t, "Product Name", cleanFileDescription("Product Name - Does this and that."))
+	assert.Equal(t, "Product Name", cleanFileDescription("Product Name / Does this and that."))
+	assert.Equal(t, "Product Name", cleanFileDescription("Product Name :: Does this and that."))
+	assert.Equal(t, "/ Product Name", cleanFileDescription("/ Product Name"))
+	assert.Equal(t, "Product", cleanFileDescription("Product / Name"))
+	assert.Equal(t, "", cleanFileDescription(". / Name"))
+	assert.Equal(t, "", cleanFileDescription(". "))
+	assert.Equal(t, "", cleanFileDescription("."))
+	assert.Equal(t, "N/A", cleanFileDescription("N/A"))
 
 	assert.Equal(t,
 		"Product Name a Does this and that.",
-		cleanFileDescription(strings.Fields("Product Name a Does this and that.")),
+		cleanFileDescription("Product Name a Does this and that."),
 	)
 }

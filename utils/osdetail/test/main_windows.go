@@ -30,7 +30,7 @@ func main() {
 }
 
 func printBinaryName(name, path string) {
-	binName, err := osdetail.GetBinaryName(path)
+	binName, err := osdetail.GetBinaryNameFromSystem(path)
 	if err != nil {
 		fmt.Printf("%s: ERROR: %s\n", name, err)
 	} else {
@@ -39,7 +39,7 @@ func printBinaryName(name, path string) {
 }
 
 func printBinaryIcon(name, path string) {
-	binIcon, err := osdetail.GetBinaryIcon(path)
+	binIcon, err := osdetail.GetBinaryIconFromSystem(path)
 	if err != nil {
 		fmt.Printf("%s: ERROR: %s\n", name, err)
 	} else {
