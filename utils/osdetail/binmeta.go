@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	segmentsSplitter = regexp.MustCompile("[^A-Za-z0-9]*[A-Z]?[a-z0-9]*")
-	nameOnly         = regexp.MustCompile("^[A-Za-z0-9]+$")
-	delimiters       = regexp.MustCompile("^[^A-Za-z0-9]+")
+	segmentsSplitter  = regexp.MustCompile("[^A-Za-z0-9]*[A-Z]?[a-z0-9]*")
+	nameOnly          = regexp.MustCompile("^[A-Za-z0-9]+$")
+	delimitersAtStart = regexp.MustCompile("^[^A-Za-z0-9]+")
+	delimitersOnly    = regexp.MustCompile("^[^A-Za-z0-9]+$")
 )
 
 // GenerateBinaryNameFromPath generates a more human readable binary name from
@@ -52,7 +53,7 @@ func GenerateBinaryNameFromPath(path string) string {
 	// Post-process name parts
 	for i := range nameParts {
 		// Remove any leading delimiters.
-		nameParts[i] = delimiters.ReplaceAllString(nameParts[i], "")
+		nameParts[i] = delimitersAtStart.ReplaceAllString(nameParts[i], "")
 
 		// Title-case name-only parts.
 		if nameOnly.MatchString(nameParts[i]) {
@@ -63,7 +64,9 @@ func GenerateBinaryNameFromPath(path string) string {
 	return strings.Join(nameParts, " ")
 }
 
-func cleanFileDescription(fields []string) string {
+func cleanFileDescription(fileDescr string) string {
+	fields := strings.Fields(fileDescr)
+
 	// If there is a 1 or 2 character delimiter field, only use fields before it.
 	endIndex := len(fields)
 	for i, field := range fields {
@@ -82,5 +85,10 @@ func cleanFileDescription(fields []string) string {
 		binName = strings.SplitN(binName, ". ", 2)[0]
 	}
 
-	return binName
+	// If does not have any characters or numbers, return an empty string.
+	if delimitersOnly.MatchString(binName) {
+		return ""
+	}
+
+	return strings.TrimSpace(binName)
 }
