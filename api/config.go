@@ -39,9 +39,9 @@ func getDefaultListenAddress() string {
 
 func registerConfig() error {
 	err := config.Register(&config.Option{
-		Name:            "API Address",
+		Name:            "API Listen Address",
 		Key:             CfgDefaultListenAddressKey,
-		Description:     "Defines the IP address and port for the internal API.",
+		Description:     "Defines the IP address and port on which the internal API listens.",
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelDeveloper,
 		ReleaseLevel:    config.ReleaseLevelStable,

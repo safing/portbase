@@ -24,7 +24,7 @@ func init() {
 
 func prep() error {
 	if getDefaultListenAddress() == "" {
-		return errors.New("no listen address for api available")
+		return errors.New("no default listen address for api available")
 	}
 	return registerConfig()
 }
