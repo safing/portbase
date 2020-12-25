@@ -26,7 +26,12 @@ func prep() error {
 	if getDefaultListenAddress() == "" {
 		return errors.New("no default listen address for api available")
 	}
-	return registerConfig()
+
+	if err := registerConfig(); err != nil {
+		return err
+	}
+
+	return registerMetaEndpoints()
 }
 
 func start() error {
@@ -34,10 +39,8 @@ func start() error {
 	go Serve()
 
 	// start api auth token cleaner
-	authFnLock.Lock()
-	defer authFnLock.Unlock()
-	if authFn != nil {
-		module.NewTask("clean api auth tokens", cleanAuthTokens).Repeat(time.Minute)
+	if authFnSet.IsSet() {
+		module.NewTask("clean api auth tokens", cleanAuthTokens).Repeat(5 * time.Minute)
 	}
 
 	return nil
