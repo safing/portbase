@@ -31,6 +31,10 @@ func prep() error {
 		return err
 	}
 
+	if err := registerDebugEndpoints(); err != nil {
+		return err
+	}
+
 	return registerMetaEndpoints()
 }
 
