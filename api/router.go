@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -127,21 +128,17 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Check authentication.
-	token := authenticateRequest(lrw, r, handler)
-	if token == nil {
+	apiRequest.AuthToken = authenticateRequest(lrw, r, handler)
+	if apiRequest.AuthToken == nil {
 		// Authenticator already replied.
 		return nil
-	}
-	apiRequest.AuthToken = &AuthToken{
-		Read:  token.Read,
-		Write: token.Write,
 	}
 
 	// Handle request.
 	switch {
 	case handler != nil:
 		handler.ServeHTTP(lrw, r)
-	case match.MatchErr == mux.ErrMethodMismatch:
+	case errors.Is(match.MatchErr, mux.ErrMethodMismatch):
 		http.Error(lrw, "Method not allowed.", http.StatusMethodNotAllowed)
 	default: // handler == nil or other error
 		http.Error(lrw, "Not found.", http.StatusNotFound)

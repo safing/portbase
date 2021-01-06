@@ -11,25 +11,25 @@ import (
 
 func registerDebugEndpoints() error {
 	if err := RegisterEndpoint(Endpoint{
-		Path:   "debug/stack",
-		Read:   PermitAnyone,
-		DataFn: getStack,
-	}); err != nil {
-		return err
-	}
-
-	if err := RegisterEndpoint(Endpoint{
-		Path:     "debug/stack/print",
+		Path:     "debug/stack",
 		Read:     PermitAnyone,
-		ActionFn: printStack,
+		DataFunc: getStack,
 	}); err != nil {
 		return err
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:   "debug/info",
-		Read:   PermitAnyone,
-		DataFn: debugInfo,
+		Path:       "debug/stack/print",
+		Read:       PermitAnyone,
+		ActionFunc: printStack,
+	}); err != nil {
+		return err
+	}
+
+	if err := RegisterEndpoint(Endpoint{
+		Path:     "debug/info",
+		Read:     PermitAnyone,
+		DataFunc: debugInfo,
 	}); err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func debugInfo(ar *Request) (data []byte, err error) {
 
 	// Add debug information.
 	di.AddVersionInfo()
-	di.AddPlatformInfo(ar.Ctx())
+	di.AddPlatformInfo(ar.Context())
 	di.AddLastReportedModuleError()
 	di.AddLastUnexpectedLogs()
 	di.AddGoroutineStack()

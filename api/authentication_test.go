@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,7 +13,7 @@ var (
 	testToken = new(AuthToken)
 )
 
-func testAuthenticator(ctx context.Context, s *http.Server, r *http.Request) (*AuthToken, error) {
+func testAuthenticator(r *http.Request, s *http.Server) (*AuthToken, error) {
 	switch {
 	case testToken.Read == -127 || testToken.Write == -127:
 		return nil, errors.New("test error")

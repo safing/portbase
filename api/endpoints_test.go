@@ -30,7 +30,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/action",
 		Read: PermitAnyone,
-		ActionFn: func(_ *Request) (msg string, err error) {
+		ActionFunc: func(_ *Request) (msg string, err error) {
 			return successMsg, nil
 		},
 	}))
@@ -39,7 +39,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/action-err",
 		Read: PermitAnyone,
-		ActionFn: func(_ *Request) (msg string, err error) {
+		ActionFunc: func(_ *Request) (msg string, err error) {
 			return "", errors.New(failedMsg)
 		},
 	}))
@@ -50,7 +50,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/data",
 		Read: PermitAnyone,
-		DataFn: func(_ *Request) (data []byte, err error) {
+		DataFunc: func(_ *Request) (data []byte, err error) {
 			return []byte(successMsg), nil
 		},
 	}))
@@ -59,7 +59,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/data-err",
 		Read: PermitAnyone,
-		DataFn: func(_ *Request) (data []byte, err error) {
+		DataFunc: func(_ *Request) (data []byte, err error) {
 			return nil, errors.New(failedMsg)
 		},
 	}))
@@ -70,7 +70,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/struct",
 		Read: PermitAnyone,
-		StructFn: func(_ *Request) (i interface{}, err error) {
+		StructFunc: func(_ *Request) (i interface{}, err error) {
 			return &actionTestRecord{
 				Msg: successMsg,
 			}, nil
@@ -81,7 +81,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/struct-err",
 		Read: PermitAnyone,
-		StructFn: func(_ *Request) (i interface{}, err error) {
+		StructFunc: func(_ *Request) (i interface{}, err error) {
 			return nil, errors.New(failedMsg)
 		},
 	}))
@@ -92,7 +92,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/record",
 		Read: PermitAnyone,
-		RecordFn: func(_ *Request) (r record.Record, err error) {
+		RecordFunc: func(_ *Request) (r record.Record, err error) {
 			r = &actionTestRecord{
 				Msg: successMsg,
 			}
@@ -105,7 +105,7 @@ func TestEndpoints(t *testing.T) {
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/record-err",
 		Read: PermitAnyone,
-		RecordFn: func(_ *Request) (r record.Record, err error) {
+		RecordFunc: func(_ *Request) (r record.Record, err error) {
 			return nil, errors.New(failedMsg)
 		},
 	}))
@@ -139,17 +139,17 @@ func TestActionRegistration(t *testing.T) {
 
 	assert.Error(t, RegisterEndpoint(Endpoint{
 		Path: "test/err",
-		ActionFn: func(_ *Request) (msg string, err error) {
+		ActionFunc: func(_ *Request) (msg string, err error) {
 			return successMsg, nil
 		},
-		DataFn: func(_ *Request) (data []byte, err error) {
+		DataFunc: func(_ *Request) (data []byte, err error) {
 			return []byte(successMsg), nil
 		},
 	}))
 
 	assert.NoError(t, RegisterEndpoint(Endpoint{
 		Path: "test/err",
-		ActionFn: func(_ *Request) (msg string, err error) {
+		ActionFunc: func(_ *Request) (msg string, err error) {
 			return successMsg, nil
 		},
 	}))

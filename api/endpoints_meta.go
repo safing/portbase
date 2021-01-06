@@ -10,23 +10,23 @@ func registerMetaEndpoints() error {
 		Path:     "endpoints",
 		Read:     PermitAnyone,
 		MimeType: MimeTypeJSON,
-		DataFn:   listEndpoints,
+		DataFunc: listEndpoints,
 	}); err != nil {
 		return err
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:     "permission",
-		Read:     Require,
-		StructFn: permissions,
+		Path:       "permission",
+		Read:       Require,
+		StructFunc: permissions,
 	}); err != nil {
 		return err
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:     "ping",
-		Read:     PermitAnyone,
-		ActionFn: ping,
+		Path:       "ping",
+		Read:       PermitAnyone,
+		ActionFunc: ping,
 	}); err != nil {
 		return err
 	}

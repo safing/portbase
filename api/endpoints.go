@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/safing/portbase/database/record"
@@ -29,36 +30,36 @@ type Endpoint struct {
 	// Order          int
 	// ExpertiseLevel config.ExpertiseLevel
 
-	// ActionFn is for simple actions with a return message for the user.
-	ActionFn ActionFn `json:"-"`
+	// ActionFunc is for simple actions with a return message for the user.
+	ActionFunc ActionFunc `json:"-"`
 
-	// DataFn is for returning raw data that the caller for further processing.
-	DataFn DataFn `json:"-"`
+	// DataFunc is for returning raw data that the caller for further processing.
+	DataFunc DataFunc `json:"-"`
 
-	// StructFn is for returning any kind of struct.
-	StructFn StructFn `json:"-"`
+	// StructFunc is for returning any kind of struct.
+	StructFunc StructFunc `json:"-"`
 
-	// RecordFn is for returning a database record. It will be properly locked
+	// RecordFunc is for returning a database record. It will be properly locked
 	// and marshalled including metadata.
-	RecordFn RecordFn `json:"-"`
+	RecordFunc RecordFunc `json:"-"`
 
-	// HandlerFn is the raw http handler.
-	HandlerFn http.HandlerFunc `json:"-"`
+	// HandlerFunc is the raw http handler.
+	HandlerFunc http.HandlerFunc `json:"-"`
 }
 
 type (
-	// ActionFn is for simple actions with a return message for the user.
-	ActionFn func(ar *Request) (msg string, err error)
+	// ActionFunc is for simple actions with a return message for the user.
+	ActionFunc func(ar *Request) (msg string, err error)
 
-	// DataFn is for returning raw data that the caller for further processing.
-	DataFn func(ar *Request) (data []byte, err error)
+	// DataFunc is for returning raw data that the caller for further processing.
+	DataFunc func(ar *Request) (data []byte, err error)
 
-	// StructFn is for returning any kind of struct.
-	StructFn func(ar *Request) (i interface{}, err error)
+	// StructFunc is for returning any kind of struct.
+	StructFunc func(ar *Request) (i interface{}, err error)
 
-	// RecordFn is for returning a database record. It will be properly locked
+	// RecordFunc is for returning a database record. It will be properly locked
 	// and marshalled including metadata.
-	RecordFn func(ar *Request) (r record.Record, err error)
+	RecordFunc func(ar *Request) (r record.Record, err error)
 )
 
 // MIME Types
@@ -135,7 +136,7 @@ func RegisterEndpoint(e Endpoint) error {
 
 func (e *Endpoint) check() error {
 	// Check path.
-	if e.Path == "" {
+	if strings.TrimSpace(e.Path) == "" {
 		return errors.New("path is missing")
 	}
 
@@ -150,23 +151,23 @@ func (e *Endpoint) check() error {
 	// Check functions.
 	var defaultMimeType string
 	fnCnt := 0
-	if e.ActionFn != nil {
+	if e.ActionFunc != nil {
 		fnCnt++
 		defaultMimeType = MimeTypeText
 	}
-	if e.DataFn != nil {
+	if e.DataFunc != nil {
 		fnCnt++
 		defaultMimeType = MimeTypeText
 	}
-	if e.StructFn != nil {
+	if e.StructFunc != nil {
 		fnCnt++
 		defaultMimeType = MimeTypeJSON
 	}
-	if e.RecordFn != nil {
+	if e.RecordFunc != nil {
 		fnCnt++
 		defaultMimeType = MimeTypeJSON
 	}
-	if e.HandlerFn != nil {
+	if e.HandlerFunc != nil {
 		fnCnt++
 		defaultMimeType = MimeTypeText
 	}
@@ -214,7 +215,7 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodHead:
-		http.Error(w, "", http.StatusOK)
+		w.WriteHeader(http.StatusOK)
 		return
 	case http.MethodPost, http.MethodPut:
 		// Read body data.
@@ -235,32 +236,32 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	switch {
-	case apiEndpoint.ActionFn != nil:
+	case apiEndpoint.ActionFunc != nil:
 		var msg string
-		msg, err = apiEndpoint.ActionFn(apiRequest)
+		msg, err = apiEndpoint.ActionFunc(apiRequest)
 		if err == nil {
 			responseData = []byte(msg)
 		}
 
-	case apiEndpoint.DataFn != nil:
-		responseData, err = apiEndpoint.DataFn(apiRequest)
+	case apiEndpoint.DataFunc != nil:
+		responseData, err = apiEndpoint.DataFunc(apiRequest)
 
-	case apiEndpoint.StructFn != nil:
+	case apiEndpoint.StructFunc != nil:
 		var v interface{}
-		v, err = apiEndpoint.StructFn(apiRequest)
+		v, err = apiEndpoint.StructFunc(apiRequest)
 		if err == nil && v != nil {
 			responseData, err = json.Marshal(v)
 		}
 
-	case apiEndpoint.RecordFn != nil:
+	case apiEndpoint.RecordFunc != nil:
 		var rec record.Record
-		rec, err = apiEndpoint.RecordFn(apiRequest)
+		rec, err = apiEndpoint.RecordFunc(apiRequest)
 		if err == nil && r != nil {
 			responseData, err = marshalRecord(rec, false)
 		}
 
-	case apiEndpoint.HandlerFn != nil:
-		apiEndpoint.HandlerFn(w, r)
+	case apiEndpoint.HandlerFunc != nil:
+		apiEndpoint.HandlerFunc(w, r)
 		return
 
 	default:
@@ -287,7 +288,7 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func readBody(w http.ResponseWriter, r *http.Request) (inputData []byte, ok bool) {
 	// Check for too long content in order to prevent death.
 	if r.ContentLength > 20000000 { // 20MB
-		http.Error(w, "Too much input data.", http.StatusBadRequest)
+		http.Error(w, "Too much input data.", http.StatusRequestEntityTooLarge)
 		return nil, false
 	}
 
@@ -297,6 +298,5 @@ func readBody(w http.ResponseWriter, r *http.Request) (inputData []byte, ok bool
 		http.Error(w, "Failed to read body: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
-	r.Body.Close()
 	return inputData, true
 }

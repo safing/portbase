@@ -49,8 +49,10 @@ const (
 	PermitSelf Permission = 4
 )
 
-// Authenticator is a function that can be set as the authenticator for the API endpoint. If none is set, all requests will be permitted.
-type Authenticator func(ctx context.Context, s *http.Server, r *http.Request) (*AuthToken, error)
+// AuthenticatorFunc is a function that can be set as the authenticator for the
+// API endpoint. If none is set, all requests will have full access.
+// The returned AuthToken represents the permissions that the request has.
+type AuthenticatorFunc func(r *http.Request, s *http.Server) (*AuthToken, error)
 
 // AuthToken represents either a set of required or granted permissions.
 // All attributes must be set when the struct is built and must not be changed
@@ -81,7 +83,8 @@ func (token *AuthToken) Refresh(ttl time.Duration) {
 }
 
 // AuthenticatedHandler defines the handler interface to specify custom
-// permission for an API handler.
+// permission for an API handler. The returned permission is the required
+// permission for the request to proceed.
 type AuthenticatedHandler interface {
 	ReadPermission(*http.Request) Permission
 	WritePermission(*http.Request) Permission
@@ -94,34 +97,35 @@ const (
 
 var (
 	authFnSet = abool.New()
-	authFn    Authenticator
+	authFn    AuthenticatorFunc
 
 	authTokens     = make(map[string]*AuthToken)
 	authTokensLock sync.Mutex
 
-	// ErrAPIAccessDeniedMessage should be returned by Authenticator functions in
-	// order to signify a blocked request, including a error message for the user.
+	// ErrAPIAccessDeniedMessage should be wrapped by errors returned by
+	// AuthenticatorFunc in order to signify a blocked request, including a error
+	// message for the user. This is an empty message on purpose, as to allow the
+	// function to define the full text of the error shown to the user.
 	ErrAPIAccessDeniedMessage = errors.New("")
 )
 
 // SetAuthenticator sets an authenticator function for the API endpoint. If none is set, all requests will be permitted.
-func SetAuthenticator(fn Authenticator) error {
+func SetAuthenticator(fn AuthenticatorFunc) error {
 	if module.Online() {
 		return ErrAuthenticationImmutable
 	}
 
-	if authFnSet.IsSet() {
+	if !authFnSet.SetToIf(false, true) {
 		return ErrAuthenticationAlreadySet
 	}
 
 	authFn = fn
-	authFnSet.Set()
 	return nil
 }
 
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := authenticateRequest(w, r, nil)
+		token := authenticateRequest(w, r, next)
 		if token != nil {
 			if _, apiRequest := getAPIContext(r); apiRequest != nil {
 				apiRequest.AuthToken = token
@@ -136,7 +140,7 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 
 	// Check if authenticator is set.
 	if !authFnSet.IsSet() {
-		// Return highest available permissions.
+		// Return highest available permissions for the request.
 		return &AuthToken{
 			Read:  PermitSelf,
 			Write: PermitSelf,
@@ -180,7 +184,8 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 		requiredPermission = PermitAnyone
 	}
 
-	// Check for valid permission after handling the specials.
+	// The required permission must match the request permission values after
+	// handling the specials.
 	if requiredPermission < PermitAnyone || requiredPermission > PermitSelf {
 		tracer.Warningf(
 			"api: handler returned invalid permission: %s (%d)",
@@ -197,11 +202,11 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 	// Get auth token from authenticator if none was in the request.
 	if token == nil {
 		var err error
-		token, err = authFn(r.Context(), server, r)
+		token, err = authFn(r, server)
 		if err != nil {
 			// Check for internal error.
 			if !errors.Is(err, ErrAPIAccessDeniedMessage) {
-				tracer.Warningf("api: authenticator failed: %s", err)
+				tracer.Errorf("api: authenticator failed: %s", err)
 				http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
 				return nil
 			}
@@ -254,7 +259,13 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 	}
 
 	tracer.Tracef("api: granted %s access to authenticated handler", r.RemoteAddr)
-	return token
+
+	// Make a copy of the AuthToken in order mitigate the handler poisoning the
+	// token, as changes would apply to future requests.
+	return &AuthToken{
+		Read:  token.Read,
+		Write: token.Write,
+	}
 }
 
 func checkAuthToken(r *http.Request) *AuthToken {
