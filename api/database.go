@@ -278,7 +278,7 @@ func (api *DatabaseAPI) handleGet(opID []byte, key string) {
 
 	r, err := api.db.Get(key)
 	if err == nil {
-		data, err = marshalRecord(r)
+		data, err = marshalRecord(r, true)
 	}
 	if err != nil {
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
@@ -336,7 +336,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 			// process query feed
 			if r != nil {
 				// process record
-				data, err := marshalRecord(r)
+				data, err := marshalRecord(r, true)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 				}
@@ -412,7 +412,7 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 			// process sub feed
 			if r != nil {
 				// process record
-				data, err := marshalRecord(r)
+				data, err := marshalRecord(r, true)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 					continue
@@ -625,7 +625,7 @@ func (api *DatabaseAPI) shutdown() {
 
 // marsharlRecords locks and marshals the given record, additionally adding
 // metadata and returning it as json.
-func marshalRecord(r record.Record) ([]byte, error) {
+func marshalRecord(r record.Record, withDSDIdentifier bool) ([]byte, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -651,10 +651,12 @@ func marshalRecord(r record.Record) ([]byte, error) {
 	}
 
 	// Add JSON identifier again.
-	formatID := varint.Pack8(record.JSON)
-	finalData := make([]byte, 0, len(formatID)+len(jsonData))
-	finalData = append(finalData, formatID...)
-	finalData = append(finalData, jsonData...)
-
-	return finalData, nil
+	if withDSDIdentifier {
+		formatID := varint.Pack8(record.JSON)
+		finalData := make([]byte, 0, len(formatID)+len(jsonData))
+		finalData = append(finalData, formatID...)
+		finalData = append(finalData, jsonData...)
+		return finalData, nil
+	}
+	return jsonData, nil
 }

@@ -8,43 +8,114 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tevino/abool"
+
 	"github.com/safing/portbase/modules"
 
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/rng"
 )
 
-var (
-	validTokens     = make(map[string]time.Time)
-	validTokensLock sync.Mutex
+// Permission defines an API requests permission.
+type Permission int8
 
-	authFnLock sync.Mutex
-	authFn     Authenticator
+const (
+	// NotFound declares that the operation does not exist.
+	NotFound Permission = -2
 
-	// ErrAPIAccessDeniedMessage should be returned by Authenticator functions in
-	// order to signify a blocked request, including a error message for the user.
-	ErrAPIAccessDeniedMessage = errors.New("")
+	// Require declares that the operation requires permission to be processed,
+	// but anyone can execute the operation.
+	Require Permission = -1
+
+	// NotSupported declares that the operation is not supported.
+	NotSupported Permission = 0
+
+	// PermitAnyone declares that anyone can execute the operation without any
+	// authentication.
+	PermitAnyone Permission = 1
+
+	// PermitUser declares that the operation may be executed by authenticated
+	// third party applications that are categorized as representing a simple
+	// user and is limited in access.
+	PermitUser Permission = 2
+
+	// PermitAdmin declares that the operation may be executed by authenticated
+	// third party applications that are categorized as representing an
+	// administrator and has broad in access.
+	PermitAdmin Permission = 3
+
+	// PermitSelf declares that the operation may only be executed by the
+	// software itself and its own (first party) components.
+	PermitSelf Permission = 4
 )
+
+// AuthenticatorFunc is a function that can be set as the authenticator for the
+// API endpoint. If none is set, all requests will have full access.
+// The returned AuthToken represents the permissions that the request has.
+type AuthenticatorFunc func(r *http.Request, s *http.Server) (*AuthToken, error)
+
+// AuthToken represents either a set of required or granted permissions.
+// All attributes must be set when the struct is built and must not be changed
+// later. Functions may be called at any time.
+// The Write permission implicitly also includes reading.
+type AuthToken struct {
+	Read  Permission
+	Write Permission
+
+	validUntil time.Time
+	validLock  sync.Mutex
+}
+
+// Expired returns whether the token has expired.
+func (token *AuthToken) Expired() bool {
+	token.validLock.Lock()
+	defer token.validLock.Unlock()
+
+	return time.Now().After(token.validUntil)
+}
+
+// Refresh refreshes the validity of the token with the given TTL.
+func (token *AuthToken) Refresh(ttl time.Duration) {
+	token.validLock.Lock()
+	defer token.validLock.Unlock()
+
+	token.validUntil = time.Now().Add(ttl)
+}
+
+// AuthenticatedHandler defines the handler interface to specify custom
+// permission for an API handler. The returned permission is the required
+// permission for the request to proceed.
+type AuthenticatedHandler interface {
+	ReadPermission(*http.Request) Permission
+	WritePermission(*http.Request) Permission
+}
 
 const (
 	cookieName = "Portmaster-API-Token"
-
-	cookieTTL = 5 * time.Minute
+	cookieTTL  = 5 * time.Minute
 )
 
-// Authenticator is a function that can be set as the authenticator for the API endpoint. If none is set, all requests will be permitted.
-type Authenticator func(ctx context.Context, s *http.Server, r *http.Request) (err error)
+var (
+	authFnSet = abool.New()
+	authFn    AuthenticatorFunc
+
+	authTokens     = make(map[string]*AuthToken)
+	authTokensLock sync.Mutex
+
+	// ErrAPIAccessDeniedMessage should be wrapped by errors returned by
+	// AuthenticatorFunc in order to signify a blocked request, including a error
+	// message for the user. This is an empty message on purpose, as to allow the
+	// function to define the full text of the error shown to the user.
+	ErrAPIAccessDeniedMessage = errors.New("")
+)
 
 // SetAuthenticator sets an authenticator function for the API endpoint. If none is set, all requests will be permitted.
-func SetAuthenticator(fn Authenticator) error {
+func SetAuthenticator(fn AuthenticatorFunc) error {
 	if module.Online() {
 		return ErrAuthenticationImmutable
 	}
 
-	authFnLock.Lock()
-	defer authFnLock.Unlock()
-
-	if authFn != nil {
+	if !authFnSet.SetToIf(false, true) {
 		return ErrAuthenticationAlreadySet
 	}
 
@@ -54,92 +125,239 @@ func SetAuthenticator(fn Authenticator) error {
 
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tracer := log.Tracer(r.Context())
-
-		// get authenticator
-		authFnLock.Lock()
-		authenticator := authFn
-		authFnLock.Unlock()
-
-		// permit if no authenticator set
-		if authenticator == nil {
+		token := authenticateRequest(w, r, next)
+		if token != nil {
+			if _, apiRequest := getAPIContext(r); apiRequest != nil {
+				apiRequest.AuthToken = token
+			}
 			next.ServeHTTP(w, r)
-			return
 		}
-
-		// check existing auth cookie
-		c, err := r.Cookie(cookieName)
-		if err == nil {
-			// get token
-			validTokensLock.Lock()
-			validUntil, valid := validTokens[c.Value]
-			validTokensLock.Unlock()
-
-			// check if token is valid
-			if valid && time.Now().Before(validUntil) {
-				tracer.Tracef("api: auth token %s is valid, refreshing", c.Value)
-				// refresh cookie
-				validTokensLock.Lock()
-				validTokens[c.Value] = time.Now().Add(cookieTTL)
-				validTokensLock.Unlock()
-				// continue
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			tracer.Tracef("api: provided auth token %s is invalid", c.Value)
-		}
-
-		// get auth decision
-		err = authenticator(r.Context(), server, r)
-		if err != nil {
-			if errors.Is(err, ErrAPIAccessDeniedMessage) {
-				tracer.Warningf("api: denying api access to %s", r.RemoteAddr)
-				http.Error(w, err.Error(), http.StatusForbidden)
-			} else {
-				tracer.Warningf("api: authenticator failed: %s", err)
-				http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
-			}
-			return
-		}
-
-		// generate new token
-		token, err := rng.Bytes(32) // 256 bit
-		if err != nil {
-			tracer.Warningf("api: failed to generate random token: %s", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
-		tokenString := base64.RawURLEncoding.EncodeToString(token)
-		// write new cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     cookieName,
-			Value:    tokenString,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-			MaxAge:   int(cookieTTL.Seconds()),
-		})
-		// save cookie
-		validTokensLock.Lock()
-		validTokens[tokenString] = time.Now().Add(cookieTTL)
-		validTokensLock.Unlock()
-
-		// serve
-		tracer.Tracef("api: granted %s, assigned auth token %s", r.RemoteAddr, tokenString)
-		next.ServeHTTP(w, r)
 	})
 }
 
-func cleanAuthTokens(_ context.Context, _ *modules.Task) error {
-	validTokensLock.Lock()
-	defer validTokensLock.Unlock()
+func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler http.Handler) *AuthToken {
+	tracer := log.Tracer(r.Context())
 
-	now := time.Now()
-	for token, validUntil := range validTokens {
-		if now.After(validUntil) {
-			delete(validTokens, token)
+	// Check if authenticator is set.
+	if !authFnSet.IsSet() {
+		// Return highest available permissions for the request.
+		return &AuthToken{
+			Read:  PermitSelf,
+			Write: PermitSelf,
+		}
+	}
+
+	// Check if request is read only.
+	readRequest := isReadMethod(r.Method)
+
+	// Get required permission for target handler.
+	requiredPermission := PermitSelf
+	if authdHandler, ok := targetHandler.(AuthenticatedHandler); ok {
+		if readRequest {
+			requiredPermission = authdHandler.ReadPermission(r)
+		} else {
+			requiredPermission = authdHandler.WritePermission(r)
+		}
+	}
+
+	// Check if we need to do any authentication at all.
+	switch requiredPermission {
+	case NotFound:
+		// Not found.
+		tracer.Trace("api: authenticated handler reported: not found")
+		http.Error(w, "Not found.", http.StatusNotFound)
+		return nil
+	case NotSupported:
+		// A read or write permission can be marked as not supported.
+		tracer.Trace("api: authenticated handler reported: not supported")
+		http.Error(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return nil
+	case PermitAnyone:
+		// Don't process permissions, as we don't need them.
+		tracer.Tracef("api: granted %s access to public handler", r.RemoteAddr)
+		return &AuthToken{
+			Read:  PermitAnyone,
+			Write: PermitAnyone,
+		}
+	case Require:
+		// Continue processing permissions, but treat as PermitAnyone.
+		requiredPermission = PermitAnyone
+	}
+
+	// The required permission must match the request permission values after
+	// handling the specials.
+	if requiredPermission < PermitAnyone || requiredPermission > PermitSelf {
+		tracer.Warningf(
+			"api: handler returned invalid permission: %s (%d)",
+			requiredPermission,
+			requiredPermission,
+		)
+		http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
+		return nil
+	}
+
+	// Check for an existing auth token.
+	token := checkAuthToken(r)
+
+	// Get auth token from authenticator if none was in the request.
+	if token == nil {
+		var err error
+		token, err = authFn(r, server)
+		if err != nil {
+			// Check for internal error.
+			if !errors.Is(err, ErrAPIAccessDeniedMessage) {
+				tracer.Errorf("api: authenticator failed: %s", err)
+				http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
+				return nil
+			}
+
+			// If authentication failed and we require authentication, return an
+			// authentication error.
+			if requiredPermission != PermitAnyone {
+				// Return authentication error.
+				tracer.Warningf("api: denying api access to %s", r.RemoteAddr)
+				http.Error(w, err.Error(), http.StatusForbidden)
+				return nil
+			}
+
+			token = &AuthToken{
+				Read:  PermitAnyone,
+				Write: PermitAnyone,
+			}
+		}
+
+		// Apply auth token to request.
+		err = applyAuthToken(w, token)
+		if err != nil {
+			tracer.Warningf("api: failed to create auth token: %s", err)
+		}
+	}
+
+	// Get effective permission for request.
+	var requestPermission Permission
+	if readRequest {
+		requestPermission = token.Read
+	} else {
+		requestPermission = token.Write
+	}
+
+	// Check for valid request permission.
+	if requestPermission < PermitAnyone || requestPermission > PermitSelf {
+		tracer.Warningf(
+			"api: authenticator returned invalid permission: %s (%d)",
+			requestPermission,
+			requestPermission,
+		)
+		http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
+		return nil
+	}
+
+	// Check permission.
+	if requestPermission < requiredPermission {
+		http.Error(w, "Insufficient permissions.", http.StatusForbidden)
+		return nil
+	}
+
+	tracer.Tracef("api: granted %s access to authenticated handler", r.RemoteAddr)
+
+	// Make a copy of the AuthToken in order mitigate the handler poisoning the
+	// token, as changes would apply to future requests.
+	return &AuthToken{
+		Read:  token.Read,
+		Write: token.Write,
+	}
+}
+
+func checkAuthToken(r *http.Request) *AuthToken {
+	// Get auth token from request.
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		return nil
+	}
+
+	// Check if auth token is registered.
+	authTokensLock.Lock()
+	token, ok := authTokens[c.Value]
+	authTokensLock.Unlock()
+	if !ok {
+		log.Tracer(r.Context()).Tracef("api: provided auth token %s is unknown", c.Value)
+		return nil
+	}
+
+	// Check if token is still valid.
+	if token.Expired() {
+		log.Tracer(r.Context()).Tracef("api: provided auth token %s has expired", c.Value)
+		return nil
+	}
+
+	// Refresh token and return.
+	token.Refresh(cookieTTL)
+	log.Tracer(r.Context()).Tracef("api: auth token %s is valid, refreshing", c.Value)
+	return token
+}
+
+func applyAuthToken(w http.ResponseWriter, token *AuthToken) error {
+	// Generate new token secret.
+	secret, err := rng.Bytes(32) // 256 bit
+	if err != nil {
+		return err
+	}
+	secretHex := base64.RawURLEncoding.EncodeToString(secret)
+
+	// Set token cookie in response.
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    secretHex,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	// Set token TTL.
+	token.Refresh(cookieTTL)
+
+	// Save token.
+	authTokensLock.Lock()
+	defer authTokensLock.Unlock()
+	authTokens[secretHex] = token
+
+	return nil
+}
+
+func cleanAuthTokens(_ context.Context, _ *modules.Task) error {
+	authTokensLock.Lock()
+	defer authTokensLock.Unlock()
+
+	for secret, token := range authTokens {
+		if token.Expired() {
+			delete(authTokens, secret)
 		}
 	}
 
 	return nil
+}
+
+func isReadMethod(method string) bool {
+	return method == http.MethodGet || method == http.MethodHead
+}
+
+func (p Permission) String() string {
+	switch p {
+	case NotSupported:
+		return "NotSupported"
+	case Require:
+		return "Require"
+	case PermitAnyone:
+		return "PermitAnyone"
+	case PermitUser:
+		return "PermitUser"
+	case PermitAdmin:
+		return "PermitAdmin"
+	case PermitSelf:
+		return "PermitSelf"
+	case NotFound:
+		return "NotFound"
+	default:
+		return "Unknown"
+	}
 }
