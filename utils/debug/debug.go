@@ -1,4 +1,4 @@
-package osdetail
+package debug
 
 import (
 	"bytes"
@@ -7,9 +7,8 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/safing/portbase/log"
-
 	"github.com/safing/portbase/info"
+	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 	"github.com/shirou/gopsutil/host"
 )

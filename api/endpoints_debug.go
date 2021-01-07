@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/safing/portbase/utils/osdetail"
+	"github.com/safing/portbase/utils/debug"
 )
 
 func registerDebugEndpoints() error {
@@ -65,7 +65,7 @@ func printStack(_ *Request) (msg string, err error) {
 // debugInfo returns the debugging information for support requests.
 func debugInfo(ar *Request) (data []byte, err error) {
 	// Create debug information helper.
-	di := new(osdetail.DebugInfo)
+	di := new(debug.DebugInfo)
 	di.Style = ar.Request.URL.Query().Get("style")
 
 	// Add debug information.
