@@ -11,6 +11,7 @@ var (
 	nameOnly          = regexp.MustCompile("^[A-Za-z0-9]+$")
 	delimitersAtStart = regexp.MustCompile("^[^A-Za-z0-9]+")
 	delimitersOnly    = regexp.MustCompile("^[^A-Za-z0-9]+$")
+	cleanName         = regexp.MustCompile(`["']`)
 )
 
 // GenerateBinaryNameFromPath generates a more human readable binary name from
@@ -66,6 +67,11 @@ func GenerateBinaryNameFromPath(path string) string {
 
 func cleanFileDescription(fileDescr string) string {
 	fields := strings.Fields(fileDescr)
+
+	// Clean out and `"` and `'`.
+	for i := range fields {
+		fields[i] = cleanName.ReplaceAllString(fields[i], "")
+	}
 
 	// If there is a 1 or 2 character delimiter field, only use fields before it.
 	endIndex := len(fields)

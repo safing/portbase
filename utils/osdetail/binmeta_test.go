@@ -26,6 +26,8 @@ func TestCleanFileDescription(t *testing.T) {
 	assert.Equal(t, "Product Name", cleanFileDescription("Product Name :: Does this and that."))
 	assert.Equal(t, "/ Product Name", cleanFileDescription("/ Product Name"))
 	assert.Equal(t, "Product", cleanFileDescription("Product / Name"))
+	assert.Equal(t, "Software 2", cleanFileDescription("Software 2"))
+	assert.Equal(t, "Launcher for Software 2", cleanFileDescription("Launcher for 'Software 2'"))
 	assert.Equal(t, "", cleanFileDescription(". / Name"))
 	assert.Equal(t, "", cleanFileDescription(". "))
 	assert.Equal(t, "", cleanFileDescription("."))
