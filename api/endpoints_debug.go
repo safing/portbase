@@ -65,7 +65,7 @@ func printStack(_ *Request) (msg string, err error) {
 // debugInfo returns the debugging information for support requests.
 func debugInfo(ar *Request) (data []byte, err error) {
 	// Create debug information helper.
-	di := new(debug.DebugInfo)
+	di := new(debug.Info)
 	di.Style = ar.Request.URL.Query().Get("style")
 
 	// Add debug information.
