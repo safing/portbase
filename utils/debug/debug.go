@@ -1,4 +1,4 @@
-package osdetail
+package debug
 
 import (
 	"bytes"
@@ -7,47 +7,46 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/safing/portbase/log"
-
 	"github.com/safing/portbase/info"
+	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 	"github.com/shirou/gopsutil/host"
 )
 
-// DebugInfo gathers debugging information and stores everything in a buffer in
+// Info gathers debugging information and stores everything in a buffer in
 // order to write it to somewhere later. It directly inherits a bytes.Buffer,
 // so you can also use all these functions too.
-type DebugInfo struct {
+type Info struct {
 	bytes.Buffer
 	Style string
 }
 
-// DebugInfoFlag defines possible options for adding sections to a DebugInfo.
-type DebugInfoFlag int
+// InfoFlag defines possible options for adding sections to a Info.
+type InfoFlag int
 
 const (
 	// NoFlags does nothing.
-	NoFlags DebugInfoFlag = 0
+	NoFlags InfoFlag = 0
 
 	// UseCodeSection wraps the section content in a markdown code section.
-	UseCodeSection DebugInfoFlag = 1
+	UseCodeSection InfoFlag = 1
 
 	// AddContentLineBreaks adds a line breaks after each line of content,
 	// except for the last.
-	AddContentLineBreaks DebugInfoFlag = 2
+	AddContentLineBreaks InfoFlag = 2
 )
 
-func useCodeSection(flags DebugInfoFlag) bool {
+func useCodeSection(flags InfoFlag) bool {
 	return flags&UseCodeSection > 0
 }
 
-func addContentLineBreaks(flags DebugInfoFlag) bool {
+func addContentLineBreaks(flags InfoFlag) bool {
 	return flags&AddContentLineBreaks > 0
 }
 
-// AddSection adds a debug section to the DebugInfo. The result is directly
+// AddSection adds a debug section to the Info. The result is directly
 // written into the buffer.
-func (di *DebugInfo) AddSection(name string, flags DebugInfoFlag, content ...string) {
+func (di *Info) AddSection(name string, flags InfoFlag, content ...string) {
 	// Check if we need a spacer.
 	if di.Len() > 0 {
 		di.WriteString("\n\n")
@@ -85,7 +84,7 @@ func (di *DebugInfo) AddSection(name string, flags DebugInfoFlag, content ...str
 }
 
 // AddVersionInfo adds version information from the info pkg.
-func (di *DebugInfo) AddVersionInfo() {
+func (di *Info) AddVersionInfo() {
 	di.AddSection(
 		"Version "+info.Version(),
 		UseCodeSection,
@@ -94,7 +93,7 @@ func (di *DebugInfo) AddVersionInfo() {
 }
 
 // AddPlatformInfo adds OS and platform information.
-func (di *DebugInfo) AddPlatformInfo(ctx context.Context) {
+func (di *Info) AddPlatformInfo(ctx context.Context) {
 	// Get information from the system.
 	info, err := host.InfoWithContext(ctx)
 	if err != nil {
@@ -127,7 +126,7 @@ func (di *DebugInfo) AddPlatformInfo(ctx context.Context) {
 }
 
 // AddGoroutineStack adds the current goroutine stack.
-func (di *DebugInfo) AddGoroutineStack() {
+func (di *Info) AddGoroutineStack() {
 	buf := new(bytes.Buffer)
 	err := pprof.Lookup("goroutine").WriteTo(buf, 1)
 	if err != nil {
@@ -148,7 +147,7 @@ func (di *DebugInfo) AddGoroutineStack() {
 }
 
 // AddLastReportedModuleError adds the last reported module error, if one exists.
-func (di *DebugInfo) AddLastReportedModuleError() {
+func (di *Info) AddLastReportedModuleError() {
 	me := modules.GetLastReportedError()
 	if me == nil {
 		di.AddSection("No Module Error", NoFlags)
@@ -163,7 +162,7 @@ func (di *DebugInfo) AddLastReportedModuleError() {
 }
 
 // AddLastUnexpectedLogs adds the last 10 unexpected log lines, if any.
-func (di *DebugInfo) AddLastUnexpectedLogs() {
+func (di *Info) AddLastUnexpectedLogs() {
 	lines := log.GetLastUnexpectedLogs()
 
 	// Check if there is anything at all.

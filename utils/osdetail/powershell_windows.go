@@ -13,7 +13,7 @@ func runPowershellCmd(script string) (output string, err error) {
 		"powershell.exe",
 		"-NoProfile",
 		"-NonInteractive",
-		script,
+		"[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n"+script,
 	)
 
 	// Create and assign output buffers.
