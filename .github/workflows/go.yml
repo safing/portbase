@@ -36,7 +36,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive 
 
     - name: Install golint
-      run: GOBIN=/tmp go get -u golang.org/x/lint/golint
+      run: GOBIN=/github/workspace go get -u golang.org/x/lint/golint
       # As with the above comment, [env] and working-directory are only required to get deprecated dep
       # and GOPATH working ...
       working-directory: /github/workspace/go/src/github.com/safing/portbase
@@ -50,7 +50,7 @@ jobs:
       working-directory: /github/workspace/go/src/github.com/safing/portbase
 
     - name: Run golint
-      run: bash -c "/tmp/golint -set_exit_status -min_confidence 1.0 ./..."
+      run: bash -c "/github/workspace/golint -set_exit_status -min_confidence 1.0 ./..."
       # As with the above comment, [env] and working-directory are only required to get deprecated dep
       # and GOPATH working ...
       working-directory: /github/workspace/go/src/github.com/safing/portbase
@@ -66,7 +66,7 @@ jobs:
         GOPATH: /github/workspace/go/
 
     - name: Install go-dep
-      run: bash -c "curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=$(pwd) sh && chmod +x ./dep"
+      run: bash -c "curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/github/workspace sh && chmod +x ./dep"
 
     - name: Get dependencies
       run: /github/workspace/dep ensure
