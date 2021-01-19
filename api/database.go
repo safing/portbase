@@ -42,7 +42,13 @@ var (
 )
 
 func init() {
-	RegisterHandleFunc("/api/database/v1", startDatabaseAPI) // net/http pattern matching only this exact path
+	RegisterHandler("/api/database/v1", WrapInAuthHandler(
+		startDatabaseAPI,
+		// Default to admin read/write permissions until the database gets support
+		// for api permissions.
+		PermitAdmin,
+		PermitAdmin,
+	))
 }
 
 // DatabaseAPI is a database API instance.
@@ -93,7 +99,7 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 	go new.handler()
 	go new.writer()
 
-	log.Infof("api request: init websocket %s %s", r.RemoteAddr, r.RequestURI)
+	log.Tracer(r.Context()).Infof("api request: init websocket %s %s", r.RemoteAddr, r.RequestURI)
 }
 
 func (api *DatabaseAPI) handler() {

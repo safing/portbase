@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime/pprof"
 
@@ -11,25 +12,37 @@ import (
 
 func registerDebugEndpoints() error {
 	if err := RegisterEndpoint(Endpoint{
-		Path:     "debug/stack",
-		Read:     PermitAnyone,
-		DataFunc: getStack,
+		Path:        "debug/stack",
+		Read:        PermitAnyone,
+		DataFunc:    getStack,
+		Name:        "Get Goroutine Stack",
+		Description: "Returns the current goroutine stack.",
 	}); err != nil {
 		return err
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:       "debug/stack/print",
-		Read:       PermitAnyone,
-		ActionFunc: printStack,
+		Path:        "debug/stack/print",
+		Read:        PermitAnyone,
+		ActionFunc:  printStack,
+		Name:        "Print Goroutine Stack",
+		Description: "Prints the current goroutine stack to stdout.",
 	}); err != nil {
 		return err
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:     "debug/info",
-		Read:     PermitAnyone,
-		DataFunc: debugInfo,
+		Path:        "debug/info",
+		Read:        PermitAnyone,
+		DataFunc:    debugInfo,
+		Name:        "Get Debug Information",
+		Description: "Returns debugging information, including the version and platform info, errors, logs and the current goroutine stack.",
+		Parameters: []Parameter{{
+			Method:      http.MethodGet,
+			Field:       "style",
+			Value:       "github",
+			Description: "Specify the formatting style. The default is simple markdown formatting.",
+		}},
 	}); err != nil {
 		return err
 	}

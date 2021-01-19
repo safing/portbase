@@ -92,7 +92,6 @@ func (mh *mainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	// Setup context trace logging.
 	ctx, tracer := log.AddTracer(r.Context())
-	lrw := NewLoggingResponseWriter(w, r)
 	// Add request context.
 	apiRequest := &Request{
 		Request: r,
@@ -100,6 +99,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	ctx = context.WithValue(ctx, requestContextKey, apiRequest)
 	// Add context back to request.
 	r = r.WithContext(ctx)
+	lrw := NewLoggingResponseWriter(w, r)
 
 	tracer.Tracef("api request: %s ___ %s", r.RemoteAddr, r.RequestURI)
 	defer func() {

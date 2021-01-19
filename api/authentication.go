@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +19,28 @@ import (
 	"github.com/safing/portbase/rng"
 )
 
+const (
+	sessionCookieName = "Portmaster-API-Token"
+	sessionCookieTTL  = 5 * time.Minute
+)
+
+var (
+	apiKeys     = make(map[string]*AuthToken)
+	apiKeysLock sync.Mutex
+
+	authFnSet = abool.New()
+	authFn    AuthenticatorFunc
+
+	sessions     = make(map[string]*session)
+	sessionsLock sync.Mutex
+
+	// ErrAPIAccessDeniedMessage should be wrapped by errors returned by
+	// AuthenticatorFunc in order to signify a blocked request, including a error
+	// message for the user. This is an empty message on purpose, as to allow the
+	// function to define the full text of the error shown to the user.
+	ErrAPIAccessDeniedMessage = errors.New("")
+)
+
 // Permission defines an API requests permission.
 type Permission int8
 
@@ -23,9 +48,9 @@ const (
 	// NotFound declares that the operation does not exist.
 	NotFound Permission = -2
 
-	// Require declares that the operation requires permission to be processed,
-	// but anyone can execute the operation.
-	Require Permission = -1
+	// Dynamic declares that the operation requires permission to be processed,
+	// but anyone can execute the operation, as it reacts to permissions itself.
+	Dynamic Permission = -1
 
 	// NotSupported declares that the operation is not supported.
 	NotSupported Permission = 0
@@ -61,25 +86,29 @@ type AuthenticatorFunc func(r *http.Request, s *http.Server) (*AuthToken, error)
 type AuthToken struct {
 	Read  Permission
 	Write Permission
+}
 
+type session struct {
+	sync.Mutex
+
+	token      *AuthToken
 	validUntil time.Time
-	validLock  sync.Mutex
 }
 
-// Expired returns whether the token has expired.
-func (token *AuthToken) Expired() bool {
-	token.validLock.Lock()
-	defer token.validLock.Unlock()
+// Expired returns whether the session has expired.
+func (sess *session) Expired() bool {
+	sess.Lock()
+	defer sess.Unlock()
 
-	return time.Now().After(token.validUntil)
+	return time.Now().After(sess.validUntil)
 }
 
-// Refresh refreshes the validity of the token with the given TTL.
-func (token *AuthToken) Refresh(ttl time.Duration) {
-	token.validLock.Lock()
-	defer token.validLock.Unlock()
+// Refresh refreshes the validity of the session with the given TTL.
+func (sess *session) Refresh(ttl time.Duration) {
+	sess.Lock()
+	defer sess.Unlock()
 
-	token.validUntil = time.Now().Add(ttl)
+	sess.validUntil = time.Now().Add(ttl)
 }
 
 // AuthenticatedHandler defines the handler interface to specify custom
@@ -89,25 +118,6 @@ type AuthenticatedHandler interface {
 	ReadPermission(*http.Request) Permission
 	WritePermission(*http.Request) Permission
 }
-
-const (
-	cookieName = "Portmaster-API-Token"
-	cookieTTL  = 5 * time.Minute
-)
-
-var (
-	authFnSet = abool.New()
-	authFn    AuthenticatorFunc
-
-	authTokens     = make(map[string]*AuthToken)
-	authTokensLock sync.Mutex
-
-	// ErrAPIAccessDeniedMessage should be wrapped by errors returned by
-	// AuthenticatorFunc in order to signify a blocked request, including a error
-	// message for the user. This is an empty message on purpose, as to allow the
-	// function to define the full text of the error shown to the user.
-	ErrAPIAccessDeniedMessage = errors.New("")
-)
 
 // SetAuthenticator sets an authenticator function for the API endpoint. If none is set, all requests will be permitted.
 func SetAuthenticator(fn AuthenticatorFunc) error {
@@ -126,26 +136,21 @@ func SetAuthenticator(fn AuthenticatorFunc) error {
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := authenticateRequest(w, r, next)
-		if token != nil {
-			if _, apiRequest := getAPIContext(r); apiRequest != nil {
-				apiRequest.AuthToken = token
-			}
-			next.ServeHTTP(w, r)
+		if token == nil {
+			// Authenticator already replied.
+			return
 		}
+
+		// Add token to request and serve next handler.
+		if _, apiRequest := getAPIContext(r); apiRequest != nil {
+			apiRequest.AuthToken = token
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
 func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler http.Handler) *AuthToken {
 	tracer := log.Tracer(r.Context())
-
-	// Check if authenticator is set.
-	if !authFnSet.IsSet() {
-		// Return highest available permissions for the request.
-		return &AuthToken{
-			Read:  PermitSelf,
-			Write: PermitSelf,
-		}
-	}
 
 	// Check if request is read only.
 	readRequest := isReadMethod(r.Method)
@@ -179,7 +184,7 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 			Read:  PermitAnyone,
 			Write: PermitAnyone,
 		}
-	case Require:
+	case Dynamic:
 		// Continue processing permissions, but treat as PermitAnyone.
 		requiredPermission = PermitAnyone
 	}
@@ -196,40 +201,16 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 		return nil
 	}
 
-	// Check for an existing auth token.
-	token := checkAuthToken(r)
-
-	// Get auth token from authenticator if none was in the request.
-	if token == nil {
-		var err error
-		token, err = authFn(r, server)
-		if err != nil {
-			// Check for internal error.
-			if !errors.Is(err, ErrAPIAccessDeniedMessage) {
-				tracer.Errorf("api: authenticator failed: %s", err)
-				http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
-				return nil
-			}
-
-			// If authentication failed and we require authentication, return an
-			// authentication error.
-			if requiredPermission != PermitAnyone {
-				// Return authentication error.
-				tracer.Warningf("api: denying api access to %s", r.RemoteAddr)
-				http.Error(w, err.Error(), http.StatusForbidden)
-				return nil
-			}
-
-			token = &AuthToken{
-				Read:  PermitAnyone,
-				Write: PermitAnyone,
-			}
-		}
-
-		// Apply auth token to request.
-		err = applyAuthToken(w, token)
-		if err != nil {
-			tracer.Warningf("api: failed to create auth token: %s", err)
+	// Authenticate request.
+	token, handled := checkAuth(w, r, requiredPermission > PermitAnyone)
+	switch {
+	case handled:
+		return nil
+	case token == nil:
+		// Use default permissions.
+		token = &AuthToken{
+			Read:  PermitAnyone,
+			Write: PermitAnyone,
 		}
 	}
 
@@ -254,11 +235,19 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 
 	// Check permission.
 	if requestPermission < requiredPermission {
+		// If the token is strictly public, return an authentication request.
+		if token.Read == PermitAnyone && token.Write == PermitAnyone {
+			w.Header().Set("WWW-Authenticate", "Bearer realm=Portmaster API")
+			http.Error(w, "Authorization required.", http.StatusUnauthorized)
+			return nil
+		}
+
+		// Otherwise just inform of insufficient permissions.
 		http.Error(w, "Insufficient permissions.", http.StatusForbidden)
 		return nil
 	}
 
-	tracer.Tracef("api: granted %s access to authenticated handler", r.RemoteAddr)
+	tracer.Tracef("api: granted %s access to protected handler", r.RemoteAddr)
 
 	// Make a copy of the AuthToken in order mitigate the handler poisoning the
 	// token, as changes would apply to future requests.
@@ -268,85 +257,249 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 	}
 }
 
-func checkAuthToken(r *http.Request) *AuthToken {
-	// Get auth token from request.
-	c, err := r.Cookie(cookieName)
+func checkAuth(w http.ResponseWriter, r *http.Request, authRequired bool) (token *AuthToken, handled bool) {
+	// Check for valid API key.
+	token = checkAPIKey(r)
+	if token != nil {
+		return token, false
+	}
+
+	// Check for valid session cookie.
+	token = checkSessionCookie(r)
+	if token != nil {
+		return token, false
+	}
+
+	// Check if an external authentication method is available.
+	if !authFnSet.IsSet() {
+		return nil, false
+	}
+
+	// Authenticate externally.
+	token, err := authFn(r, server)
+	if err != nil {
+		// Check if the authentication process failed internally.
+		if !errors.Is(err, ErrAPIAccessDeniedMessage) {
+			log.Tracer(r.Context()).Errorf("api: authenticator failed: %s", err)
+			http.Error(w, "Internal server error during authentication.", http.StatusInternalServerError)
+			return nil, true
+		}
+
+		// Return authentication failure message if authentication is required.
+		if authRequired {
+			log.Tracer(r.Context()).Warningf("api: denying api access to %s", r.RemoteAddr)
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return nil, true
+		}
+
+		return nil, false
+	}
+
+	// Abort if no token is returned.
+	if token == nil {
+		return nil, false
+	}
+
+	// Create session cookie for authenticated request.
+	err = createSession(w, r, token)
+	if err != nil {
+		log.Tracer(r.Context()).Warningf("api: failed to create session: %s", err)
+	}
+	return token, false
+}
+
+func checkAPIKey(r *http.Request) *AuthToken {
+	// Get API key from request.
+	key := r.Header.Get("Authorization")
+	if key == "" {
+		return nil
+	}
+
+	// Parse API key.
+	switch {
+	case strings.HasPrefix(key, "Bearer "):
+		key = strings.TrimPrefix(key, "Bearer ")
+	case strings.HasPrefix(key, "Basic "):
+		user, pass, _ := r.BasicAuth()
+		key = user + pass
+	default:
+		log.Tracer(r.Context()).Tracef(
+			"api: provided api key type %s is unsupported", strings.Split(key, " ")[0],
+		)
+		return nil
+	}
+
+	apiKeysLock.Lock()
+	defer apiKeysLock.Unlock()
+
+	// Check if the provided API key exists.
+	token, ok := apiKeys[key]
+	if !ok {
+		log.Tracer(r.Context()).Tracef(
+			"api: provided api key %s... is unknown", key[:4],
+		)
+		return nil
+	}
+
+	return token
+}
+
+func updateAPIKeys(_ context.Context, _ interface{}) error {
+	apiKeysLock.Lock()
+	defer apiKeysLock.Unlock()
+
+	log.Debug("api: importing possibly updated API keys from config")
+
+	// Delete current keys.
+	for k := range apiKeys {
+		delete(apiKeys, k)
+	}
+
+	// Parse new keys.
+	for _, key := range configuredAPIKeys() {
+		u, err := url.Parse(key)
+		if err != nil {
+			log.Errorf("api: failed to parse configured API key %s: %s", key, err)
+			continue
+		}
+		if u.Path == "" {
+			log.Errorf("api: malformed API key %s: missing path section", key)
+			continue
+		}
+
+		// Create token with default permissions.
+		token := &AuthToken{
+			Read:  PermitAnyone,
+			Write: PermitAnyone,
+		}
+
+		// Update with configured permissions.
+		q := u.Query()
+		// Parse read permission.
+		readPermission, err := parseAPIPermission(q.Get("read"))
+		if err != nil {
+			log.Errorf("api: invalid API key %s: %s", key, err)
+			continue
+		}
+		token.Read = readPermission
+		// Parse write permission.
+		writePermission, err := parseAPIPermission(q.Get("write"))
+		if err != nil {
+			log.Errorf("api: invalid API key %s: %s", key, err)
+			continue
+		}
+		token.Write = writePermission
+
+		// Save token.
+		apiKeys[u.Path] = token
+	}
+
+	return nil
+}
+
+func checkSessionCookie(r *http.Request) *AuthToken {
+	// Get session cookie from request.
+	c, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return nil
 	}
 
-	// Check if auth token is registered.
-	authTokensLock.Lock()
-	token, ok := authTokens[c.Value]
-	authTokensLock.Unlock()
+	// Check if session cookie is registered.
+	sessionsLock.Lock()
+	sess, ok := sessions[c.Value]
+	sessionsLock.Unlock()
 	if !ok {
-		log.Tracer(r.Context()).Tracef("api: provided auth token %s is unknown", c.Value)
+		log.Tracer(r.Context()).Tracef("api: provided session cookie %s is unknown", c.Value)
 		return nil
 	}
 
-	// Check if token is still valid.
-	if token.Expired() {
-		log.Tracer(r.Context()).Tracef("api: provided auth token %s has expired", c.Value)
+	// Check if session is still valid.
+	if sess.Expired() {
+		log.Tracer(r.Context()).Tracef("api: provided session cookie %s has expired", c.Value)
 		return nil
 	}
 
-	// Refresh token and return.
-	token.Refresh(cookieTTL)
-	log.Tracer(r.Context()).Tracef("api: auth token %s is valid, refreshing", c.Value)
-	return token
+	// Refresh session and return.
+	sess.Refresh(sessionCookieTTL)
+	log.Tracer(r.Context()).Tracef("api: session cookie %s is valid, refreshing", c.Value)
+	return sess.token
 }
 
-func applyAuthToken(w http.ResponseWriter, token *AuthToken) error {
-	// Generate new token secret.
+func createSession(w http.ResponseWriter, r *http.Request, token *AuthToken) error {
+	// Generate new session key.
 	secret, err := rng.Bytes(32) // 256 bit
 	if err != nil {
 		return err
 	}
-	secretHex := base64.RawURLEncoding.EncodeToString(secret)
+	sessionKey := base64.RawURLEncoding.EncodeToString(secret)
 
 	// Set token cookie in response.
 	http.SetCookie(w, &http.Cookie{
-		Name:     cookieName,
-		Value:    secretHex,
+		Name:     sessionCookieName,
+		Value:    sessionKey,
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	// Set token TTL.
-	token.Refresh(cookieTTL)
+	// Create session.
+	sess := &session{
+		token: token,
+	}
+	sess.Refresh(sessionCookieTTL)
 
-	// Save token.
-	authTokensLock.Lock()
-	defer authTokensLock.Unlock()
-	authTokens[secretHex] = token
+	// Save session.
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
+	sessions[sessionKey] = sess
+	log.Tracer(r.Context()).Debug("api: issued session cookie")
 
 	return nil
 }
 
-func cleanAuthTokens(_ context.Context, _ *modules.Task) error {
-	authTokensLock.Lock()
-	defer authTokensLock.Unlock()
+func cleanSessions(_ context.Context, _ *modules.Task) error {
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
 
-	for secret, token := range authTokens {
-		if token.Expired() {
-			delete(authTokens, secret)
+	for sessionKey, sess := range sessions {
+		if sess.Expired() {
+			delete(sessions, sessionKey)
 		}
 	}
 
 	return nil
 }
 
+func deleteSession(sessionKey string) {
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
+
+	delete(sessions, sessionKey)
+}
+
 func isReadMethod(method string) bool {
 	return method == http.MethodGet || method == http.MethodHead
+}
+
+func parseAPIPermission(s string) (Permission, error) {
+	switch strings.ToLower(s) {
+	case "", "anyone":
+		return PermitAnyone, nil
+	case "user":
+		return PermitUser, nil
+	case "admin":
+		return PermitAdmin, nil
+	default:
+		return PermitAnyone, fmt.Errorf("invalid permission: %s", s)
+	}
 }
 
 func (p Permission) String() string {
 	switch p {
 	case NotSupported:
 		return "NotSupported"
-	case Require:
-		return "Require"
+	case Dynamic:
+		return "Dynamic"
 	case PermitAnyone:
 		return "PermitAnyone"
 	case PermitUser:
@@ -359,5 +512,21 @@ func (p Permission) String() string {
 		return "NotFound"
 	default:
 		return "Unknown"
+	}
+}
+
+// Role returns a string representation of the permission role.
+func (p Permission) Role() string {
+	switch p {
+	case PermitAnyone:
+		return "Anyone"
+	case PermitUser:
+		return "User"
+	case PermitAdmin:
+		return "Admin"
+	case PermitSelf:
+		return "Self"
+	default:
+		return "Invalid"
 	}
 }

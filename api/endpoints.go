@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,13 +24,6 @@ type Endpoint struct {
 	Read     Permission
 	Write    Permission
 
-	// TODO: We _could_ expose more metadata to be able to build lists of actions
-	// automatically.
-	// Name           string
-	// Description    string
-	// Order          int
-	// ExpertiseLevel config.ExpertiseLevel
-
 	// ActionFunc is for simple actions with a return message for the user.
 	ActionFunc ActionFunc `json:"-"`
 
@@ -45,6 +39,19 @@ type Endpoint struct {
 
 	// HandlerFunc is the raw http handler.
 	HandlerFunc http.HandlerFunc `json:"-"`
+
+	// Documentation Metadata.
+	Name        string
+	Description string
+	Parameters  []Parameter
+}
+
+// Parameter describes a parameterized variation of an endpoint.
+type Parameter struct {
+	Method      string
+	Field       string
+	Value       string
+	Description string
 }
 
 type (
@@ -141,10 +148,10 @@ func (e *Endpoint) check() error {
 	}
 
 	// Check permissions.
-	if e.Read < Require || e.Read > PermitSelf {
+	if e.Read < Dynamic || e.Read > PermitSelf {
 		return errors.New("invalid read permission")
 	}
-	if e.Write < Require || e.Write > PermitSelf {
+	if e.Write < Dynamic || e.Write > PermitSelf {
 		return errors.New("invalid write permission")
 	}
 
@@ -182,6 +189,28 @@ func (e *Endpoint) check() error {
 
 	return nil
 }
+
+// ExportEndpoints exports the registered endpoints. The returned data must be
+// treated as immutable.
+func ExportEndpoints() []*Endpoint {
+	endpointsLock.RLock()
+	defer endpointsLock.RUnlock()
+
+	// Copy the map into a slice.
+	eps := make([]*Endpoint, 0, len(endpoints))
+	for _, ep := range endpoints {
+		eps = append(eps, ep)
+	}
+
+	sort.Sort(sortByPath(eps))
+	return eps
+}
+
+type sortByPath []*Endpoint
+
+func (eps sortByPath) Len() int           { return len(eps) }
+func (eps sortByPath) Less(i, j int) bool { return eps[i].Path < eps[j].Path }
+func (eps sortByPath) Swap(i, j int)      { eps[i], eps[j] = eps[j], eps[i] }
 
 type endpointHandler struct{}
 
@@ -278,6 +307,7 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Write response.
 	w.Header().Set("Content-Type", apiEndpoint.MimeType+"; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(len(responseData)))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(responseData)
 	if err != nil {
