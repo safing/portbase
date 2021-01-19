@@ -52,6 +52,7 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v1
       with:
+        only-new-issues: true
         version: v1.26
         args: -c ./.golangci.yml
 
