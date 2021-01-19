@@ -77,7 +77,7 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 		PermitUser,
 		PermitAdmin,
 		PermitSelf,
-		Require,
+		Dynamic,
 		NotFound,
 		100,  // Test a too high value.
 		-100, // Test a too low value.
@@ -117,7 +117,7 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 				case handlerPerm == PermitAnyone:
 					// This is fast-tracked. There are not additional checks.
 					expectSuccess = true
-				case handlerPerm == Require:
+				case handlerPerm == Dynamic:
 					// This is turned into PermitAnyone in the authenticator.
 					// But authentication is still processed and the result still gets
 					// sanity checked!

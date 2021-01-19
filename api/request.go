@@ -1,9 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/safing/portbase/log"
 )
 
 // Request is a support struct to pool more request related information.
@@ -41,4 +43,15 @@ func GetAPIRequest(r *http.Request) *Request {
 		return ar
 	}
 	return nil
+}
+
+// TextResponse writes a text response.
+func TextResponse(w http.ResponseWriter, r *http.Request, text string) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, err := fmt.Fprintln(w, text)
+	if err != nil {
+		log.Tracer(r.Context()).Warningf("api: failed to write text response: %s", err)
+	}
 }

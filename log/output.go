@@ -240,7 +240,7 @@ func finalizeWriting() {
 // Last Unexpected Logs
 
 var (
-	lastUnexpectedLogs      = make([]string, 10)
+	lastUnexpectedLogs      [10]string
 	lastUnexpectedLogsIndex int
 	lastUnexpectedLogsLock  sync.Mutex
 )
