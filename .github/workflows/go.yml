@@ -34,6 +34,13 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive 
 
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v1
+      with:
+        only-new-issues: true
+        version: v1.26
+        args: -c ./.golangci.yml
+
     - name: Get dependencies
       run: go mod download
 
@@ -48,13 +55,6 @@ jobs:
    
     - name: Run gofmt
       run: bash -c "test -z $(gofmt -s -l .)"
-
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v1
-      with:
-        only-new-issues: true
-        version: v1.26
-        args: -c ./.golangci.yml
 
   test:
     name: Test
