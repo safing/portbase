@@ -12,6 +12,16 @@ import (
 
 func registerDebugEndpoints() error {
 	if err := RegisterEndpoint(Endpoint{
+		Path:        "ping",
+		Read:        PermitAnyone,
+		ActionFunc:  ping,
+		Name:        "Ping",
+		Description: "Pong.",
+	}); err != nil {
+		return err
+	}
+
+	if err := RegisterEndpoint(Endpoint{
 		Path:        "debug/stack",
 		Read:        PermitAnyone,
 		DataFunc:    getStack,
@@ -48,6 +58,11 @@ func registerDebugEndpoints() error {
 	}
 
 	return nil
+}
+
+// ping responds with pong.
+func ping(ar *Request) (msg string, err error) {
+	return "Pong.", nil
 }
 
 // getStack returns the current goroutine stack.

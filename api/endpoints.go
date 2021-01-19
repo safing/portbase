@@ -41,6 +41,7 @@ type Endpoint struct {
 	HandlerFunc http.HandlerFunc `json:"-"`
 
 	// Documentation Metadata.
+
 	Name        string
 	Description string
 	Parameters  []Parameter

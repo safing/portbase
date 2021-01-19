@@ -8,16 +8,6 @@ import (
 
 func registerMetaEndpoints() error {
 	if err := RegisterEndpoint(Endpoint{
-		Path:        "ping",
-		Read:        PermitAnyone,
-		ActionFunc:  ping,
-		Name:        "Ping",
-		Description: "Pong.",
-	}); err != nil {
-		return err
-	}
-
-	if err := RegisterEndpoint(Endpoint{
 		Path:        "endpoints",
 		Read:        PermitAnyone,
 		MimeType:    MimeTypeJSON,
@@ -92,10 +82,6 @@ func permissions(ar *Request) (i interface{}, err error) {
 		ReadRole:  ar.AuthToken.Read.Role(),
 		WriteRole: ar.AuthToken.Write.Role(),
 	}, nil
-}
-
-func ping(ar *Request) (msg string, err error) {
-	return "Pong.", nil
 }
 
 func authBearer(w http.ResponseWriter, r *http.Request) {
