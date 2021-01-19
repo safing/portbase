@@ -74,6 +74,16 @@ func Start() error {
 		return err
 	}
 
+	// execute command if available
+	if cmdLineOperation != nil {
+		err := cmdLineOperation()
+		if err != nil {
+			SetExitStatusCode(1)
+			fmt.Fprintf(os.Stderr, "cmdline operation failed: %s\n", err)
+		}
+		return ErrCleanExit
+	}
+
 	// start logging
 	log.EnableScheduling()
 	err = log.Start()
