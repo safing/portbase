@@ -31,7 +31,7 @@ jobs:
     # go-dep needs git so install it. We can get rid of this once we
     # switch to gomod.
     - name: Install git
-      run: bash -c "apt-get update && apt-get install -y git gcc libc6-dev"
+      run: sudo bash -c "apt-get update && apt-get install -y git gcc libc6-dev"
       env:
         DEBIAN_FRONTEND: noninteractive 
 
@@ -118,7 +118,7 @@ jobs:
     # go-dep needs git so install it. We can get rid of this once we
     # switch to gomod.
     - name: Install git
-      run: bash -c "apt-get update && apt-get install -y git gcc libc6-dev"
+      run: sudo bash -c "apt-get update && apt-get install -y git gcc libc6-dev"
       env:
         DEBIAN_FRONTEND: noninteractive 
 
