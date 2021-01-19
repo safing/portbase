@@ -1,0 +1,143 @@
+name: Go
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+jobs:
+  lint:
+    name: Linter
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      # The following is only required until we finally switch away
+      # from the already deprecated godep and start using go modules
+      # ...
+      with:
+        path: go/src/github.com/safing/portbase
+
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15.3'
+
+    # go-dep needs git so install it. We can get rid of this once we
+    # switch to gomod.
+    - name: Install git
+      run: bash -c "apt-get update && apt-get install -y git gcc libc6-dev"
+      env:
+        DEBIAN_FRONTEND: noninteractive 
+
+    - name: Install golint
+      run: GOBIN=/tmp go get -u golang.org/x/lint/golint
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
+    - name: Remove vendor folder
+      run: bash -c "rm -rf ./vendor || true"
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+
+    - name: Run golint
+      run: bash -c "/tmp/golint -set_exit_status -min_confidence 1.0 ./..."
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+   
+    - name: Run gofmt
+      run: bash -c "test -z $(gofmt -s -l .)"
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
+    - name: Install go-dep
+      run: bash -c "curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=$(pwd) sh && chmod +x ./dep"
+
+    - name: Get dependencies
+      run: /github/workspace/dep ensure
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v1
+      with:
+        version: v1.26
+        args: --build-tags=musl  -c ./.golangci.yml
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      # Note that one cannot use the step-level working-directory together with uses: so we need to
+      # use the working-directory support from the golangci-lint-action to get it working
+        working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
+    - name: Run go vet
+      run: go vet ./...
+      # As with the above comment, [env] and working-directory are only required to get deprecated dep
+      # and GOPATH working ...
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.14
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      # The following is only required until we finally switch away
+      # from the already deprecated godep and start using go modules
+      # ...
+      with:
+        path: go/src/github.com/safing/portbase
+
+    # go-dep needs git so install it. We can get rid of this once we
+    # switch to gomod.
+    - name: Install git
+      run: bash -c "apt-get update && apt-get install -y git gcc libc6-dev"
+      env:
+        DEBIAN_FRONTEND: noninteractive 
+
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15.3'
+
+    - name: Install go-dep
+      run: bash -c "curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/github/workspace/ sh && chmod +x ./dep"
+
+    - name: Get dependencies
+      run: /github/workspace/dep ensure
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
+    - name: Test
+      run: ./test --test-only full
+      working-directory: /github/workspace/go/src/github.com/safing/portbase
+      env:
+        GOPATH: /github/workspace/go/
+
