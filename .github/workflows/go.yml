@@ -81,6 +81,7 @@ jobs:
       with:
         version: v1.26
         args: --build-tags=musl  -c ./.golangci.yml
+        only-new-issues: true
       # As with the above comment, [env] and working-directory are only required to get deprecated dep
       # and GOPATH working ...
       # Note that one cannot use the step-level working-directory together with uses: so we need to
