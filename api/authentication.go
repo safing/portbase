@@ -133,22 +133,6 @@ func SetAuthenticator(fn AuthenticatorFunc) error {
 	return nil
 }
 
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := authenticateRequest(w, r, next)
-		if token == nil {
-			// Authenticator already replied.
-			return
-		}
-
-		// Add token to request and serve next handler.
-		if _, apiRequest := getAPIContext(r); apiRequest != nil {
-			apiRequest.AuthToken = token
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler http.Handler) *AuthToken {
 	tracer := log.Tracer(r.Context())
 

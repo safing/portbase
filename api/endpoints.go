@@ -70,7 +70,7 @@ type (
 	RecordFunc func(ar *Request) (r record.Record, err error)
 )
 
-// MIME Types
+// MIME Types.
 const (
 	MimeTypeJSON string = "application/json"
 	MimeTypeText string = "text/plain"

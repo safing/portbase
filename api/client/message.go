@@ -9,7 +9,7 @@ import (
 	"github.com/tevino/abool"
 )
 
-// Client errors
+// Client errors.
 var (
 	ErrMalformedMessage = errors.New("malformed message")
 )
