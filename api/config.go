@@ -19,6 +19,8 @@ var (
 	defaultListenAddress string
 
 	configuredAPIKeys config.StringArrayOption
+
+	devMode config.BoolOption
 )
 
 func init() {
@@ -78,6 +80,8 @@ func registerConfig() error {
 		return err
 	}
 	configuredAPIKeys = config.GetAsStringArray(CfgAPIKeys, []string{})
+
+	devMode = config.Concurrent.GetAsBool(config.CfgDevModeKey, false)
 
 	return nil
 }

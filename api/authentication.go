@@ -242,6 +242,14 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 }
 
 func checkAuth(w http.ResponseWriter, r *http.Request, authRequired bool) (token *AuthToken, handled bool) {
+	// Return highest possible permissions in dev mode.
+	if devMode() {
+		return &AuthToken{
+			Read:  PermitSelf,
+			Write: PermitSelf,
+		}, false
+	}
+
 	// Check for valid API key.
 	token = checkAPIKey(r)
 	if token != nil {
@@ -462,7 +470,12 @@ func deleteSession(sessionKey string) {
 }
 
 func isReadMethod(method string) bool {
-	return method == http.MethodGet || method == http.MethodHead
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	default:
+		return false
+	}
 }
 
 func parseAPIPermission(s string) (Permission, error) {

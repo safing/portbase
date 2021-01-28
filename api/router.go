@@ -16,17 +16,6 @@ var (
 	// gorilla mux
 	mainMux = mux.NewRouter()
 
-	// middlewares
-	middlewareHandler = &mwHandler{
-		final: mainMux,
-		handlers: []Middleware{
-			ModuleWorker,
-			LogTracer,
-			RequestLogger,
-			authMiddleware,
-		},
-	}
-
 	// main server and lock
 	server      = &http.Server{}
 	handlerLock sync.RWMutex
@@ -46,18 +35,12 @@ func RegisterHandleFunc(path string, handleFunc func(http.ResponseWriter, *http.
 	return mainMux.HandleFunc(path, handleFunc)
 }
 
-// RegisterMiddleware registers a middle function with the API endoint.
-func RegisterMiddleware(middleware Middleware) {
-	handlerLock.Lock()
-	defer handlerLock.Unlock()
-	middlewareHandler.handlers = append(middlewareHandler.handlers, middleware)
-}
-
 // Serve starts serving the API endpoint.
 func Serve() {
 	// configure server
 	server.Addr = listenAddressConfig()
 	server.Handler = &mainHandler{
+		// TODO: mainMux should not be modified anymore.
 		mux: mainMux,
 	}
 
@@ -132,6 +115,22 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	if apiRequest.AuthToken == nil {
 		// Authenticator already replied.
 		return nil
+	}
+
+	// Add security headers.
+	if !devMode() {
+		w.Header().Set(
+			"Content-Security-Policy",
+			"default-src 'self'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data:",
+		)
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "deny")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 
 	// Handle request.

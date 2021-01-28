@@ -256,6 +256,9 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		apiRequest.InputData = inputData
 	case http.MethodGet:
 		// Nothing special to do here.
+	case http.MethodOptions:
+		w.WriteHeader(http.StatusNoContent)
+		return
 	default:
 		http.Error(w, "Unsupported method for the actions API.", http.StatusMethodNotAllowed)
 		return
@@ -308,7 +311,6 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Write response.
 	w.Header().Set("Content-Type", apiEndpoint.MimeType+"; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(len(responseData)))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(responseData)
 	if err != nil {
