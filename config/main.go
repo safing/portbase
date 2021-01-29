@@ -47,6 +47,12 @@ func prep() error {
 		modules.SetCmdLineOperation(exportConfigCmd)
 	}
 
+	logDevModeOverride()
+	err := registerDevModeOption()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

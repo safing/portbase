@@ -133,22 +133,6 @@ func SetAuthenticator(fn AuthenticatorFunc) error {
 	return nil
 }
 
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := authenticateRequest(w, r, next)
-		if token == nil {
-			// Authenticator already replied.
-			return
-		}
-
-		// Add token to request and serve next handler.
-		if _, apiRequest := getAPIContext(r); apiRequest != nil {
-			apiRequest.AuthToken = token
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler http.Handler) *AuthToken {
 	tracer := log.Tracer(r.Context())
 
@@ -258,6 +242,14 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 }
 
 func checkAuth(w http.ResponseWriter, r *http.Request, authRequired bool) (token *AuthToken, handled bool) {
+	// Return highest possible permissions in dev mode.
+	if devMode() {
+		return &AuthToken{
+			Read:  PermitSelf,
+			Write: PermitSelf,
+		}, false
+	}
+
 	// Check for valid API key.
 	token = checkAPIKey(r)
 	if token != nil {
@@ -478,7 +470,12 @@ func deleteSession(sessionKey string) {
 }
 
 func isReadMethod(method string) bool {
-	return method == http.MethodGet || method == http.MethodHead
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	default:
+		return false
+	}
 }
 
 func parseAPIPermission(s string) (Permission, error) {

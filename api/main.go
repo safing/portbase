@@ -17,7 +17,7 @@ var (
 	exportEndpoints bool
 )
 
-// API Errors
+// API Errors.
 var (
 	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set")
 	ErrAuthenticationImmutable  = errors.New("the authentication function can only be set before the api has started")
