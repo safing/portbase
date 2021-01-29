@@ -20,7 +20,8 @@ var (
 	metricNamespace       string
 	globalLabels          = make(map[string]string)
 
-	pushURL string
+	pushURL        string
+	metricInstance string
 
 	// ErrAlreadyStarted is returned when an operation is only valid before the
 	// first metric is registered, and is called after.
@@ -36,11 +37,19 @@ var (
 
 func init() {
 	flag.StringVar(&pushURL, "push-metrics", "", "URL to push prometheus metrics to")
+	flag.StringVar(&metricInstance, "metrics-instance", "", "Set the global instance label")
 
 	module = modules.Register("metrics", prep, start, stop, "database", "api")
 }
 
 func prep() error {
+	// Add metric instance name as global variable if set.
+	if metricInstance != "" {
+		if err := AddGlobalLabel("instance", metricInstance); err != nil {
+			return err
+		}
+	}
+
 	return registerInfoMetric()
 }
 
@@ -75,7 +84,7 @@ func register(m Metric) error {
 
 	// Add new metric to registry and sort it.
 	registry = append(registry, m)
-	sort.Sort(metricRegistry(registry))
+	sort.Sort(byLabeledID(registry))
 
 	// Set flag that first metric is now registered.
 	firstMetricRegistered = true
@@ -124,8 +133,8 @@ func AddGlobalLabel(name, value string) error {
 	return nil
 }
 
-type metricRegistry []Metric
+type byLabeledID []Metric
 
-func (r metricRegistry) Len() int           { return len(r) }
-func (r metricRegistry) Less(i, j int) bool { return r[i].LabeledID() < r[j].LabeledID() }
-func (r metricRegistry) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r byLabeledID) Len() int           { return len(r) }
+func (r byLabeledID) Less(i, j int) bool { return r[i].LabeledID() < r[j].LabeledID() }
+func (r byLabeledID) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }

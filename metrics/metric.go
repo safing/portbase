@@ -126,10 +126,11 @@ func (m *metricBase) buildLabeledID() string {
 		return metricID
 	}
 
-	// Add global labels to the custom ones.
-	// This overrides conflicts.
+	// Add global labels to the custom ones, if they don't exist yet.
 	for labelName, labelValue := range globalLabels {
-		m.Labels[labelName] = labelValue
+		if _, ok := m.Labels[labelName]; !ok {
+			m.Labels[labelName] = labelValue
+		}
 	}
 
 	// Render labels into a slice and sort them in order to make the labeled ID

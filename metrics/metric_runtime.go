@@ -9,6 +9,9 @@ import (
 )
 
 func init() {
+	registryLock.Lock()
+	defer registryLock.Unlock()
+
 	registry = append(registry, &runtimeMetrics{})
 }
 

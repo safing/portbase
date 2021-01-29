@@ -14,13 +14,18 @@ import (
 
 var (
 	storage       *metricsStorage
-	storageLoaded = abool.New()
 	storageKey    string
+	storageInit   = abool.New()
+	storageLoaded = abool.New()
 
 	db = database.NewInterface(&database.Options{
 		Local:    true,
 		Internal: true,
 	})
+
+	// ErrAlreadyInitialized is returned when trying to initialize an option
+	// more than once.
+	ErrAlreadyInitialized = errors.New("already initialized")
 )
 
 type metricsStorage struct {
@@ -39,9 +44,9 @@ type metricsStorage struct {
 // persistence.
 // May only be called once.
 func EnableMetricPersistence(key string) error {
-	// Check if already loaded.
-	if storageLoaded.IsSet() {
-		return nil
+	// Check if already initialized.
+	if !storageInit.SetToIf(false, true) {
+		return ErrAlreadyInitialized
 	}
 
 	// Set storage key.
@@ -85,7 +90,7 @@ func (c *Counter) loadState() {
 
 func storePersistentMetrics() {
 	// Check if persistence is enabled.
-	if storageKey == "" {
+	if !storageInit.IsSet() || storageKey == "" {
 		return
 	}
 

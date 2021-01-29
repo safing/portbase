@@ -69,7 +69,7 @@ func WriteMetrics(w io.Writer, permission api.Permission, expertiseLevel config.
 	registryLock.RLock()
 	defer registryLock.RUnlock()
 
-	// Check if metric ID is already registered.
+	// Write all matching metrics.
 	for _, metric := range registry {
 		if permission >= metric.Opts().Permission &&
 			expertiseLevel >= metric.Opts().ExpertiseLevel {
@@ -96,28 +96,25 @@ func writeMetricsTo(ctx context.Context, url string) error {
 	}
 
 	// Send.
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
 	// Check return status.
-	switch resp.StatusCode {
-	case http.StatusOK,
-		http.StatusAccepted,
-		http.StatusNoContent:
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		return nil
-	default:
-		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf(
-			"got %s while writing metrics to %s: %s",
-			resp.Status,
-			url,
-			body,
-		)
 	}
+
+	// Get and return error.
+	body, _ := ioutil.ReadAll(resp.Body)
+	return fmt.Errorf(
+		"got %s while writing metrics to %s: %s",
+		resp.Status,
+		url,
+		body,
+	)
 }
 
 func metricsWriter(ctx context.Context) error {
