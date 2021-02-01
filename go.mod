@@ -38,7 +38,7 @@ require (
 
 require (
 	// The follow-up commit removes Windows support.
-	// TOOD: Check how we want to handle this in the future, possibly ingest
+	// TODO: Check how we want to handle this in the future, possibly ingest
 	// needed functionality into here.
 	github.com/google/renameio v0.1.1-0.20200217212219-353f81969824
 )
