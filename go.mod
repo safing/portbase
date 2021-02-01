@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/VictoriaMetrics/metrics v1.12.3
 	github.com/aead/serpent v0.0.0-20160714141033-fba169763ea6
 	github.com/armon/go-radix v1.0.0
 	github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833
@@ -13,7 +14,6 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/google/renameio v0.1.0
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -29,8 +29,16 @@ require (
 	github.com/tidwall/gjson v1.6.0
 	github.com/tidwall/sjson v1.1.1
 	go.etcd.io/bbolt v1.3.4
-	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20200523222454-059865788121
+	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+	golang.org/x/tools v0.0.0-20210115202250-e0d201561e39 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
+)
+
+require (
+	// The follow-up commit removes Windows support.
+	// TOOD: Check how we want to handle this in the future, possibly ingest
+	// needed functionality into here.
+	github.com/google/renameio v0.1.1-0.20200217212219-353f81969824
 )
