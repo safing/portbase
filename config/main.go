@@ -1,7 +1,9 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
+	"flag"
 	"os"
 	"path/filepath"
 
@@ -17,6 +19,8 @@ const (
 var (
 	module   *modules.Module
 	dataRoot *utils.DirStructure
+
+	exportConfig bool
 )
 
 // SetDataRoot sets the data root from which the updates module derives its paths.
@@ -29,12 +33,24 @@ func SetDataRoot(root *utils.DirStructure) {
 func init() {
 	module = modules.Register("config", prep, start, nil, "database")
 	module.RegisterEvent(configChangeEvent)
+
+	flag.BoolVar(&exportConfig, "export-config-options", false, "export configuration registry and exit")
 }
 
 func prep() error {
 	SetDataRoot(dataroot.Root())
 	if dataRoot == nil {
 		return errors.New("data root is not set")
+	}
+
+	if exportConfig {
+		modules.SetCmdLineOperation(exportConfigCmd)
+	}
+
+	logDevModeOverride()
+	err := registerDevModeOption()
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -53,4 +69,14 @@ func start() error {
 		return err
 	}
 	return nil
+}
+
+func exportConfigCmd() error {
+	data, err := json.MarshalIndent(ExportOptions(), "", "  ")
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stdout.Write(data)
+	return err
 }

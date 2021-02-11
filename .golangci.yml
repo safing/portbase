@@ -8,6 +8,8 @@ linters:
     - whitespace
     - wsl
     - gomnd
+    - goerr113 
+    - testpackage
 
 linters-settings:
   godox:

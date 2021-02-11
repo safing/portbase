@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -27,6 +28,23 @@ func ForEachOption(fn func(opt *Option) error) error {
 		}
 	}
 	return nil
+}
+
+// ExportOptions exports the registered options. The returned data must be
+// treated as immutable.
+// The data does not include the current active or default settings.
+func ExportOptions() []*Option {
+	optionsLock.RLock()
+	defer optionsLock.RUnlock()
+
+	// Copy the map into a slice.
+	opts := make([]*Option, 0, len(options))
+	for _, opt := range options {
+		opts = append(opts, opt)
+	}
+
+	sort.Sort(sortByKey(opts))
+	return opts
 }
 
 // GetOption returns the option with name or an error

@@ -5,6 +5,10 @@ import (
 	"io"
 	"os"
 
+	// Version is fixed to commit 353f8196982447d8b12c64f69530e657331e3dbc.
+	// The follow-up commit removes Windows support.
+	// TOOD: Check how we want to handle this in the future, possibly ingest
+	// needed functionality into here.
 	"github.com/google/renameio"
 )
 

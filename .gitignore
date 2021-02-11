@@ -2,4 +2,5 @@ portbase
 apitest
 misc
 
+go.mod.*
 vendor

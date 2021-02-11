@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"flag"
+	"os"
 	"time"
 
 	"github.com/safing/portbase/modules"
@@ -10,9 +13,11 @@ import (
 
 var (
 	module *modules.Module
+
+	exportEndpoints bool
 )
 
-// API Errors
+// API Errors.
 var (
 	ErrAuthenticationAlreadySet = errors.New("the authentication function has already been set")
 	ErrAuthenticationImmutable  = errors.New("the authentication function can only be set before the api has started")
@@ -20,24 +25,47 @@ var (
 
 func init() {
 	module = modules.Register("api", prep, start, stop, "database", "config")
+
+	flag.BoolVar(&exportEndpoints, "export-api-endpoints", false, "export api endpoint registry and exit")
 }
 
 func prep() error {
+	if exportEndpoints {
+		modules.SetCmdLineOperation(exportEndpointsCmd)
+	}
+
 	if getDefaultListenAddress() == "" {
 		return errors.New("no default listen address for api available")
 	}
-	return registerConfig()
+
+	if err := registerConfig(); err != nil {
+		return err
+	}
+
+	if err := registerDebugEndpoints(); err != nil {
+		return err
+	}
+
+	if err := registerConfigEndpoints(); err != nil {
+		return err
+	}
+
+	return registerMetaEndpoints()
 }
 
 func start() error {
 	logFlagOverrides()
 	go Serve()
 
+	_ = updateAPIKeys(module.Ctx, nil)
+	err := module.RegisterEventHook("config", "config change", "update API keys", updateAPIKeys)
+	if err != nil {
+		return err
+	}
+
 	// start api auth token cleaner
-	authFnLock.Lock()
-	defer authFnLock.Unlock()
-	if authFn != nil {
-		module.NewTask("clean api auth tokens", cleanAuthTokens).Repeat(time.Minute)
+	if authFnSet.IsSet() {
+		module.NewTask("clean api sessions", cleanSessions).Repeat(5 * time.Minute)
 	}
 
 	return nil
@@ -48,4 +76,14 @@ func stop() error {
 		return server.Shutdown(context.Background())
 	}
 	return nil
+}
+
+func exportEndpointsCmd() error {
+	data, err := json.MarshalIndent(ExportEndpoints(), "", "  ")
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stdout.Write(data)
+	return err
 }

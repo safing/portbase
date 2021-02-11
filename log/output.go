@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -191,6 +192,8 @@ StackTrace:
 
 				// if currentLine and line are _not_ equal, output currentLine
 				adapter.Write(currentLine, duplicates)
+				// add to unexpected logs
+				addUnexpectedLogs(currentLine)
 				// reset duplicate counter
 				duplicates = 0
 				// set new currentLine
@@ -203,6 +206,8 @@ StackTrace:
 		// write final line
 		if currentLine != nil {
 			adapter.Write(currentLine, duplicates)
+			// add to unexpected logs
+			addUnexpectedLogs(currentLine)
 		}
 		// reset state
 		currentLine = nil //nolint:ineffassign
@@ -230,4 +235,61 @@ func finalizeWriting() {
 			return
 		}
 	}
+}
+
+// Last Unexpected Logs
+
+var (
+	lastUnexpectedLogs      [10]string
+	lastUnexpectedLogsIndex int
+	lastUnexpectedLogsLock  sync.Mutex
+)
+
+func addUnexpectedLogs(line *logLine) {
+	// Add main line.
+	if line.level >= WarningLevel {
+		addUnexpectedLogLine(line)
+		return
+	}
+
+	// Check for unexpected lines in the tracer.
+	if line.tracer != nil {
+		for _, traceLine := range line.tracer.logs {
+			if traceLine.level >= WarningLevel {
+				// Add full trace.
+				addUnexpectedLogLine(line)
+				return
+			}
+		}
+	}
+}
+
+func addUnexpectedLogLine(line *logLine) {
+	lastUnexpectedLogsLock.Lock()
+	defer lastUnexpectedLogsLock.Unlock()
+
+	// Format line and add to logs.
+	lastUnexpectedLogs[lastUnexpectedLogsIndex] = formatLine(line, 0, false)
+
+	// Increase index and wrap back to start.
+	lastUnexpectedLogsIndex = (lastUnexpectedLogsIndex + 1) % len(lastUnexpectedLogs)
+}
+
+// GetLastUnexpectedLogs returns the last 10 log lines of level Warning an up.
+func GetLastUnexpectedLogs() []string {
+	lastUnexpectedLogsLock.Lock()
+	defer lastUnexpectedLogsLock.Unlock()
+
+	// Make a copy and return.
+	len := len(lastUnexpectedLogs)
+	start := lastUnexpectedLogsIndex
+	logsCopy := make([]string, 0, len)
+	// Loop from mid-to-mid.
+	for i := start; i < start+len; i++ {
+		if lastUnexpectedLogs[i%len] != "" {
+			logsCopy = append(logsCopy, lastUnexpectedLogs[i%len])
+		}
+	}
+
+	return logsCopy
 }

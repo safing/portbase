@@ -14,7 +14,7 @@ import (
 // to change deep configuration settings.
 type ExpertiseLevel uint8
 
-// Expertise Level constants
+// Expertise Level constants.
 const (
 	ExpertiseLevelUser      ExpertiseLevel = 0
 	ExpertiseLevelExpert    ExpertiseLevel = 1

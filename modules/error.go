@@ -11,7 +11,8 @@ import (
 var (
 	errorReportingChannel chan *ModuleError
 	reportToStdErr        = true
-	reportingLock         sync.RWMutex
+	lastReportedError     *ModuleError
+	reportingLock         sync.Mutex
 )
 
 // ModuleError wraps a panic, error or message into an error that can be reported.
@@ -67,10 +68,37 @@ func (me *ModuleError) Error() string {
 	return me.Message
 }
 
+// Format returns the error formatted in key/value form.
+func (me *ModuleError) Format() string {
+	return fmt.Sprintf(
+		`Message: %s
+Timestamp: %s
+ModuleName: %s
+TaskName: %s
+TaskType: %s
+Severity: %s
+PanicValue: %s
+StackTrace:
+
+%s
+`,
+		me.Message,
+		time.Now(),
+		me.ModuleName,
+		me.TaskName,
+		me.TaskType,
+		me.Severity,
+		me.PanicValue,
+		me.StackTrace,
+	)
+}
+
 // Report reports the error through the configured reporting channel.
 func (me *ModuleError) Report() {
-	reportingLock.RLock()
-	defer reportingLock.RUnlock()
+	reportingLock.Lock()
+	defer reportingLock.Unlock()
+
+	lastReportedError = me
 
 	if errorReportingChannel != nil {
 		select {
@@ -83,27 +111,8 @@ func (me *ModuleError) Report() {
 		// default to writing to stderr
 		fmt.Fprintf(
 			os.Stderr,
-			`===== Error Report =====
-Message: %s
-Timestamp: %s
-ModuleName: %s
-TaskName: %s
-TaskType: %s
-Severity: %s
-PanicValue: %s
-StackTrace:
-
-%s
-===== End of Report =====
-`,
-			me.Message,
-			time.Now(),
-			me.ModuleName,
-			me.TaskName,
-			me.TaskType,
-			me.Severity,
-			me.PanicValue,
-			me.StackTrace,
+			"===== Error Report =====\n%s\n===== End of Report =====\n",
+			me.Format(),
 		)
 	}
 }
@@ -132,4 +141,12 @@ func SetStdErrReporting(on bool) {
 	defer reportingLock.Unlock()
 
 	reportToStdErr = on
+}
+
+// GetLastReportedError returns the last reported module error.
+func GetLastReportedError() *ModuleError {
+	reportingLock.Lock()
+	defer reportingLock.Unlock()
+
+	return lastReportedError
 }

@@ -61,6 +61,27 @@ func (i *Interface) DelayedCacheWriter(ctx context.Context) error {
 	}
 }
 
+// ClearCache clears the read cache.
+func (i *Interface) ClearCache() {
+	// Check if cache is in use.
+	if i.cache == nil {
+		return
+	}
+
+	// Clear all cache entries.
+	i.cache.Purge()
+}
+
+// FlushCache writes (and thus clears) the write cache.
+func (i *Interface) FlushCache() {
+	// Check if write cache is in use.
+	if i.options.DelayCachedWrites != "" {
+		return
+	}
+
+	i.flushWriteCache(0)
+}
+
 func (i *Interface) flushWriteCache(percentThreshold int) {
 	i.writeCacheLock.Lock()
 	defer i.writeCacheLock.Unlock()

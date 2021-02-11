@@ -60,7 +60,7 @@ type PossibleValue struct {
 // future well-known annotation additions do not conflict
 // with vendor/product/package specific annoations.
 //
-// Format: <vendor/package>:<scope>:<identifier>
+// Format: <vendor/package>:<scope>:<identifier> //.
 type Annotations map[string]interface{}
 
 // Well known annotations defined by this package.
@@ -144,7 +144,7 @@ type ValueRequirement struct {
 	Value interface{}
 }
 
-// Values for the DisplayHintAnnotation
+// Values for the DisplayHintAnnotation.
 const (
 	// DisplayHintOneOf is used to mark an option
 	// as a "select"-style option. That is, only one of
@@ -263,7 +263,7 @@ func (option *Option) SetAnnotation(key string, value interface{}) {
 	option.Annotations[key] = value
 }
 
-// GetAnnotation returns the value of the annotation key
+// GetAnnotation returns the value of the annotation key.
 func (option *Option) GetAnnotation(key string) (interface{}, bool) {
 	option.Lock()
 	defer option.Unlock()
