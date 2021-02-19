@@ -25,9 +25,21 @@ func GenerateBinaryNameFromPath(path string) string {
 	segments := segmentsSplitter.FindAllString(fileName, -1)
 
 	// Remove last segment if it's an extension.
-	if len(segments) >= 2 &&
-		strings.HasPrefix(segments[len(segments)-1], ".") {
-		segments = segments[:len(segments)-1]
+	if len(segments) >= 2 {
+		switch strings.ToLower(segments[len(segments)-1]) {
+		case
+			".exe",      // Windows Executable
+			".msi",      // Windows Installer
+			".bat",      // Windows Batch File
+			".cmd",      // Windows Command Script
+			".ps1",      // Windows Powershell Cmdlet
+			".run",      // Linux Executable
+			".appimage", // Linux AppImage
+			".app",      // MacOS Executable
+			".action",   // MacOS Automator Action
+			".out":      // Generic Compiled Executable
+			segments = segments[:len(segments)-1]
+		}
 	}
 
 	// Debugging snippet:
