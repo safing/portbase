@@ -30,12 +30,15 @@ func GenerateBinaryNameFromPath(path string) string {
 		segments = segments[:len(segments)-1]
 	}
 
+	// Debugging snippet:
+	// fmt.Printf("segments: %s\n", segments)
+
 	// Go through segments and collect name parts.
 	nameParts := make([]string, 0, len(segments))
 	var fragments string
 	for _, segment := range segments {
 		// Group very short segments.
-		if len(segment) <= 3 {
+		if len(delimitersAtStart.ReplaceAllString(segment, "")) <= 2 {
 			fragments += segment
 			continue
 		} else if fragments != "" {
@@ -51,6 +54,9 @@ func GenerateBinaryNameFromPath(path string) string {
 		nameParts = append(nameParts, fragments)
 	}
 
+	// Debugging snippet:
+	// fmt.Printf("parts: %s\n", nameParts)
+
 	// Post-process name parts
 	for i := range nameParts {
 		// Remove any leading delimiters.
@@ -61,6 +67,9 @@ func GenerateBinaryNameFromPath(path string) string {
 			nameParts[i] = strings.Title(nameParts[i])
 		}
 	}
+
+	// Debugging snippet:
+	// fmt.Printf("final: %s\n", nameParts)
 
 	return strings.Join(nameParts, " ")
 }

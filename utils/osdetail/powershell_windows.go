@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func runPowershellCmd(script string) (output string, err error) {
+// RunPowershellCmd runs a powershell command and returns its output.
+func RunPowershellCmd(script string) (output string, err error) {
 	// Create command to execute.
 	cmd := exec.Command(
 		"powershell.exe",
