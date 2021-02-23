@@ -25,17 +25,32 @@ func GenerateBinaryNameFromPath(path string) string {
 	segments := segmentsSplitter.FindAllString(fileName, -1)
 
 	// Remove last segment if it's an extension.
-	if len(segments) >= 2 &&
-		strings.HasPrefix(segments[len(segments)-1], ".") {
-		segments = segments[:len(segments)-1]
+	if len(segments) >= 2 {
+		switch strings.ToLower(segments[len(segments)-1]) {
+		case
+			".exe",      // Windows Executable
+			".msi",      // Windows Installer
+			".bat",      // Windows Batch File
+			".cmd",      // Windows Command Script
+			".ps1",      // Windows Powershell Cmdlet
+			".run",      // Linux Executable
+			".appimage", // Linux AppImage
+			".app",      // MacOS Executable
+			".action",   // MacOS Automator Action
+			".out":      // Generic Compiled Executable
+			segments = segments[:len(segments)-1]
+		}
 	}
+
+	// Debugging snippet:
+	// fmt.Printf("segments: %s\n", segments)
 
 	// Go through segments and collect name parts.
 	nameParts := make([]string, 0, len(segments))
 	var fragments string
 	for _, segment := range segments {
 		// Group very short segments.
-		if len(segment) <= 3 {
+		if len(delimitersAtStart.ReplaceAllString(segment, "")) <= 2 {
 			fragments += segment
 			continue
 		} else if fragments != "" {
@@ -51,6 +66,9 @@ func GenerateBinaryNameFromPath(path string) string {
 		nameParts = append(nameParts, fragments)
 	}
 
+	// Debugging snippet:
+	// fmt.Printf("parts: %s\n", nameParts)
+
 	// Post-process name parts
 	for i := range nameParts {
 		// Remove any leading delimiters.
@@ -61,6 +79,9 @@ func GenerateBinaryNameFromPath(path string) string {
 			nameParts[i] = strings.Title(nameParts[i])
 		}
 	}
+
+	// Debugging snippet:
+	// fmt.Printf("final: %s\n", nameParts)
 
 	return strings.Join(nameParts, " ")
 }
