@@ -51,6 +51,10 @@ func start() error {
 		return err
 	}
 
+	if err := registerRuntimeMetric(); err != nil {
+		return err
+	}
+
 	if err := registerAPI(); err != nil {
 		return err
 	}
