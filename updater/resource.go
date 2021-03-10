@@ -13,6 +13,18 @@ import (
 	semver "github.com/hashicorp/go-version"
 )
 
+var (
+	devVersion *semver.Version
+)
+
+func init() {
+	var err error
+	devVersion, err = semver.NewVersion("0")
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Resource represents a resource (via an identifier) and multiple file versions.
 type Resource struct {
 	sync.Mutex
@@ -71,6 +83,21 @@ func (rv *ResourceVersion) String() string {
 	return rv.VersionNumber
 }
 
+// SemVer returns the semantiv version of the resource.
+func (rv *ResourceVersion) SemVer() *semver.Version {
+	return rv.semVer
+}
+
+// EqualsVersion normalizes the given version and checks equality with semver.
+func (rv *ResourceVersion) EqualsVersion(version string) bool {
+	cmpSemVer, err := semver.NewVersion(version)
+	if err != nil {
+		return false
+	}
+
+	return rv.semVer.Equal(cmpSemVer)
+}
+
 // isSelectable returns true if the version represented by rv is selectable.
 // A version is selectable if it's not blacklisted and either already locally
 // available or ready to be downloaded.
@@ -85,7 +112,12 @@ func (rv *ResourceVersion) isBetaVersionNumber() bool {
 	// new versions should use the pre-release suffix as
 	// declared by https://semver.org
 	// i.e. 1.2.3-beta
-	return strings.HasSuffix(rv.VersionNumber, "b") || strings.Contains(rv.semVer.Prerelease(), "beta")
+	switch rv.semVer.Prerelease() {
+	case "b", "beta":
+		return true
+	default:
+		return false
+	}
 }
 
 // Len is the number of elements in the collection.
@@ -175,7 +207,7 @@ func (res *Resource) AddVersion(version string, available, stableRelease, betaRe
 
 		rv = &ResourceVersion{
 			resource:      res,
-			VersionNumber: version,
+			VersionNumber: sv.String(), // Use normalized version.
 			semVer:        sv,
 		}
 		res.Versions = append(res.Versions, rv)
@@ -253,7 +285,7 @@ func (res *Resource) selectVersion() {
 		// get last element
 		rv := res.Versions[len(res.Versions)-1]
 		// check if it's a dev version
-		if rv.VersionNumber == "0" && rv.Available {
+		if rv.semVer.Equal(devVersion) && rv.Available {
 			res.SelectedVersion = rv
 			return
 		}
@@ -312,7 +344,7 @@ func (res *Resource) Blacklist(version string) error {
 	// count available and valid versions
 	valid := 0
 	for _, rv := range res.Versions {
-		if rv.VersionNumber == "0" {
+		if rv.semVer.Equal(devVersion) {
 			continue // ignore dev versions
 		}
 		if !rv.Blacklisted {

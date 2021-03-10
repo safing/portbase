@@ -7,6 +7,8 @@ import (
 
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
+
+	semver "github.com/hashicorp/go-version"
 )
 
 // File represents a file from the update system.
@@ -26,6 +28,16 @@ func (file *File) Identifier() string {
 // Version returns the version of the file.
 func (file *File) Version() string {
 	return file.version.VersionNumber
+}
+
+// SemVer returns the semantic version of the file.
+func (file *File) SemVer() *semver.Version {
+	return file.version.semVer
+}
+
+// EqualsVersion normalizes the given version and checks equality with semver.
+func (file *File) EqualsVersion(version string) bool {
+	return file.version.EqualsVersion(version)
 }
 
 // Path returns the absolute filepath of the file.
