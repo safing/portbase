@@ -15,7 +15,8 @@ import (
 
 // PrometheusFormatRequirement is required format defined by prometheus for
 // metric and label names.
-const PrometheusFormatRequirement = "[a-zA-Z_][a-zA-Z0-9_]*"
+const prometheusBaseFormt = "[a-zA-Z_][a-zA-Z0-9_]*"
+const PrometheusFormatRequirement = "^" + prometheusBaseFormt + "$"
 
 var prometheusFormat = regexp.MustCompile(PrometheusFormatRequirement)
 
@@ -60,7 +61,7 @@ type Options struct {
 
 func newMetricBase(id string, labels map[string]string, opts Options) (*metricBase, error) {
 	// Check formats.
-	if !prometheusFormat.MatchString(id) {
+	if !prometheusFormat.MatchString(strings.ReplaceAll(id, "/", "_")) {
 		return nil, fmt.Errorf("metric name %q must match %s", id, PrometheusFormatRequirement)
 	}
 	for labelName := range labels {
@@ -73,6 +74,11 @@ func newMetricBase(id string, labels map[string]string, opts Options) (*metricBa
 	if opts.Permission < api.PermitAnyone {
 		// Default to PermitUser.
 		opts.Permission = api.PermitUser
+	}
+
+	// Ensure that labels is a map.
+	if labels == nil {
+		labels = make(map[string]string)
 	}
 
 	// Create metric base.

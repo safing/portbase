@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"sort"
 	"sync"
@@ -20,9 +19,6 @@ var (
 	metricNamespace       string
 	globalLabels          = make(map[string]string)
 
-	pushURL        string
-	metricInstance string
-
 	// ErrAlreadyStarted is returned when an operation is only valid before the
 	// first metric is registered, and is called after.
 	ErrAlreadyStarted = errors.New("can only be changed before first metric is registered")
@@ -36,29 +32,30 @@ var (
 )
 
 func init() {
-	flag.StringVar(&pushURL, "push-metrics", "", "URL to push prometheus metrics to")
-	flag.StringVar(&metricInstance, "metrics-instance", "", "Set the global instance label")
-
 	module = modules.Register("metrics", prep, start, stop, "database", "api")
 }
 
 func prep() error {
+	return prepConfig()
+}
+
+func start() error {
 	// Add metric instance name as global variable if set.
-	if metricInstance != "" {
-		if err := AddGlobalLabel("instance", metricInstance); err != nil {
+	if instanceOption() != "" {
+		if err := AddGlobalLabel("instance", instanceOption()); err != nil {
 			return err
 		}
 	}
 
-	return registerInfoMetric()
-}
+	if err := registerInfoMetric(); err != nil {
+		return err
+	}
 
-func start() error {
 	if err := registerAPI(); err != nil {
 		return err
 	}
 
-	if pushURL != "" {
+	if pushOption() != "" {
 		module.StartServiceWorker("metric pusher", 0, metricsWriter)
 	}
 
