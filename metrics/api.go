@@ -90,7 +90,7 @@ func writeMetricsTo(ctx context.Context, url string) error {
 	}
 
 	// Create request
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, buf)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -118,6 +118,7 @@ func writeMetricsTo(ctx context.Context, url string) error {
 }
 
 func metricsWriter(ctx context.Context) error {
+	pushURL := pushOption()
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
