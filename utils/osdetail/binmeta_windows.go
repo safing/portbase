@@ -10,7 +10,7 @@ const powershellGetFileDescription = `Get-ItemProperty %q | Select -ExpandProper
 // name for the given binary path.
 func GetBinaryNameFromSystem(path string) (string, error) {
 	// Get FileProperties via Powershell call.
-	output, err := runPowershellCmd(fmt.Sprintf(powershellGetFileDescription, path))
+	output, err := RunPowershellCmd(fmt.Sprintf(powershellGetFileDescription, path))
 	if err != nil {
 		return "", fmt.Errorf("failed to get file properties of %s: %s", path, err)
 	}
@@ -69,7 +69,7 @@ $MemoryStream.Dispose()
 // for a given binary path and returns it as a data-URL.
 func GetBinaryIconFromSystem(path string) (string, error) {
 	// Get Associated File Icon via Powershell call.
-	output, err := runPowershellCmd(fmt.Sprintf(powershellGetIcon, path))
+	output, err := RunPowershellCmd(fmt.Sprintf(powershellGetIcon, path))
 	if err != nil {
 		return "", fmt.Errorf("failed to get file properties of %s: %s", path, err)
 	}
