@@ -8,41 +8,26 @@ import (
 	"github.com/safing/portbase/config"
 )
 
-func init() {
-	registryLock.Lock()
-	defer registryLock.Unlock()
+func registerRuntimeMetric() error {
+	runtimeBase, err := newMetricBase("_runtime", nil, Options{
+		Name:           "Golang Runtime",
+		Permission:     api.PermitAdmin,
+		ExpertiseLevel: config.ExpertiseLevelDeveloper,
+	})
+	if err != nil {
+		return err
+	}
 
-	registry = append(registry, &runtimeMetrics{})
+	return register(&runtimeMetrics{
+		metricBase: runtimeBase,
+	})
 }
 
-var runtimeOpts = &Options{
-	Name:           "Golang Runtime",
-	Permission:     api.PermitAdmin,
-	ExpertiseLevel: config.ExpertiseLevelDeveloper,
-}
-
-type runtimeMetrics struct{}
-
-func (r *runtimeMetrics) ID() string {
-	return "_runtime"
-}
-
-func (r *runtimeMetrics) LabeledID() string {
-	return "_runtime"
-}
-
-func (r *runtimeMetrics) Opts() *Options {
-	return runtimeOpts
-}
-
-func (r *runtimeMetrics) Permission() api.Permission {
-	return runtimeOpts.Permission
-}
-
-func (r *runtimeMetrics) ExpertiseLevel() config.ExpertiseLevel {
-	return runtimeOpts.ExpertiseLevel
+type runtimeMetrics struct {
+	*metricBase
 }
 
 func (r *runtimeMetrics) WritePrometheus(w io.Writer) {
+	// TODO: Add global labels.
 	vm.WriteProcessMetrics(w)
 }

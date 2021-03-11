@@ -1,7 +1,11 @@
 package updater
 
 import (
+	"fmt"
 	"testing"
+
+	semver "github.com/hashicorp/go-version"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVersionSelection(t *testing.T) {
@@ -78,4 +82,24 @@ func TestVersionSelection(t *testing.T) {
 	for _, rv := range res.Versions {
 		t.Logf("version %s: %+v", rv.VersionNumber, rv)
 	}
+}
+
+func TestVersionParsing(t *testing.T) {
+	assert.Equal(t, "1.2.3", parseVersion("1.2.3"))
+	assert.Equal(t, "1.2.0", parseVersion("1.2.0"))
+	assert.Equal(t, "0.2.0", parseVersion("0.2.0"))
+	assert.Equal(t, "0.0.0", parseVersion("0"))
+	assert.Equal(t, "1.2.3-b", parseVersion("1.2.3-b"))
+	assert.Equal(t, "1.2.3-b", parseVersion("1.2.3b"))
+	assert.Equal(t, "1.2.3-beta", parseVersion("1.2.3-beta"))
+	assert.Equal(t, "1.2.3-beta", parseVersion("1.2.3beta"))
+	assert.Equal(t, "1.2.3", parseVersion("01.02.03"))
+}
+
+func parseVersion(v string) string {
+	sv, err := semver.NewVersion(v)
+	if err != nil {
+		return fmt.Sprintf("failed to parse version: %s", err)
+	}
+	return sv.String()
 }

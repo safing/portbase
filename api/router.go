@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -53,7 +55,7 @@ func Serve() {
 			return server.ListenAndServe()
 		})
 		// return on shutdown error
-		if err == http.ErrServerClosed {
+		if errors.Is(err, http.ErrServerClosed) {
 			return
 		}
 		// log error and restart
@@ -93,6 +95,17 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		}
 		tracer.Submit()
 	}()
+
+	// Clean URL.
+	cleanedRequestPath := cleanRequestPath(r.URL.Path)
+
+	// If the cleaned URL differs from the original one, redirect to there.
+	if r.URL.Path != cleanedRequestPath {
+		redirURL := *r.URL
+		redirURL.Path = cleanedRequestPath
+		http.Redirect(lrw, r, redirURL.String(), http.StatusMovedPermanently)
+		return nil
+	}
 
 	// Get handler for request.
 	// Gorilla does not support handling this on our own very well.
@@ -144,4 +157,26 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return nil
+}
+
+// cleanRequestPath cleans and returns a request URL.
+func cleanRequestPath(requestPath string) string {
+	// If the request URL is empty, return a request for "root".
+	if requestPath == "" || requestPath == "/" {
+		return "/"
+	}
+	// If the request URL does not start with a slash, prepend it.
+	if !strings.HasPrefix(requestPath, "/") {
+		requestPath = "/" + requestPath
+	}
+
+	// Clean path to remove any relative parts.
+	cleanedRequestPath := path.Clean(requestPath)
+	// Because path.Clean removes a trailing slash, we need to add it back here
+	// if the original URL had one.
+	if strings.HasSuffix(requestPath, "/") {
+		cleanedRequestPath += "/"
+	}
+
+	return cleanedRequestPath
 }

@@ -7,6 +7,8 @@ import (
 )
 
 func TestGenerateBinaryNameFromPath(t *testing.T) {
+	t.Parallel()
+
 	assert.Equal(t, "Nslookup", GenerateBinaryNameFromPath("nslookup.exe"))
 	assert.Equal(t, "System Settings", GenerateBinaryNameFromPath("SystemSettings.exe"))
 	assert.Equal(t, "One Drive Setup", GenerateBinaryNameFromPath("OneDriveSetup.exe"))
@@ -17,9 +19,13 @@ func TestGenerateBinaryNameFromPath(t *testing.T) {
 	assert.Equal(t, "Win Store App", GenerateBinaryNameFromPath("WinStore.App.exe"))
 	assert.Equal(t, "Test Script", GenerateBinaryNameFromPath(".test-script"))
 	assert.Equal(t, "Browser Broker", GenerateBinaryNameFromPath("browser_broker.exe"))
+	assert.Equal(t, "Virtual Box VM", GenerateBinaryNameFromPath("VirtualBoxVM"))
+	assert.Equal(t, "Io Elementary Appcenter", GenerateBinaryNameFromPath("io.elementary.appcenter"))
 }
 
 func TestCleanFileDescription(t *testing.T) {
+	t.Parallel()
+
 	assert.Equal(t, "Product Name", cleanFileDescription("Product Name. Does this and that."))
 	assert.Equal(t, "Product Name", cleanFileDescription("Product Name - Does this and that."))
 	assert.Equal(t, "Product Name", cleanFileDescription("Product Name / Does this and that."))
