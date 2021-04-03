@@ -12,6 +12,7 @@ func RunPowershellCmd(script string) (output string, err error) {
 	// Create command to execute.
 	cmd := exec.Command(
 		"powershell.exe",
+		"-ExecutionPolicy", "Bypass",
 		"-NoProfile",
 		"-NonInteractive",
 		"[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n"+script,

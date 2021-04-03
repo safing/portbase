@@ -47,17 +47,14 @@ func prep() error {
 		modules.SetCmdLineOperation(exportConfigCmd)
 	}
 
-	logDevModeOverride()
-	err := registerDevModeOption()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return registerBasicOptions()
 }
 
 func start() error {
 	configFilePath = filepath.Join(dataRoot.Path, "config.json")
+
+	// Load log level from log package after it started.
+	loadLogLevel()
 
 	err := registerAsDatabase()
 	if err != nil && !os.IsNotExist(err) {

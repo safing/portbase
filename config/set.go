@@ -192,5 +192,7 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 	// finalize change, activate triggers
 	signalChanges()
 
-	return saveConfig()
+	// Do not save the configuration, as it only saves the active values, not the
+	// active default value.
+	return nil
 }

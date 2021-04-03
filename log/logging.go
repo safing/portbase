@@ -102,7 +102,7 @@ var (
 	logBuffer             chan *logLine
 	forceEmptyingOfBuffer = make(chan struct{})
 
-	logLevelInt = uint32(3)
+	logLevelInt = uint32(InfoLevel)
 	logLevel    = &logLevelInt
 
 	pkgLevelsActive = abool.NewBool(false)
@@ -134,9 +134,34 @@ func UnSetPkgLevels() {
 	pkgLevelsActive.UnSet()
 }
 
+// GetLogLevel returns the current log level.
+func GetLogLevel() Severity {
+	return Severity(atomic.LoadUint32(logLevel))
+}
+
 // SetLogLevel sets a new log level. Only effective after Start().
 func SetLogLevel(level Severity) {
 	atomic.StoreUint32(logLevel, uint32(level))
+}
+
+// Name returns the name of the log level.
+func (s Severity) Name() string {
+	switch s {
+	case TraceLevel:
+		return "trace"
+	case DebugLevel:
+		return "debug"
+	case InfoLevel:
+		return "info"
+	case WarningLevel:
+		return "warning"
+	case ErrorLevel:
+		return "error"
+	case CriticalLevel:
+		return "critical"
+	default:
+		return "none"
+	}
 }
 
 // ParseLevel returns the level severity of a log level name.
