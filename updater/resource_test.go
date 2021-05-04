@@ -36,14 +36,14 @@ func TestVersionSelection(t *testing.T) {
 	registry.Beta = true
 	registry.DevMode = true
 	res.selectVersion()
-	if res.SelectedVersion.VersionNumber != "0" {
-		t.Errorf("selected version should be 0, not %s", res.SelectedVersion.VersionNumber)
+	if res.SelectedVersion.VersionNumber != "0.0.0" {
+		t.Errorf("selected version should be 0.0.0, not %s", res.SelectedVersion.VersionNumber)
 	}
 
 	registry.DevMode = false
 	res.selectVersion()
-	if res.SelectedVersion.VersionNumber != "1.2.4b" {
-		t.Errorf("selected version should be 1.2.4b, not %s", res.SelectedVersion.VersionNumber)
+	if res.SelectedVersion.VersionNumber != "1.2.4-b" {
+		t.Errorf("selected version should be 1.2.4-b, not %s", res.SelectedVersion.VersionNumber)
 	}
 
 	registry.Beta = false

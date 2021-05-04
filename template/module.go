@@ -39,7 +39,7 @@ func init() {
 	)
 
 	// register events that other modules can subscribe to
-	module.RegisterEvent(eventStateUpdate)
+	module.RegisterEvent(eventStateUpdate, true)
 }
 
 func prep() error {
