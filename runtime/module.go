@@ -1,6 +1,8 @@
 package runtime
 
 import (
+	"fmt"
+
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/modules"
 )
@@ -28,6 +30,10 @@ func startModule() error {
 
 	if err := DefaultRegistry.InjectAsDatabase("runtime"); err != nil {
 		return err
+	}
+
+	if err := startModulesIntegration(); err != nil {
+		return fmt.Errorf("failed to start modules integration: %w", err)
 	}
 
 	return nil

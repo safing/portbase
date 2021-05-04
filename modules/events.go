@@ -6,7 +6,17 @@ import (
 	"fmt"
 
 	"github.com/safing/portbase/log"
+	"github.com/tevino/abool"
 )
+
+type eventHooks struct {
+	// hooks holds all registed hooks for the event.
+	hooks []*eventHook
+
+	// internal signifies that the event and it's data may not be exposed and may
+	// only be propagated internally.
+	internal bool
+}
 
 type eventHookFn func(context.Context, interface{}) error
 
@@ -27,16 +37,25 @@ func (m *Module) processEventTrigger(event string, data interface{}) {
 	m.eventHooksLock.RLock()
 	defer m.eventHooksLock.RUnlock()
 
-	hooks, ok := m.eventHooks[event]
+	eventHooks, ok := m.eventHooks[event]
 	if !ok {
 		log.Warningf(`%s: tried to trigger non-existent event "%s"`, m.Name, event)
 		return
 	}
 
-	for _, hook := range hooks {
+	for _, hook := range eventHooks.hooks {
 		if hook.hookingModule.OnlineSoon() {
 			go m.runEventHook(hook, event, data)
 		}
+	}
+
+	// Call subscription function, if set.
+	if eventSubscriptionFuncReady.IsSet() {
+		m.StartWorker("event subscription", func(context.Context) error {
+			// Only use data in worker that won't change anymore.
+			eventSubscriptionFunc(m.Name, event, eventHooks.internal, data)
+			return nil
+		})
 	}
 }
 
@@ -63,10 +82,19 @@ func (m *Module) InjectEvent(sourceEventName, targetModuleName, targetEventName 
 		return fmt.Errorf(`module "%s" has no event named "%s"`, targetModuleName, targetEventName)
 	}
 
-	for _, hook := range targetHooks {
+	for _, hook := range targetHooks.hooks {
 		if hook.hookingModule.OnlineSoon() {
 			go m.runEventHook(hook, sourceEventName, data)
 		}
+	}
+
+	// Call subscription function, if set.
+	if eventSubscriptionFuncReady.IsSet() {
+		m.StartWorker("event subscription", func(context.Context) error {
+			// Only use data in worker that won't change anymore.
+			eventSubscriptionFunc(targetModule.Name, targetEventName, targetHooks.internal, data)
+			return nil
+		})
 	}
 
 	return nil
@@ -111,13 +139,20 @@ func (m *Module) runEventHook(hook *eventHook, event string, data interface{}) {
 }
 
 // RegisterEvent registers a new event to allow for registering hooks.
-func (m *Module) RegisterEvent(event string) {
+// The expose argument controls whether these events and the attached data may
+// be received by external components via APIs. If not exposed, the database
+// record that carries the event and it's data will be marked as secret and as
+// a crown jewel. Enforcement is left to the database layer.
+func (m *Module) RegisterEvent(event string, expose bool) {
 	m.eventHooksLock.Lock()
 	defer m.eventHooksLock.Unlock()
 
 	_, ok := m.eventHooks[event]
 	if !ok {
-		m.eventHooks[event] = make([]*eventHook, 0, 1)
+		m.eventHooks[event] = &eventHooks{
+			hooks:    make([]*eventHook, 0, 1),
+			internal: !expose,
+		}
 	}
 }
 
@@ -138,16 +173,34 @@ func (m *Module) RegisterEventHook(module string, event string, description stri
 	// get target event
 	eventModule.eventHooksLock.Lock()
 	defer eventModule.eventHooksLock.Unlock()
-	hooks, ok := eventModule.eventHooks[event]
+	eventHooks, ok := eventModule.eventHooks[event]
 	if !ok {
 		return fmt.Errorf(`event "%s/%s" does not exist`, eventModule.Name, event)
 	}
 
 	// add hook
-	eventModule.eventHooks[event] = append(hooks, &eventHook{
+	eventHooks.hooks = append(eventHooks.hooks, &eventHook{
 		description:   description,
 		hookingModule: m,
 		hookFn:        fn,
 	})
 	return nil
+}
+
+// Subscribe to all events
+
+var (
+	eventSubscriptionFunc        func(moduleName, eventName string, internal bool, data interface{})
+	eventSubscriptionFuncEnabled = abool.NewBool(false)
+	eventSubscriptionFuncReady   = abool.NewBool(false)
+)
+
+// SetEventSubscriptionFunc
+func SetEventSubscriptionFunc(fn func(moduleName, eventName string, internal bool, data interface{})) bool {
+	if eventSubscriptionFuncEnabled.SetToIf(false, true) {
+		eventSubscriptionFunc = fn
+		eventSubscriptionFuncReady.Set()
+		return true
+	}
+	return false
 }
