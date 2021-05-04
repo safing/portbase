@@ -1,5 +1,11 @@
 package modules
 
+import (
+	"context"
+
+	"github.com/tevino/abool"
+)
+
 // Module Status Values
 const (
 	StatusDead      uint8 = 0 // not prepared, not started
@@ -24,6 +30,23 @@ const (
 	statusReady
 	statusNothingToDo
 )
+
+var (
+	failureUpdateNotifyFunc        func(moduleFailure uint8, id, title, msg string)
+	failureUpdateNotifyFuncEnabled = abool.NewBool(false)
+	failureUpdateNotifyFuncReady   = abool.NewBool(false)
+)
+
+// SetFailureUpdateNotifyFunc sets a function that is called on every change
+// of a module's failure status.
+func SetFailureUpdateNotifyFunc(fn func(moduleFailure uint8, id, title, msg string)) bool {
+	if failureUpdateNotifyFuncEnabled.SetToIf(false, true) {
+		failureUpdateNotifyFunc = fn
+		failureUpdateNotifyFuncReady.Set()
+		return true
+	}
+	return false
+}
 
 // Online returns whether the module is online.
 func (m *Module) Online() bool {
@@ -57,38 +80,52 @@ func (m *Module) FailureStatus() (failureStatus uint8, failureID, failureMsg str
 }
 
 // Hint sets failure status to hint. This is a somewhat special failure status, as the module is believed to be working correctly, but there is an important module specific information to convey. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
-func (m *Module) Hint(failureID, failureMsg string) {
+func (m *Module) Hint(id, title, msg string) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.failureStatus = FailureHint
-	m.failureID = failureID
-	m.failureMsg = failureMsg
-
-	m.notifyOfChange()
+	m.setFailure(FailureHint, id, title, msg)
 }
 
 // Warning sets failure status to warning. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
-func (m *Module) Warning(failureID, failureMsg string) {
+func (m *Module) Warning(id, title, msg string) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.failureStatus = FailureWarning
-	m.failureID = failureID
-	m.failureMsg = failureMsg
-
-	m.notifyOfChange()
+	m.setFailure(FailureWarning, id, title, msg)
 }
 
 // Error sets failure status to error. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
-func (m *Module) Error(failureID, failureMsg string) {
+func (m *Module) Error(id, title, msg string) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.failureStatus = FailureError
-	m.failureID = failureID
-	m.failureMsg = failureMsg
+	m.setFailure(FailureError, id, title, msg)
+}
 
+func (m *Module) setFailure(status uint8, id, title, msg string) {
+	// Send an update before we override a previous failure.
+	if failureUpdateNotifyFuncReady.IsSet() && m.failureID != "" {
+		updateFailureID := m.failureID
+		m.StartWorker("failure status updater", func(context.Context) error {
+			// Only use data in worker that won't change anymore.
+			failureUpdateNotifyFunc(FailureNone, updateFailureID, "", "")
+			return nil
+		})
+	}
+
+	m.failureStatus = status
+	m.failureID = id
+	m.failureTitle = title
+	m.failureMsg = msg
+
+	if failureUpdateNotifyFuncReady.IsSet() {
+		m.StartWorker("failure status updater", func(context.Context) error {
+			// Only use data in worker that won't change anymore.
+			failureUpdateNotifyFunc(status, id, title, msg)
+			return nil
+		})
+	}
 	m.notifyOfChange()
 }
 
@@ -98,12 +135,24 @@ func (m *Module) Resolve(failureID string) {
 	defer m.Unlock()
 
 	if failureID == "" || failureID == m.failureID {
+		// Propagate resolving.
+		if failureUpdateNotifyFuncReady.IsSet() {
+			updateFailureID := m.failureID
+			m.StartWorker("failure status updater", func(context.Context) error {
+				// Only use data in worker that won't change anymore.
+				failureUpdateNotifyFunc(FailureNone, updateFailureID, "", "")
+				return nil
+			})
+		}
+
+		// Set failure status on module.
 		m.failureStatus = FailureNone
 		m.failureID = ""
+		m.failureTitle = ""
 		m.failureMsg = ""
-	}
 
-	m.notifyOfChange()
+		m.notifyOfChange()
+	}
 }
 
 // readyToPrep returns whether all dependencies are ready for this module to prep.

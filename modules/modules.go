@@ -40,6 +40,7 @@ type Module struct { //nolint:maligned // not worth the effort
 	// failure status
 	failureStatus uint8
 	failureID     string
+	failureTitle  string
 	failureMsg    string
 
 	// lifecycle callback functions
@@ -62,7 +63,7 @@ type Module struct { //nolint:maligned // not worth the effort
 	waitGroup    sync.WaitGroup
 
 	// events
-	eventHooks     map[string][]*eventHook
+	eventHooks     map[string]*eventHooks
 	eventHooksLock sync.RWMutex
 
 	// dependency mgmt
@@ -127,8 +128,9 @@ func (m *Module) prep(reports chan *report) {
 		// set status
 		if err != nil {
 			m.Error(
-				"module-failed-prep",
-				fmt.Sprintf("failed to prep module: %s", err.Error()),
+				fmt.Sprintf("%s:prep-failed", m.Name),
+				fmt.Sprintf("Preparing module %s failed", m.Name),
+				fmt.Sprintf("Failed to prep module: %s", err.Error()),
 			)
 		} else {
 			m.Lock()
@@ -183,8 +185,9 @@ func (m *Module) start(reports chan *report) {
 		// set status
 		if err != nil {
 			m.Error(
-				"module-failed-start",
-				fmt.Sprintf("failed to start module: %s", err.Error()),
+				fmt.Sprintf("%s:start-failed", m.Name),
+				fmt.Sprintf("Starting module %s failed", m.Name),
+				fmt.Sprintf("Failed to start module: %s", err.Error()),
 			)
 		} else {
 			m.Lock()
@@ -270,8 +273,9 @@ func (m *Module) stopAllTasks(reports chan *report) {
 	// set status
 	if err != nil {
 		m.Error(
-			"module-failed-stop",
-			fmt.Sprintf("failed to stop module: %s", err.Error()),
+			fmt.Sprintf("%s:stop-failed", m.Name),
+			fmt.Sprintf("Stopping module %s failed", m.Name),
+			fmt.Sprintf("Failed to stop module: %s", err.Error()),
 		)
 	}
 
@@ -328,7 +332,7 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		taskCnt:             &taskCnt,
 		microTaskCnt:        &microTaskCnt,
 		waitGroup:           sync.WaitGroup{},
-		eventHooks:          make(map[string][]*eventHook),
+		eventHooks:          make(map[string]*eventHooks),
 		depNames:            dependencies,
 	}
 
