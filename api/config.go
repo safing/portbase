@@ -4,7 +4,6 @@ import (
 	"flag"
 
 	"github.com/safing/portbase/config"
-	"github.com/safing/portbase/log"
 )
 
 // Config Keys.
@@ -24,13 +23,12 @@ var (
 )
 
 func init() {
-	flag.StringVar(&listenAddressFlag, "api-address", "", "override api listen address")
-}
-
-func logFlagOverrides() {
-	if listenAddressFlag != "" {
-		log.Warning("api: api/listenAddress default config is being overridden by -api-address flag")
-	}
+	flag.StringVar(
+		&listenAddressFlag,
+		"api-address",
+		"",
+		"set api listen address; configuration is stronger",
+	)
 }
 
 func getDefaultListenAddress() string {

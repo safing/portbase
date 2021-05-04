@@ -54,7 +54,6 @@ func prep() error {
 }
 
 func start() error {
-	logFlagOverrides()
 	go Serve()
 
 	_ = updateAPIKeys(module.Ctx, nil)

@@ -21,8 +21,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&pushFlag, "push-metrics", "", "Set default URL to push prometheus metrics to.")
-	flag.StringVar(&instanceFlag, "metrics-instance", "", "Set the default global instance label.")
+	flag.StringVar(&pushFlag, "push-metrics", "", "set default URL to push prometheus metrics to")
+	flag.StringVar(&instanceFlag, "metrics-instance", "", "set the default global instance label")
 }
 
 func prepConfig() error {

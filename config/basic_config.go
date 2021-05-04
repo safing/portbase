@@ -18,7 +18,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&defaultDevMode, "devmode", false, "enable development mode")
+	flag.BoolVar(&defaultDevMode, "devmode", false, "enable development mode; configuration is stronger")
 }
 
 func registerBasicOptions() error {
