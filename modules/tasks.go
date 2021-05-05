@@ -61,7 +61,10 @@ const (
 	defaultMaxDelay   = 1 * time.Minute
 )
 
-// NewTask creates a new task with a descriptive name (non-unique), a optional deadline, and the task function to be executed. You must call one of Queue, Prioritize, StartASAP, Schedule or Repeat in order to have the Task executed.
+// NewTask creates a new task with a descriptive name (non-unique), a optional
+// deadline, and the task function to be executed. You must call one of Queue,
+// QueuePrioritized, StartASAP, Schedule or Repeat in order to have the Task
+// executed.
 func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Task {
 	if m == nil {
 		log.Errorf(`modules: cannot create task "%s" with nil module`, name)
@@ -75,6 +78,10 @@ func (m *Module) NewTask(name string, fn func(context.Context, *Task) error) *Ta
 	m.Lock()
 	defer m.Unlock()
 
+	return m.newTask(name, fn)
+}
+
+func (m *Module) newTask(name string, fn func(context.Context, *Task) error) *Task {
 	if m.Ctx == nil || !m.OnlineSoon() {
 		log.Errorf(`modules: tasks should only be started when the module is online or starting`)
 		return &Task{
@@ -144,8 +151,8 @@ func (t *Task) Queue() *Task {
 	return t
 }
 
-// Prioritize puts the task in the prioritized queue.
-func (t *Task) Prioritize() *Task {
+// QueuePrioritized queues the Task for execution in the prioritized queue.
+func (t *Task) QueuePrioritized() *Task {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
