@@ -104,29 +104,34 @@ func (m *Module) Error(id, title, msg string) {
 }
 
 func (m *Module) setFailure(status uint8, id, title, msg string) {
-	// Send an update before we override a previous failure.
-	if failureUpdateNotifyFuncReady.IsSet() && m.failureID != "" {
-		updateFailureID := m.failureID
-		m.StartWorker("failure status updater", func(context.Context) error {
-			// Only use data in worker that won't change anymore.
-			failureUpdateNotifyFunc(FailureNone, updateFailureID, "", "")
-			return nil
-		})
-	}
+	// Copy data for failure status update worker.
+	resolveFailureID := m.failureID
 
+	// Set new failure status.
 	m.failureStatus = status
 	m.failureID = id
 	m.failureTitle = title
 	m.failureMsg = msg
 
-	if failureUpdateNotifyFuncReady.IsSet() {
-		m.StartWorker("failure status updater", func(context.Context) error {
-			// Only use data in worker that won't change anymore.
-			failureUpdateNotifyFunc(status, id, title, msg)
-			return nil
-		})
-	}
+	// Notify of module change.
 	m.notifyOfChange()
+
+	// Propagate failure status.
+	if failureUpdateNotifyFuncReady.IsSet() {
+		m.newTask("failure status updater", func(context.Context, *Task) error {
+			// Only use data in worker that won't change anymore.
+
+			// Resolve previous failure state if available.
+			if resolveFailureID != "" {
+				failureUpdateNotifyFunc(FailureNone, resolveFailureID, "", "")
+			}
+
+			// Notify of new failure state.
+			failureUpdateNotifyFunc(status, id, title, msg)
+
+			return nil
+		}).QueuePrioritized()
+	}
 }
 
 // Resolve removes the failure state from the module if the given failureID matches the current failure ID. If the given failureID is an empty string, Resolve removes any failure state.
@@ -134,24 +139,32 @@ func (m *Module) Resolve(failureID string) {
 	m.Lock()
 	defer m.Unlock()
 
-	if failureID == "" || failureID == m.failureID {
-		// Propagate resolving.
-		if failureUpdateNotifyFuncReady.IsSet() {
-			updateFailureID := m.failureID
-			m.StartWorker("failure status updater", func(context.Context) error {
-				// Only use data in worker that won't change anymore.
-				failureUpdateNotifyFunc(FailureNone, updateFailureID, "", "")
-				return nil
-			})
-		}
+	// Check if resolving is necessary.
+	if failureID != "" && failureID != m.failureID {
+		// Return immediately if not resolving any (`""`) or if the failure ID
+		// does not match.
+		return
+	}
 
-		// Set failure status on module.
-		m.failureStatus = FailureNone
-		m.failureID = ""
-		m.failureTitle = ""
-		m.failureMsg = ""
+	// Copy data for failure status update worker.
+	resolveFailureID := m.failureID
 
-		m.notifyOfChange()
+	// Set failure status on module.
+	m.failureStatus = FailureNone
+	m.failureID = ""
+	m.failureTitle = ""
+	m.failureMsg = ""
+
+	// Notify of module change.
+	m.notifyOfChange()
+
+	// Propagate failure status.
+	if failureUpdateNotifyFuncReady.IsSet() {
+		m.newTask("failure status updater", func(context.Context, *Task) error {
+			// Only use data in worker that won't change anymore.
+			failureUpdateNotifyFunc(FailureNone, resolveFailureID, "", "")
+			return nil
+		}).QueuePrioritized()
 	}
 }
 

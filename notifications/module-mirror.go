@@ -9,7 +9,7 @@ import (
 // notification will be reflected on the module failure status.
 func (n *Notification) AttachToModule(m *modules.Module) {
 	if m == nil {
-		log.Warningf("notifications: cannot remove attached module from notification %s", n.EventID)
+		log.Warningf("notifications: invalid usage: cannot attach %s to nil module", n.EventID)
 		return
 	}
 

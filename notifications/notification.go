@@ -112,7 +112,7 @@ type Action struct {
 	// ID specifies a unique ID for the action. If an action is selected, the ID
 	// is written to SelectedActionID and the notification is saved.
 	// If the action type is not ActionTypeNone, the ID may be empty, signifying
-	// that this action is merely additional and selecting it does dismiss the
+	// that this action is merely additional and selecting it does not dismiss the
 	// notification.
 	ID string
 	// Text on the button.
