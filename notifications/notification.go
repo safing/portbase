@@ -73,7 +73,8 @@ type Notification struct {
 	// have any paramerized values replaced.
 	Message string
 	// ShowOnSystem specifies if the notification should be also shown on the
-	// operating system.
+	// operating system. Notifications shown on the operating system level are
+	// more focus-intrusive and should only be used for important notifications.
 	ShowOnSystem bool
 	// EventData contains an additional payload for the notification. This payload
 	// may contain contextual data and may be used by a localization framework
@@ -108,13 +109,19 @@ type Notification struct {
 
 // Action describes an action that can be taken for a notification.
 type Action struct {
-	ID      string
-	Text    string
-	Type    ActionType
+	// ID specifies a unique ID for the action. If an action is selected, the ID
+	// is written to SelectedActionID and the notification is saved.
+	// If the action type is not ActionTypeNone, the ID may be empty, signifying
+	// that this action is merely additional and selecting it does dismiss the
+	// notification.
+	ID string
+	// Text on the button.
+	Text string
+	// Type specifies the action type. Implementing interfaces should only
+	// display action types they can handle.
+	Type ActionType
+	// Payload holds additional data for special action types.
 	Payload interface{}
-
-	// Dismisses specifies if the notification is dismissed when this action is selected.
-	Dismisses bool
 }
 
 // ActionType defines a specific type of action.
@@ -184,43 +191,60 @@ func Delete(id string) {
 	n, ok = nots[id]
 }
 
-// NotifyInfo is a helper method for quickly showing a info
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
+// NotifyInfo is a helper method for quickly showing an info notification.
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
 // ShowOnSystem is disabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
 func NotifyInfo(id, title, msg string, actions ...Action) *Notification {
 	return notify(Info, id, title, msg, false, actions...)
 }
 
-// NotifyWarn is a helper method for quickly showing a warning
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
+// NotifyWarn is a helper method for quickly showing a warning notification
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
 // ShowOnSystem is enabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
 func NotifyWarn(id, title, msg string, actions ...Action) *Notification {
 	return notify(Warning, id, title, msg, true, actions...)
 }
 
-// NotifyError is a helper method for quickly showing an error
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
+// NotifyError is a helper method for quickly showing an error notification.
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
 // ShowOnSystem is enabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
 func NotifyError(id, title, msg string, actions ...Action) *Notification {
 	return notify(Error, id, title, msg, true, actions...)
 }
 
-// NotifyPrompt is a helper method for quickly showing a prompt
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
+// NotifyPrompt is a helper method for quickly showing a prompt notification.
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
 // ShowOnSystem is disabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
 func NotifyPrompt(id, title, msg string, actions ...Action) *Notification {
 	return notify(Prompt, id, title, msg, false, actions...)
 }
 
 func notify(nType Type, id, title, msg string, showOnSystem bool, actions ...Action) *Notification {
-	acts := make([]*Action, len(actions))
-	for idx := range actions {
-		a := actions[idx]
-		acts[idx] = &a
+	// Process actions.
+	var acts []*Action
+	if len(actions) == 0 {
+		// Create ack action if there are no defined actions.
+		acts = []*Action{
+			{
+				ID:   "ack",
+				Text: "OK",
+			},
+		}
+	} else {
+		// Reference given actions for notification.
+		acts = make([]*Action, len(actions))
+		for index := range actions {
+			a := actions[index]
+			acts[index] = &a
+		}
 	}
 
 	return Notify(&Notification{
@@ -228,8 +252,8 @@ func notify(nType Type, id, title, msg string, showOnSystem bool, actions ...Act
 		Type:             nType,
 		Title:            title,
 		Message:          msg,
-		AvailableActions: acts,
 		ShowOnSystem:     showOnSystem,
+		AvailableActions: acts,
 	})
 }
 
@@ -288,16 +312,6 @@ func (n *Notification) save(pushUpdate bool) {
 	// Generate random GUID if not set.
 	if n.GUID == "" {
 		n.GUID = utils.RandomUUID(n.EventID).String()
-	}
-
-	// Make ack notification if there are no defined actions.
-	if len(n.AvailableActions) == 0 {
-		n.AvailableActions = []*Action{
-			{
-				ID:   "ack",
-				Text: "OK",
-			},
-		}
 	}
 
 	// Make sure we always have a notification state assigned.

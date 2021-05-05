@@ -8,8 +8,6 @@ import (
 // AttachToModule attaches the notification to a module and changes to the
 // notification will be reflected on the module failure status.
 func (n *Notification) AttachToModule(m *modules.Module) {
-	log.Errorf("notifications: attaching %q", n.EventID)
-
 	if m == nil {
 		log.Warningf("notifications: cannot remove attached module from notification %s", n.EventID)
 		return
@@ -46,8 +44,6 @@ func (n *Notification) AttachToModule(m *modules.Module) {
 
 // resolveModuleFailure removes the notification from the module failure status.
 func (n *Notification) resolveModuleFailure() {
-	log.Errorf("notifications: resolving %q", n.EventID)
-
 	if n.belongsTo != nil {
 		// Resolve failure in attached module.
 		n.belongsTo.Resolve(n.EventID)
@@ -63,8 +59,6 @@ func init() {
 }
 
 func mirrorModuleStatus(moduleFailure uint8, id, title, msg string) {
-	log.Errorf("notifications: mirroring %d %q %q %q", moduleFailure, id, title, msg)
-
 	// Ignore "resolve all" requests.
 	if id == "" {
 		return
@@ -84,12 +78,30 @@ func mirrorModuleStatus(moduleFailure uint8, id, title, msg string) {
 	}
 
 	// A notification for the given ID does not yet exists, create it.
+	n = &Notification{
+		EventID: id,
+		Title:   title,
+		Message: msg,
+	}
+
 	switch moduleFailure {
 	case modules.FailureHint:
-		NotifyInfo(id, title, msg)
+		n.Type = Info
 	case modules.FailureWarning:
-		NotifyWarn(id, title, msg)
+		n.Type = Warning
+		n.AvailableActions = []*Action{
+			{
+				Text:    "Get Help",
+				Type:    ActionTypeOpenURL,
+				Payload: "https://safing.io/support/",
+			},
+		}
+
+		fallthrough
 	case modules.FailureError:
-		NotifyError(id, title, msg)
+		n.Type = Error
+		n.ShowOnSystem = true
 	}
+
+	Notify(n)
 }
