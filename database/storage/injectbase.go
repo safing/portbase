@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	errNotImplemented = errors.New("not implemented")
+	// ErrNotImplemented is returned when a function is not implemented by a storage.
+	ErrNotImplemented = errors.New("not implemented")
 )
 
 // InjectBase is a dummy base structure to reduce boilerplate code for injected storage interfaces.
@@ -22,22 +23,27 @@ var _ Interface = &InjectBase{}
 
 // Get returns a database record.
 func (i *InjectBase) Get(key string) (record.Record, error) {
-	return nil, errNotImplemented
+	return nil, ErrNotImplemented
+}
+
+// Get returns a database record.
+func (i *InjectBase) GetMeta(key string) (*record.Meta, error) {
+	return nil, ErrNotImplemented
 }
 
 // Put stores a record in the database.
 func (i *InjectBase) Put(m record.Record) (record.Record, error) {
-	return nil, errNotImplemented
+	return nil, ErrNotImplemented
 }
 
 // Delete deletes a record from the database.
 func (i *InjectBase) Delete(key string) error {
-	return errNotImplemented
+	return ErrNotImplemented
 }
 
 // Query returns a an iterator for the supplied query.
 func (i *InjectBase) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
-	return nil, errNotImplemented
+	return nil, ErrNotImplemented
 }
 
 // ReadOnly returns whether the database is read only.

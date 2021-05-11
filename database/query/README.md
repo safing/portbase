@@ -21,28 +21,28 @@ Please note that some feeders may have other special characters. It is advised t
 
 ## Operators
 
-| Name | Textual | Req. Type | Internal Type | Compared with |
-|---|---|---|---|
-| Equals | `==` | int | int64 | `==` |
-| GreaterThan | `>` | int | int64 | `>` |
-| GreaterThanOrEqual | `>=` | int | int64 | `>=` |
-| LessThan | `<`  | int | int64 | `<` |
-| LessThanOrEqual | `<=` | int | int64 | `<=` |
-| FloatEquals | `f==` | float | float64 | `==` |
-| FloatGreaterThan | `f>` | float | float64 | `>` |
-| FloatGreaterThanOrEqual | `f>=` | float | float64 | `>=` |
-| FloatLessThan | `f<` | float | float64 | `<` |
-| FloatLessThanOrEqual | `f<=` | float | float64 | `<=` |
-| SameAs | `sameas`, `s==` | string | string | `==` |
-| Contains | `contains`, `co` | string | string | `strings.Contains()` |
-| StartsWith | `startswith`, `sw` | string | string | `strings.HasPrefix()` |
-| EndsWith | `endswith`, `ew` | string | string | `strings.HasSuffix()` |
-| In | `in` | string | string | for loop with `==` |
-| Matches | `matches`, `re` | string | int64 | `regexp.Regexp.Matches()` |
-| Is | `is` | bool* | bool | `==` |
-| Exists | `exists`, `ex` | any | n/a | n/a |
+| Name                    | Textual            | Req. Type | Internal Type | Compared with             |
+|-------------------------|--------------------|-----------|---------------|---------------------------|
+| Equals                  | `==`               | int       | int64         | `==`                      |
+| GreaterThan             | `>`                | int       | int64         | `>`                       |
+| GreaterThanOrEqual      | `>=`               | int       | int64         | `>=`                      |
+| LessThan                | `<`                | int       | int64         | `<`                       |
+| LessThanOrEqual         | `<=`               | int       | int64         | `<=`                      |
+| FloatEquals             | `f==`              | float     | float64       | `==`                      |
+| FloatGreaterThan        | `f>`               | float     | float64       | `>`                       |
+| FloatGreaterThanOrEqual | `f>=`              | float     | float64       | `>=`                      |
+| FloatLessThan           | `f<`               | float     | float64       | `<`                       |
+| FloatLessThanOrEqual    | `f<=`              | float     | float64       | `<=`                      |
+| SameAs                  | `sameas`, `s==`    | string    | string        | `==`                      |
+| Contains                | `contains`, `co`   | string    | string        | `strings.Contains()`      |
+| StartsWith              | `startswith`, `sw` | string    | string        | `strings.HasPrefix()`     |
+| EndsWith                | `endswith`, `ew`   | string    | string        | `strings.HasSuffix()`     |
+| In                      | `in`               | string    | string        | for loop with `==`        |
+| Matches                 | `matches`, `re`    | string    | string        | `regexp.Regexp.Matches()` |
+| Is                      | `is`               | bool*     | bool          | `==`                      |
+| Exists                  | `exists`, `ex`     | any       | n/a           | n/a                       |
 
-\*accepts strings: 1, t, T, TRUE, true, True, 0, f, F, FALSE
+\*accepts strings: 1, t, T, true, True, TRUE, 0, f, F, false, False, FALSE
 
 ## Escaping
 

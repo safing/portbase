@@ -42,7 +42,7 @@ func (c *Controller) Injected() bool {
 	return c.storage.Injected()
 }
 
-// Get return the record with the given key.
+// Get returns the record with the given key.
 func (c *Controller) Get(key string) (record.Record, error) {
 	if shuttingDown.IsSet() {
 		return nil, ErrShuttingDown
@@ -74,6 +74,28 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	}
 
 	return r, nil
+}
+
+// Get returns the metadata of the record with the given key.
+func (c *Controller) GetMeta(key string) (*record.Meta, error) {
+	if shuttingDown.IsSet() {
+		return nil, ErrShuttingDown
+	}
+
+	m, err := c.storage.GetMeta(key)
+	if err != nil {
+		// replace not found error
+		if err == storage.ErrNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	if !m.CheckValidity() {
+		return nil, ErrNotFound
+	}
+
+	return m, nil
 }
 
 // Put saves a record in the database, executes any registered

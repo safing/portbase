@@ -25,7 +25,7 @@ var (
 	registry     = make(map[string]*Database)
 	registryLock sync.Mutex
 
-	nameConstraint = regexp.MustCompile("^[A-Za-z0-9_-]{4,}$")
+	nameConstraint = regexp.MustCompile("^[A-Za-z0-9_-]{3,}$")
 )
 
 // Register registers a new database.
@@ -56,7 +56,7 @@ func Register(new *Database) (*Database, error) {
 	} else {
 		// register new database
 		if !nameConstraint.MatchString(new.Name) {
-			return nil, errors.New("database name must only contain alphanumeric and `_-` characters and must be at least 4 characters long")
+			return nil, errors.New("database name must only contain alphanumeric and `_-` characters and must be at least 3 characters long")
 		}
 
 		now := time.Now().Round(time.Second)

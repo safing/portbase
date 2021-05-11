@@ -13,6 +13,7 @@ import (
 type Interface interface {
 	// Primary Interface
 	Get(key string) (record.Record, error)
+	GetMeta(key string) (*record.Meta, error)
 	Put(m record.Record) (record.Record, error)
 	Delete(key string) error
 	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
