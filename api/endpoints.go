@@ -260,7 +260,7 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	default:
-		http.Error(w, "Unsupported method for the actions API.", http.StatusMethodNotAllowed)
+		http.Error(w, "unsupported method for the actions API", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -298,13 +298,13 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 
 	default:
-		http.Error(w, "Internal server error: Missing handler.", http.StatusInternalServerError)
+		http.Error(w, "missing handler", http.StatusInternalServerError)
 		return
 	}
 
 	// Check for handler error.
 	if err != nil {
-		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -321,14 +321,14 @@ func (eh *endpointHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func readBody(w http.ResponseWriter, r *http.Request) (inputData []byte, ok bool) {
 	// Check for too long content in order to prevent death.
 	if r.ContentLength > 20000000 { // 20MB
-		http.Error(w, "Too much input data.", http.StatusRequestEntityTooLarge)
+		http.Error(w, "too much input data", http.StatusRequestEntityTooLarge)
 		return nil, false
 	}
 
 	// Read and close body.
 	inputData, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read body: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to read body"+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
 	return inputData, true

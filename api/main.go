@@ -67,7 +67,7 @@ func start() error {
 		module.NewTask("clean api sessions", cleanSessions).Repeat(5 * time.Minute)
 	}
 
-	return nil
+	return registerEndpointBridgeDB()
 }
 
 func stop() error {

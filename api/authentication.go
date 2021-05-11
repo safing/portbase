@@ -250,6 +250,14 @@ func checkAuth(w http.ResponseWriter, r *http.Request, authRequired bool) (token
 		}, false
 	}
 
+	// Database Bridge Access.
+	if r.RemoteAddr == endpointBridgeRemoteAddress {
+		return &AuthToken{
+			Read:  dbCompatibilityPermission,
+			Write: dbCompatibilityPermission,
+		}, false
+	}
+
 	// Check for valid API key.
 	token = checkAPIKey(r)
 	if token != nil {
