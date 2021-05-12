@@ -82,22 +82,22 @@ func mirrorModuleStatus(moduleFailure uint8, id, title, msg string) {
 		EventID: id,
 		Title:   title,
 		Message: msg,
-	}
-
-	switch moduleFailure {
-	case modules.FailureHint:
-		n.Type = Info
-	case modules.FailureWarning:
-		n.Type = Warning
-		n.AvailableActions = []*Action{
+		AvailableActions: []*Action{
 			{
 				Text:    "Get Help",
 				Type:    ActionTypeOpenURL,
 				Payload: "https://safing.io/support/",
 			},
-		}
+		},
+	}
 
-		fallthrough
+	switch moduleFailure {
+	case modules.FailureHint:
+		n.Type = Info
+		n.AvailableActions = nil
+	case modules.FailureWarning:
+		n.Type = Warning
+		n.ShowOnSystem = true
 	case modules.FailureError:
 		n.Type = Error
 		n.ShowOnSystem = true

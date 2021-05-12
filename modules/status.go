@@ -79,7 +79,14 @@ func (m *Module) FailureStatus() (failureStatus uint8, failureID, failureMsg str
 	return m.failureStatus, m.failureID, m.failureMsg
 }
 
-// Hint sets failure status to hint. This is a somewhat special failure status, as the module is believed to be working correctly, but there is an important module specific information to convey. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
+// Hint sets failure status to hint. This is a somewhat special failure status,
+// as the module is believed to be working correctly, but there is an important
+// module specific information to convey. The supplied failureID is for
+// improved automatic handling within connected systems, the failureMsg is for
+// humans.
+// The given ID must be unique for the given title and message. A call to
+// Hint(), Warning() or Error() with the same ID as the existing one will be
+// ignored.
 func (m *Module) Hint(id, title, msg string) {
 	m.Lock()
 	defer m.Unlock()
@@ -87,7 +94,12 @@ func (m *Module) Hint(id, title, msg string) {
 	m.setFailure(FailureHint, id, title, msg)
 }
 
-// Warning sets failure status to warning. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
+// Warning sets failure status to warning. The supplied failureID is for
+// improved automatic handling within connected systems, the failureMsg is for
+// humans.
+// The given ID must be unique for the given title and message. A call to
+// Hint(), Warning() or Error() with the same ID as the existing one will be
+// ignored.
 func (m *Module) Warning(id, title, msg string) {
 	m.Lock()
 	defer m.Unlock()
@@ -95,7 +107,11 @@ func (m *Module) Warning(id, title, msg string) {
 	m.setFailure(FailureWarning, id, title, msg)
 }
 
-// Error sets failure status to error. The supplied failureID is for improved automatic handling within connected systems, the failureMsg is for humans.
+// Error sets failure status to error. The supplied failureID is for improved
+// automatic handling within connected systems, the failureMsg is for humans.
+// The given ID must be unique for the given title and message. A call to
+// Hint(), Warning() or Error() with the same ID as the existing one will be
+// ignored.
 func (m *Module) Error(id, title, msg string) {
 	m.Lock()
 	defer m.Unlock()
@@ -104,6 +120,11 @@ func (m *Module) Error(id, title, msg string) {
 }
 
 func (m *Module) setFailure(status uint8, id, title, msg string) {
+	// Ignore calls with the same ID.
+	if id == m.failureID {
+		return
+	}
+
 	// Copy data for failure status update worker.
 	resolveFailureID := m.failureID
 
