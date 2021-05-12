@@ -13,7 +13,6 @@ import (
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
-	"github.com/safing/portbase/log"
 )
 
 const (
@@ -59,8 +58,6 @@ type EndpointBridgeResponse struct {
 
 // Get returns a database record.
 func (ebs *endpointBridgeStorage) Get(key string) (record.Record, error) {
-	log.Errorf("api bridge: getting %s", key)
-
 	if key == "" {
 		return nil, database.ErrNotFound
 	}
@@ -81,8 +78,6 @@ func (ebs *endpointBridgeStorage) GetMeta(key string) (*record.Meta, error) {
 
 // Put stores a record in the database.
 func (ebs *endpointBridgeStorage) Put(r record.Record) (record.Record, error) {
-	log.Errorf("api bridge: putting %s", r.Key())
-
 	if r.DatabaseKey() == "" {
 		return nil, database.ErrNotFound
 	}
@@ -103,7 +98,6 @@ func (ebs *endpointBridgeStorage) Put(r record.Record) (record.Record, error) {
 			return nil, fmt.Errorf("record not of type *EndpointBridgeRequest, but %T", r)
 		}
 	}
-	log.Errorf("api bridge: putting %+v", ebr)
 
 	// Override path with key to mitigate sneaky stuff.
 	ebr.Path = r.DatabaseKey()
@@ -145,7 +139,6 @@ func callAPI(ebr *EndpointBridgeRequest) (record.Record, error) {
 		}
 		u.RawQuery = query.Encode()
 	}
-	log.Errorf("api bridge: calling %s", u.String())
 
 	// Create request and response objects.
 	r := httptest.NewRequest(ebr.Method, u.String(), bytes.NewBuffer(ebr.Data))
