@@ -13,7 +13,6 @@ import (
 type Interface interface {
 	// Primary Interface
 	Get(key string) (record.Record, error)
-	GetMeta(key string) (*record.Meta, error)
 	Put(m record.Record) (record.Record, error)
 	Delete(key string) error
 	Query(q *query.Query, local, internal bool) (*iterator.Iterator, error)
@@ -25,6 +24,11 @@ type Interface interface {
 
 	// Mandatory Record Maintenance
 	MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error
+}
+
+// Maintainer defines the database storage API for backends that support optimized fetching of only the metadata.
+type MetaHandler interface {
+	GetMeta(key string) (*record.Meta, error)
 }
 
 // Maintainer defines the database storage API for backends that require regular maintenance.

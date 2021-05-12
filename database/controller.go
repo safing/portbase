@@ -55,7 +55,7 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	r, err := c.storage.Get(key)
 	if err != nil {
 		// replace not found error
-		if err == storage.ErrNotFound {
+		if errors.Is(err, storage.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -82,13 +82,27 @@ func (c *Controller) GetMeta(key string) (*record.Meta, error) {
 		return nil, ErrShuttingDown
 	}
 
-	m, err := c.storage.GetMeta(key)
-	if err != nil {
-		// replace not found error
-		if err == storage.ErrNotFound {
-			return nil, ErrNotFound
+	var m *record.Meta
+	var err error
+	if metaDB, ok := c.storage.(storage.MetaHandler); ok {
+		m, err = metaDB.GetMeta(key)
+		if err != nil {
+			// replace not found error
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, ErrNotFound
+			}
+			return nil, err
 		}
-		return nil, err
+	} else {
+		r, err := c.storage.Get(key)
+		if err != nil {
+			// replace not found error
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, ErrNotFound
+			}
+			return nil, err
+		}
+		m = r.Meta()
 	}
 
 	if !m.CheckValidity() {
