@@ -128,9 +128,7 @@ func getAPIContext(r *http.Request) (apiEndpoint *Endpoint, apiRequest *Request)
 		return nil, apiRequest
 	}
 
-	log.Errorf("handler: %+v", handler)
 	apiEndpoint, ok = handler.(*Endpoint)
-	log.Errorf("apiEndpoint: %+v", apiEndpoint)
 	if ok {
 		// Cache for next operation.
 		apiRequest.HandlerCache = apiEndpoint
