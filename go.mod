@@ -38,8 +38,3 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
-
-// The follow-up commit removes Windows support.
-// TODO: Check how we want to handle this in the future, possibly ingest
-// needed functionality into here.
-require github.com/google/renameio v0.1.1-0.20200217212219-353f81969824

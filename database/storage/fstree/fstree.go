@@ -19,8 +19,7 @@ import (
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
-
-	"github.com/google/renameio"
+	"github.com/safing/portbase/utils/renameio"
 )
 
 const (

@@ -58,7 +58,7 @@ func prioritizedTaskTester(s string) {
 		qtOutputChannel <- s
 		qtWg.Done()
 		return nil
-	}).Prioritize()
+	}).QueuePrioritized()
 }
 
 // test
@@ -201,7 +201,7 @@ func TestRequeueingTask(t *testing.T) {
 	// reschedule
 	task.Schedule(time.Now().Add(1 * time.Second))
 	task.Queue()
-	task.Prioritize()
+	task.QueuePrioritized()
 	task.StartASAP()
 	wg.Wait()
 	time.Sleep(100 * time.Millisecond) // let tasks finalize execution
@@ -217,7 +217,7 @@ func TestRequeueingTask(t *testing.T) {
 	wg.Add(1)
 	task.Schedule(time.Now().Add(1 * time.Second))
 	task.Queue()
-	task.Prioritize()
+	task.QueuePrioritized()
 	task.StartASAP()
 	wg.Wait()
 }

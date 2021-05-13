@@ -12,9 +12,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/renameio"
-
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils/renameio"
 )
 
 func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client, rv *ResourceVersion, tries int) error {
