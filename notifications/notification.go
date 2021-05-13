@@ -8,6 +8,7 @@ import (
 
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/utils"
 )
 
@@ -19,6 +20,7 @@ const (
 	Info    Type = 0
 	Warning Type = 1
 	Prompt  Type = 2
+	Error   Type = 3
 )
 
 // State describes the state of a notification.
@@ -70,6 +72,10 @@ type Notification struct {
 	// of the notification is available. Note that the message should already
 	// have any paramerized values replaced.
 	Message string
+	// ShowOnSystem specifies if the notification should be also shown on the
+	// operating system. Notifications shown on the operating system level are
+	// more focus-intrusive and should only be used for important notifications.
+	ShowOnSystem bool
 	// EventData contains an additional payload for the notification. This payload
 	// may contain contextual data and may be used by a localization framework
 	// to populate the notification message template.
@@ -91,6 +97,10 @@ type Notification struct {
 	// based on the user selection.
 	SelectedActionID string
 
+	// belongsTo holds the module this notification belongs to. The notification
+	// lifecycle will be mirrored to the module's failure status.
+	belongsTo *modules.Module
+
 	lock           sync.Mutex
 	actionFunction NotificationActionFn // call function to process action
 	actionTrigger  chan string          // and/or send to a channel
@@ -99,8 +109,59 @@ type Notification struct {
 
 // Action describes an action that can be taken for a notification.
 type Action struct {
-	ID   string
+	// ID specifies a unique ID for the action. If an action is selected, the ID
+	// is written to SelectedActionID and the notification is saved.
+	// If the action type is not ActionTypeNone, the ID may be empty, signifying
+	// that this action is merely additional and selecting it does not dismiss the
+	// notification.
+	ID string
+	// Text on the button.
 	Text string
+	// Type specifies the action type. Implementing interfaces should only
+	// display action types they can handle.
+	Type ActionType
+	// Payload holds additional data for special action types.
+	Payload interface{}
+}
+
+// ActionType defines a specific type of action.
+type ActionType string
+
+// Action Types.
+const (
+	ActionTypeNone        = ""             // Report selected ID back to backend.
+	ActionTypeOpenURL     = "open-url"     // Open external URL
+	ActionTypeOpenPage    = "open-page"    // Payload: Page ID
+	ActionTypeOpenSetting = "open-setting" // Payload: See struct definition below.
+	ActionTypeOpenProfile = "open-profile" // Payload: Scoped Profile ID
+	ActionTypeInjectEvent = "inject-event" // Payload: Event ID
+	ActionTypeWebhook     = "call-webhook" // Payload: See struct definition below.
+)
+
+// ActionTypeOpenSettingPayload defines the payload for the OpenSetting Action Type.
+type ActionTypeOpenSettingPayload struct {
+	// Key is the key of the setting.
+	Key string
+	// Profile is the scoped ID of the profile.
+	// Leaving this empty opens the global settings.
+	Profile string
+}
+
+// ActionTypeWebhookPayload defines the payload for the WebhookPayload Action Type.
+type ActionTypeWebhookPayload struct {
+	// HTTP Method to use. Defaults to "GET", or "POST" if a Payload is supplied.
+	Method string
+	// URL to call.
+	// If the URL is relative, prepend the current API endpoint base path.
+	// If the URL is absolute, send request to the Portmaster.
+	URL string
+	// Payload holds arbitrary payload data.
+	Payload interface{}
+	// ResultAction defines what should be done with successfully returned data.
+	// Must one of:
+	// - `ignore`: do nothing (default)
+	// - `display`: the result is a human readable message, display it in a success message.
+	ResultAction string
 }
 
 // Get returns the notification identifed by the given id or nil if it doesn't exist.
@@ -114,38 +175,84 @@ func Get(id string) *Notification {
 	return nil
 }
 
-// NotifyInfo is a helper method for quickly showing a info
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
-func NotifyInfo(id, msg string, actions ...Action) *Notification {
-	return notify(Info, id, msg, actions...)
+// Delete deletes the notification with the given id.
+func Delete(id string) {
+	// Delete notification in defer to enable deferred unlocking.
+	var n *Notification
+	var ok bool
+	defer func() {
+		if ok {
+			n.Delete()
+		}
+	}()
+
+	notsLock.Lock()
+	defer notsLock.Unlock()
+	n, ok = nots[id]
 }
 
-// NotifyWarn is a helper method for quickly showing a warning
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
-func NotifyWarn(id, msg string, actions ...Action) *Notification {
-	return notify(Warning, id, msg, actions...)
+// NotifyInfo is a helper method for quickly showing an info notification.
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
+// ShowOnSystem is disabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
+func NotifyInfo(id, title, msg string, actions ...Action) *Notification {
+	return notify(Info, id, title, msg, false, actions...)
 }
 
-// NotifyPrompt is a helper method for quickly showing a prompt
-// notification. The notification is already shown. If id is
-// an empty string a new UUIDv4 will be generated.
-func NotifyPrompt(id, msg string, actions ...Action) *Notification {
-	return notify(Prompt, id, msg, actions...)
+// NotifyWarn is a helper method for quickly showing a warning notification
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
+// ShowOnSystem is enabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
+func NotifyWarn(id, title, msg string, actions ...Action) *Notification {
+	return notify(Warning, id, title, msg, true, actions...)
 }
 
-func notify(nType Type, id, msg string, actions ...Action) *Notification {
-	acts := make([]*Action, len(actions))
-	for idx := range actions {
-		a := actions[idx]
-		acts[idx] = &a
+// NotifyError is a helper method for quickly showing an error notification.
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
+// ShowOnSystem is enabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
+func NotifyError(id, title, msg string, actions ...Action) *Notification {
+	return notify(Error, id, title, msg, true, actions...)
+}
+
+// NotifyPrompt is a helper method for quickly showing a prompt notification.
+// The notification will be activated immediately.
+// If the provided id is empty, an id will derived from msg.
+// ShowOnSystem is disabled.
+// If no actions are defined, a default "OK" (ID:"ack") action will be added.
+func NotifyPrompt(id, title, msg string, actions ...Action) *Notification {
+	return notify(Prompt, id, title, msg, false, actions...)
+}
+
+func notify(nType Type, id, title, msg string, showOnSystem bool, actions ...Action) *Notification {
+	// Process actions.
+	var acts []*Action
+	if len(actions) == 0 {
+		// Create ack action if there are no defined actions.
+		acts = []*Action{
+			{
+				ID:   "ack",
+				Text: "OK",
+			},
+		}
+	} else {
+		// Reference given actions for notification.
+		acts = make([]*Action, len(actions))
+		for index := range actions {
+			a := actions[index]
+			acts[index] = &a
+		}
 	}
 
 	return Notify(&Notification{
 		EventID:          id,
 		Type:             nType,
+		Title:            title,
 		Message:          msg,
+		ShowOnSystem:     showOnSystem,
 		AvailableActions: acts,
 	})
 }
@@ -185,15 +292,9 @@ func (n *Notification) save(pushUpdate bool) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	// Move Title to Message, as that is the required field.
-	if n.Message == "" {
-		n.Message = n.Title
-		n.Title = ""
-	}
-
 	// Check if required data is present.
-	if n.Message == "" {
-		log.Warning("notifications: ignoring notification without Message")
+	if n.Title == "" && n.Message == "" {
+		log.Warning("notifications: ignoring notification without Title or Message")
 		return
 	}
 
@@ -211,16 +312,6 @@ func (n *Notification) save(pushUpdate bool) {
 	// Generate random GUID if not set.
 	if n.GUID == "" {
 		n.GUID = utils.RandomUUID(n.EventID).String()
-	}
-
-	// Make ack notification if there are no defined actions.
-	if len(n.AvailableActions) == 0 {
-		n.AvailableActions = []*Action{
-			{
-				ID:   "ack",
-				Text: "OK",
-			},
-		}
 	}
 
 	// Make sure we always have a notification state assigned.
@@ -293,9 +384,8 @@ func (n *Notification) Update(expires int64) {
 }
 
 // Delete (prematurely) cancels and deletes a notification.
-func (n *Notification) Delete() error {
+func (n *Notification) Delete() {
 	n.delete(true)
-	return nil
 }
 
 // delete deletes the notification from the internal storage. It locks the
@@ -332,6 +422,8 @@ func (n *Notification) delete(pushUpdate bool) {
 	if pushUpdate {
 		dbController.PushUpdate(n)
 	}
+
+	n.resolveModuleFailure()
 }
 
 // Expired notifies the caller when the notification has expired.
@@ -384,6 +476,7 @@ func (n *Notification) selectAndExecuteAction(id string) {
 
 	if executed {
 		n.State = Executed
+		n.resolveModuleFailure()
 	}
 }
 

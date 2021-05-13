@@ -42,7 +42,7 @@ func (c *Controller) Injected() bool {
 	return c.storage.Injected()
 }
 
-// Get return the record with the given key.
+// Get returns the record with the given key.
 func (c *Controller) Get(key string) (record.Record, error) {
 	if shuttingDown.IsSet() {
 		return nil, ErrShuttingDown
@@ -55,7 +55,7 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	r, err := c.storage.Get(key)
 	if err != nil {
 		// replace not found error
-		if err == storage.ErrNotFound {
+		if errors.Is(err, storage.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -74,6 +74,42 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	}
 
 	return r, nil
+}
+
+// Get returns the metadata of the record with the given key.
+func (c *Controller) GetMeta(key string) (*record.Meta, error) {
+	if shuttingDown.IsSet() {
+		return nil, ErrShuttingDown
+	}
+
+	var m *record.Meta
+	var err error
+	if metaDB, ok := c.storage.(storage.MetaHandler); ok {
+		m, err = metaDB.GetMeta(key)
+		if err != nil {
+			// replace not found error
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, ErrNotFound
+			}
+			return nil, err
+		}
+	} else {
+		r, err := c.storage.Get(key)
+		if err != nil {
+			// replace not found error
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, ErrNotFound
+			}
+			return nil, err
+		}
+		m = r.Meta()
+	}
+
+	if !m.CheckValidity() {
+		return nil, ErrNotFound
+	}
+
+	return m, nil
 }
 
 // Put saves a record in the database, executes any registered

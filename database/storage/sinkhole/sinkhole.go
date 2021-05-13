@@ -44,6 +44,11 @@ func (s *Sinkhole) Get(key string) (record.Record, error) {
 	return nil, storage.ErrNotFound
 }
 
+// GetMeta returns the metadata of a database record.
+func (s *Sinkhole) GetMeta(key string) (*record.Meta, error) {
+	return nil, storage.ErrNotFound
+}
+
 // Put stores a record in the database.
 func (s *Sinkhole) Put(r record.Record) (record.Record, error) {
 	return r, nil

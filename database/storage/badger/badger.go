@@ -82,6 +82,18 @@ func (b *Badger) Get(key string) (record.Record, error) {
 	return m, nil
 }
 
+// GetMeta returns the metadata of a database record.
+func (b *Badger) GetMeta(key string) (*record.Meta, error) {
+	// TODO: Replace with more performant variant.
+
+	r, err := b.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Meta(), nil
+}
+
 // Put stores a record in the database.
 func (b *Badger) Put(r record.Record) (record.Record, error) {
 	data, err := r.MarshalRecord(r)

@@ -50,11 +50,14 @@ func prep() error {
 		return err
 	}
 
+	if err := registerModulesEndpoints(); err != nil {
+		return err
+	}
+
 	return registerMetaEndpoints()
 }
 
 func start() error {
-	logFlagOverrides()
 	go Serve()
 
 	_ = updateAPIKeys(module.Ctx, nil)
@@ -68,7 +71,7 @@ func start() error {
 		module.NewTask("clean api sessions", cleanSessions).Repeat(5 * time.Minute)
 	}
 
-	return nil
+	return registerEndpointBridgeDB()
 }
 
 func stop() error {

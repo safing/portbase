@@ -76,7 +76,8 @@ func prep() error {
 			if err != nil {
 				module.Error(
 					"modulemgmt-failed",
-					fmt.Sprintf("The subsystem framework failed to start or stop one or more modules.\nError: %s\nCheck logs for more information.", err),
+					"A Module failed to start",
+					fmt.Sprintf("The subsystem framework failed to start or stop one or more modules.\nError: %s\nCheck logs for more information or try to restart.", err),
 				)
 				return nil
 			}

@@ -51,6 +51,7 @@ func registerMetaEndpoints() error {
 	if err := RegisterEndpoint(Endpoint{
 		Path:        "auth/reset",
 		Read:        PermitAnyone,
+		Write:       PermitAnyone,
 		HandlerFunc: authReset,
 		Name:        "Reset Authenticated Session",
 		Description: "Resets authentication status internally and in the browser.",

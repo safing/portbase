@@ -77,7 +77,7 @@ func TestSubsystems(t *testing.T) {
 	// test
 
 	// let module fail
-	feature1.Error("test-fail", "Testing Fail")
+	feature1.Error("test-fail", "Test Fail", "Testing Fail")
 	time.Sleep(10 * time.Millisecond)
 	if sub1.FailureStatus != modules.FailureError {
 		t.Fatal("error did not propagate")

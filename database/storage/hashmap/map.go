@@ -44,6 +44,18 @@ func (hm *HashMap) Get(key string) (record.Record, error) {
 	return r, nil
 }
 
+// GetMeta returns the metadata of a database record.
+func (hm *HashMap) GetMeta(key string) (*record.Meta, error) {
+	// TODO: Replace with more performant variant.
+
+	r, err := hm.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Meta(), nil
+}
+
 // Put stores a record in the database.
 func (hm *HashMap) Put(r record.Record) (record.Record, error) {
 	hm.dbLock.Lock()

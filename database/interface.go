@@ -201,6 +201,40 @@ func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool)
 	return r, db, nil
 }
 
+func (i *Interface) getMeta(dbName string, dbKey string, mustBeWriteable bool) (m *record.Meta, db *Controller, err error) {
+	if dbName == "" {
+		dbName, dbKey = record.ParseKey(dbKey)
+	}
+
+	db, err = getController(dbName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if mustBeWriteable && db.ReadOnly() {
+		return nil, db, ErrReadOnly
+	}
+
+	r := i.checkCache(dbName + ":" + dbKey)
+	if r != nil {
+		if !i.options.hasAccessPermission(r) {
+			return nil, db, ErrPermissionDenied
+		}
+		return r.Meta(), db, nil
+	}
+
+	m, err = db.GetMeta(dbKey)
+	if err != nil {
+		return nil, db, err
+	}
+
+	if !m.CheckPermission(i.options.Local, i.options.Internal) {
+		return nil, db, ErrPermissionDenied
+	}
+
+	return m, db, nil
+}
+
 // InsertValue inserts a value into a record.
 func (i *Interface) InsertValue(key string, attribute string, value interface{}) error {
 	r, db, err := i.getRecord(getDBFromKey, key, true)
@@ -236,7 +270,7 @@ func (i *Interface) Put(r record.Record) (err error) {
 	// get record or only database
 	var db *Controller
 	if !i.options.HasAllPermissions() {
-		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true)
+		_, db, err = i.getMeta(r.DatabaseName(), r.DatabaseKey(), true)
 		if err != nil && err != ErrNotFound {
 			return err
 		}
@@ -247,7 +281,7 @@ func (i *Interface) Put(r record.Record) (err error) {
 		}
 	}
 
-	// Check if database is read only before we add to the cache.
+	// Check if database is read only.
 	if db.ReadOnly() {
 		return ErrReadOnly
 	}
@@ -274,7 +308,7 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 	// get record or only database
 	var db *Controller
 	if !i.options.HasAllPermissions() {
-		_, db, err = i.getRecord(r.DatabaseName(), r.DatabaseKey(), true)
+		_, db, err = i.getMeta(r.DatabaseName(), r.DatabaseKey(), true)
 		if err != nil && err != ErrNotFound {
 			return err
 		}
@@ -283,6 +317,11 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 		if err != nil {
 			return err
 		}
+	}
+
+	// Check if database is read only.
+	if db.ReadOnly() {
+		return ErrReadOnly
 	}
 
 	r.Lock()
@@ -325,6 +364,13 @@ func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	if err != nil {
 		return func(r record.Record) error {
 			return err
+		}
+	}
+
+	// Check if database is read only.
+	if db.ReadOnly() {
+		return func(r record.Record) error {
+			return ErrReadOnly
 		}
 	}
 
@@ -462,6 +508,11 @@ func (i *Interface) Delete(key string) error {
 		return err
 	}
 
+	// Check if database is read only.
+	if db.ReadOnly() {
+		return ErrReadOnly
+	}
+
 	i.options.Apply(r)
 	r.Meta().Delete()
 	return db.Put(r)
@@ -493,6 +544,11 @@ func (i *Interface) Purge(ctx context.Context, q *query.Query) (int, error) {
 	db, err := getController(q.DatabaseName())
 	if err != nil {
 		return 0, err
+	}
+
+	// Check if database is read only before we add to the cache.
+	if db.ReadOnly() {
+		return 0, ErrReadOnly
 	}
 
 	return db.Purge(ctx, q, i.options.Local, i.options.Internal)

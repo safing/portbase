@@ -96,6 +96,18 @@ func (b *BBolt) Get(key string) (record.Record, error) {
 	return r, nil
 }
 
+// GetMeta returns the metadata of a database record.
+func (b *BBolt) GetMeta(key string) (*record.Meta, error) {
+	// TODO: Replace with more performant variant.
+
+	r, err := b.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Meta(), nil
+}
+
 // Put stores a record in the database.
 func (b *BBolt) Put(r record.Record) (record.Record, error) {
 	data, err := r.MarshalRecord(r)
