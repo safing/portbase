@@ -26,11 +26,6 @@ func (i *InjectBase) Get(key string) (record.Record, error) {
 	return nil, ErrNotImplemented
 }
 
-// Get returns a database record.
-func (i *InjectBase) GetMeta(key string) (*record.Meta, error) {
-	return nil, ErrNotImplemented
-}
-
 // Put stores a record in the database.
 func (i *InjectBase) Put(m record.Record) (record.Record, error) {
 	return nil, ErrNotImplemented
