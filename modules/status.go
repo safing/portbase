@@ -139,7 +139,7 @@ func (m *Module) setFailure(status uint8, id, title, msg string) {
 
 	// Propagate failure status.
 	if failureUpdateNotifyFuncReady.IsSet() {
-		m.newTask("failure status updater", func(context.Context, *Task) error {
+		m.RunWorker("failure status updater", func(context.Context) error {
 			// Only use data in worker that won't change anymore.
 
 			// Resolve previous failure state if available.
@@ -151,7 +151,7 @@ func (m *Module) setFailure(status uint8, id, title, msg string) {
 			failureUpdateNotifyFunc(status, id, title, msg)
 
 			return nil
-		}).QueuePrioritized()
+		})
 	}
 }
 
@@ -181,11 +181,11 @@ func (m *Module) Resolve(failureID string) {
 
 	// Propagate failure status.
 	if failureUpdateNotifyFuncReady.IsSet() {
-		m.newTask("failure status updater", func(context.Context, *Task) error {
+		m.RunWorker("failure status updater", func(context.Context) error {
 			// Only use data in worker that won't change anymore.
 			failureUpdateNotifyFunc(FailureNone, resolveFailureID, "", "")
 			return nil
-		}).QueuePrioritized()
+		})
 	}
 }
 
