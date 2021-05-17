@@ -86,12 +86,12 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	r = r.WithContext(ctx)
 	lrw := NewLoggingResponseWriter(w, r)
 
-	tracer.Tracef("api request: %s ___ %s", r.RemoteAddr, r.RequestURI)
+	tracer.Tracef("api request: %s ___ %s %s", r.RemoteAddr, lrw.Request.Method, r.RequestURI)
 	defer func() {
 		// Log request status.
 		if lrw.Status != 0 {
 			// If lrw.Status is 0, the request may have been hijacked.
-			tracer.Debugf("api request: %s %d %s", lrw.Request.RemoteAddr, lrw.Status, lrw.Request.RequestURI)
+			tracer.Debugf("api request: %s %d %s %s", lrw.Request.RemoteAddr, lrw.Status, lrw.Request.Method, lrw.Request.RequestURI)
 		}
 		tracer.Submit()
 	}()
@@ -128,6 +128,14 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	if apiRequest.AuthToken == nil {
 		// Authenticator already replied.
 		return nil
+	}
+
+	// Wait for the owning module to be ready.
+	if moduleHandler, ok := handler.(ModuleHandler); ok {
+		if !moduleIsReady(moduleHandler.BelongsTo()) {
+			http.Error(lrw, "The API endpoint not ready yet. Please try again later.", http.StatusServiceUnavailable)
+			return nil
+		}
 	}
 
 	// Add security headers.
