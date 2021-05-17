@@ -161,7 +161,7 @@ func callAPI(ebr *EndpointBridgeRequest) (record.Record, error) {
 	}
 
 	response := &EndpointBridgeResponse{
-		MimeType: w.Result().Header.Get("Content-Type"),
+		MimeType: w.Header().Get("Content-Type"),
 		Body:     w.Body.String(),
 	}
 	response.SetKey(apiDatabaseName + ":" + ebr.Path)

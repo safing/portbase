@@ -19,9 +19,10 @@ func registerAPI() error {
 	api.RegisterHandler("/metrics", &metricsAPI{})
 
 	return api.RegisterEndpoint(api.Endpoint{
-		Path:     "metrics/list",
-		Read:     api.PermitAnyone,
-		MimeType: api.MimeTypeJSON,
+		Path:      "metrics/list",
+		Read:      api.PermitAnyone,
+		MimeType:  api.MimeTypeJSON,
+		BelongsTo: module,
 		DataFunc: func(*api.Request) ([]byte, error) {
 			registryLock.RLock()
 			defer registryLock.RUnlock()

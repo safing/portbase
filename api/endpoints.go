@@ -15,16 +15,18 @@ import (
 
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/modules"
 )
 
 // Endpoint describes an API Endpoint.
 // Path and at least one permission are required.
 // As is exactly one function.
 type Endpoint struct {
-	Path     string
-	MimeType string
-	Read     Permission
-	Write    Permission
+	Path      string
+	MimeType  string
+	Read      Permission
+	Write     Permission
+	BelongsTo *modules.Module
 
 	// ActionFunc is for simple actions with a return message for the user.
 	ActionFunc ActionFunc `json:"-"`
@@ -265,6 +267,12 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, apiRequest := getAPIContext(r)
 	if apiRequest == nil {
 		http.NotFound(w, r)
+		return
+	}
+
+	// Wait for the owning module to be ready.
+	if !moduleIsReady(e.BelongsTo) {
+		http.Error(w, "The API endpoint not ready yet. Please try again later.", http.StatusServiceUnavailable)
 		return
 	}
 
