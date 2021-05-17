@@ -70,7 +70,13 @@ func mirrorModuleStatus(moduleFailure uint8, id, title, msg string) {
 		// The notification already exists.
 
 		// Check if we should delete it.
-		if moduleFailure == modules.FailureNone {
+		if moduleFailure == modules.FailureNone && !n.Meta().IsDeleted() {
+
+			// Remove belongsTo, as the deletion was already triggered by the module itself.
+			n.Lock()
+			n.belongsTo = nil
+			n.Unlock()
+
 			n.Delete()
 		}
 
@@ -92,6 +98,8 @@ func mirrorModuleStatus(moduleFailure uint8, id, title, msg string) {
 	}
 
 	switch moduleFailure {
+	case modules.FailureNone:
+		return
 	case modules.FailureHint:
 		n.Type = Info
 		n.AvailableActions = nil
