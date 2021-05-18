@@ -75,6 +75,8 @@ type Notification struct {
 	// ShowOnSystem specifies if the notification should be also shown on the
 	// operating system. Notifications shown on the operating system level are
 	// more focus-intrusive and should only be used for important notifications.
+	// If the configuration option "Desktop Notifications" is switched off, this
+	// will be forced to false on the first save.
 	ShowOnSystem bool
 	// EventData contains an additional payload for the notification. This payload
 	// may contain contextual data and may be used by a localization framework
@@ -319,9 +321,15 @@ func (n *Notification) save(pushUpdate bool) {
 		n.State = Active
 	}
 
-	// check key
+	// Initialize on first save.
 	if !n.KeyIsSet() {
+		// Set database key.
 		n.SetKey(fmt.Sprintf("notifications:all/%s", n.EventID))
+
+		// Check if notifications should be shown on the system at all.
+		if !useSystemNotifications() {
+			n.ShowOnSystem = false
+		}
 	}
 
 	// Update meta data.
