@@ -133,7 +133,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	// Wait for the owning module to be ready.
 	if moduleHandler, ok := handler.(ModuleHandler); ok {
 		if !moduleIsReady(moduleHandler.BelongsTo()) {
-			http.Error(lrw, "The API endpoint not ready yet. Please try again later.", http.StatusServiceUnavailable)
+			http.Error(lrw, "The API endpoint is not ready yet. Please try again later.", http.StatusServiceUnavailable)
 			return nil
 		}
 	}
@@ -150,6 +150,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "deny")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("X-DNS-Prefetch-Control", "off")
 	} else {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
