@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	fileVersionRegex = regexp.MustCompile(`_v([0-9]+-[0-9]+-[0-9]+b?|0)`)
-	rawVersionRegex  = regexp.MustCompile(`^([0-9]+\.[0-9]+\.[0-9]+b?\*?|0)$`)
+	fileVersionRegex = regexp.MustCompile(`_v[0-9]+-[0-9]+-[0-9]+(-[a-z]+)?`)
+	rawVersionRegex  = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+)?$`)
 )
 
 // GetIdentifierAndVersion splits the given file path into its identifier and version.
@@ -24,7 +24,7 @@ func GetIdentifierAndVersion(versionedPath string) (identifier, version string, 
 
 	// Trim the `_v` that gets caught by the regex and
 	// replace `-` with `.` to get the version string.
-	version = strings.Replace(strings.TrimLeft(rawVersion, "_v"), "-", ".", -1)
+	version = strings.Replace(strings.TrimLeft(rawVersion, "_v"), "-", ".", 2)
 
 	// Put the filename back together without version.
 	i := strings.Index(filename, rawVersion)
@@ -46,7 +46,7 @@ func GetVersionedPath(identifier, version string) (versionedPath string) {
 	// Split the filename where the version should go.
 	splittedFilename := strings.SplitN(filename, ".", 2)
 	// Replace `.` with `-` for the filename format.
-	transformedVersion := strings.Replace(version, ".", "-", -1)
+	transformedVersion := strings.Replace(version, ".", "-", 2)
 
 	// Put everything back together and return it.
 	versionedPath = identifierPath + splittedFilename[0] + "_v" + transformedVersion

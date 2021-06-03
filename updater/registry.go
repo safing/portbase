@@ -28,12 +28,16 @@ type ResourceRegistry struct {
 	MandatoryUpdates []string
 	AutoUnpack       []string
 
-	Beta    bool
-	DevMode bool
-	Online  bool
+	// UsePreReleases signifies that pre-releases should be used when selecting a
+	// version. This does not affect current releases that are also pre-releases.
+	UsePreReleases bool
+	DevMode        bool
+	Online         bool
 }
 
 // AddIndex adds a new index to the resource registry.
+// The order is important, as indexes added later will override the current
+// release from earlier indexes.
 func (reg *ResourceRegistry) AddIndex(idx Index) {
 	reg.Lock()
 	defer reg.Unlock()
@@ -92,41 +96,41 @@ func (reg *ResourceRegistry) SetDevMode(on bool) {
 	reg.DevMode = on
 }
 
-// SetBeta sets the beta flag.
-func (reg *ResourceRegistry) SetBeta(on bool) {
+// SetUsePreReleases sets the UsePreReleases flag.
+func (reg *ResourceRegistry) SetUsePreReleases(yes bool) {
 	reg.Lock()
 	defer reg.Unlock()
 
-	reg.Beta = on
+	reg.UsePreReleases = yes
 }
 
 // AddResource adds a resource to the registry. Does _not_ select new version.
-func (reg *ResourceRegistry) AddResource(identifier, version string, available, stableRelease, betaRelease bool) error {
+func (reg *ResourceRegistry) AddResource(identifier, version string, available, currentRelease, preRelease bool) error {
 	reg.Lock()
 	defer reg.Unlock()
 
-	err := reg.addResource(identifier, version, available, stableRelease, betaRelease)
+	err := reg.addResource(identifier, version, available, currentRelease, preRelease)
 	return err
 }
 
-func (reg *ResourceRegistry) addResource(identifier, version string, available, stableRelease, betaRelease bool) error {
+func (reg *ResourceRegistry) addResource(identifier, version string, available, currentRelease, preRelease bool) error {
 	res, ok := reg.resources[identifier]
 	if !ok {
 		res = reg.newResource(identifier)
 		reg.resources[identifier] = res
 	}
-	return res.AddVersion(version, available, stableRelease, betaRelease)
+	return res.AddVersion(version, available, currentRelease, preRelease)
 }
 
 // AddResources adds resources to the registry. Errors are logged, the last one is returned. Despite errors, non-failing resources are still added. Does _not_ select new versions.
-func (reg *ResourceRegistry) AddResources(versions map[string]string, available, stableRelease, betaRelease bool) error {
+func (reg *ResourceRegistry) AddResources(versions map[string]string, available, currentRelease, preRelease bool) error {
 	reg.Lock()
 	defer reg.Unlock()
 
 	// add versions and their flags to registry
 	var lastError error
 	for identifier, version := range versions {
-		lastError = reg.addResource(identifier, version, available, stableRelease, betaRelease)
+		lastError = reg.addResource(identifier, version, available, currentRelease, preRelease)
 		if lastError != nil {
 			log.Warningf("%s: failed to add resource %s: %s", reg.Name, identifier, lastError)
 		}
@@ -161,7 +165,8 @@ func (reg *ResourceRegistry) GetSelectedVersions() (versions map[string]string) 
 	return
 }
 
-// Purge deletes old updates, retaining a certain amount, specified by the keep parameter. Will at least keep 2 updates per resource.
+// Purge deletes old updates, retaining a certain amount, specified by the keep
+// parameter. Will at least keep 2 updates per resource.
 func (reg *ResourceRegistry) Purge(keep int) {
 	reg.RLock()
 	defer reg.RUnlock()
@@ -171,12 +176,20 @@ func (reg *ResourceRegistry) Purge(keep int) {
 	}
 }
 
-// Reset resets the internal state of the registry, removing all added resources.
-func (reg *ResourceRegistry) Reset() {
+// ResetResources removes all resources from the registry.
+func (reg *ResourceRegistry) ResetResources() {
 	reg.Lock()
 	defer reg.Unlock()
 
 	reg.resources = make(map[string]*Resource)
+}
+
+// ResetIndexes removes all indexes from the registry.
+func (reg *ResourceRegistry) ResetIndexes() {
+	reg.Lock()
+	defer reg.Unlock()
+
+	reg.indexes = make([]Index, 1)
 }
 
 // Cleanup removes temporary files.

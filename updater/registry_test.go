@@ -19,9 +19,9 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	registry = &ResourceRegistry{
-		Beta:    true,
-		DevMode: true,
-		Online:  true,
+		UsePreReleases: true,
+		DevMode:        true,
+		Online:         true,
 	}
 	err = registry.Initialize(utils.NewDirStructure(tmpDir, 0777))
 	if err != nil {

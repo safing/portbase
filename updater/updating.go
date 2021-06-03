@@ -80,7 +80,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 	}
 
 	// add resources to registry
-	err = reg.AddResources(cleanedData, false, idx.Stable, idx.Beta)
+	err = reg.AddResources(cleanedData, false, true, idx.PreRelease)
 	if err != nil {
 		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
 	}
@@ -118,7 +118,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 
 			// add all non-available and eligible versions to update queue
 			for _, rv := range res.Versions {
-				if !rv.Available && (rv.StableRelease || reg.Beta && rv.BetaRelease) {
+				if !rv.Available && rv.CurrentRelease {
 					toUpdate = append(toUpdate, rv)
 				}
 			}

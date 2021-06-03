@@ -6,11 +6,8 @@ type Index struct {
 	// on the update server.
 	Path string
 
-	// Stable is set if the index file contains only stable
-	// releases.
-	Stable bool
-
-	// Beta is set if the index file contains beta
-	// releases.
-	Beta bool
+	// PreRelease signifies that all versions of this index should be marked as
+	// pre-releases, no matter if the versions actually have a pre-release tag or
+	// not.
+	PreRelease bool
 }
