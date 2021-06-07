@@ -59,30 +59,30 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		return fmt.Errorf("failed to parse index %s: %w", idx.Path, err)
 	}
 
-	// check for content
-	if len(newIndexData) == 0 {
-		return fmt.Errorf("index %s is empty", idx.Path)
-	}
-
-	// Check if all resources are within the indexes' authority.
-	authoritativePath := path.Dir(idx.Path) + "/"
-	if authoritativePath == "./" {
-		// Fix path for indexes at the storage root.
-		authoritativePath = ""
-	}
-	cleanedData := make(map[string]string, len(newIndexData))
-	for key, version := range newIndexData {
-		if strings.HasPrefix(key, authoritativePath) {
-			cleanedData[key] = version
-		} else {
-			log.Warningf("%s: index %s oversteps it's authority by defining version for %s", reg.Name, idx.Path, key)
+	// Add index data to registry.
+	if len(newIndexData) > 0 {
+		// Check if all resources are within the indexes' authority.
+		authoritativePath := path.Dir(idx.Path) + "/"
+		if authoritativePath == "./" {
+			// Fix path for indexes at the storage root.
+			authoritativePath = ""
 		}
-	}
+		cleanedData := make(map[string]string, len(newIndexData))
+		for key, version := range newIndexData {
+			if strings.HasPrefix(key, authoritativePath) {
+				cleanedData[key] = version
+			} else {
+				log.Warningf("%s: index %s oversteps it's authority by defining version for %s", reg.Name, idx.Path, key)
+			}
+		}
 
-	// add resources to registry
-	err = reg.AddResources(cleanedData, false, true, idx.PreRelease)
-	if err != nil {
-		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
+		// add resources to registry
+		err = reg.AddResources(cleanedData, false, true, idx.PreRelease)
+		if err != nil {
+			log.Warningf("%s: failed to add resources: %s", reg.Name, err)
+		}
+	} else {
+		log.Debugf("%s: index %s is empty", reg.Name, idx.Path)
 	}
 
 	// check if dest dir exists

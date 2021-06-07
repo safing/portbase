@@ -132,7 +132,7 @@ func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
 	}
 
 	if len(releases) == 0 {
-		log.Warningf("%s: index %s is empty", reg.Name, idx.Path)
+		log.Debugf("%s: index %s is empty", reg.Name, idx.Path)
 		return nil
 	}
 
