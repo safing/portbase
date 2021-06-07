@@ -136,7 +136,7 @@ func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
 		return nil
 	}
 
-	err = reg.AddResources(releases, false, idx.Stable, idx.Beta)
+	err = reg.AddResources(releases, false, true, idx.PreRelease)
 	if err != nil {
 		log.Warningf("%s: failed to add resource: %s", reg.Name, err)
 	}

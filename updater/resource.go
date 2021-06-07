@@ -65,13 +65,12 @@ type ResourceVersion struct {
 	// Available indicates if this version is available locally.
 	Available bool
 
-	// StableRelease indicates that this version is part of
-	// a stable release index file.
-	StableRelease bool
+	// CurrentRelease indicates that this is the current release that should be
+	// selected, if possible.
+	CurrentRelease bool
 
-	// BetaRelease indicates that this version is part of
-	// a beta release index file.
-	BetaRelease bool
+	// PreRelease indicates that this version is pre-release.
+	PreRelease bool
 
 	// Blacklisted may be set to true if this version should
 	// be skipped and not used. This is useful if the version
@@ -172,19 +171,14 @@ func (reg *ResourceRegistry) newResource(identifier string) *Resource {
 }
 
 // AddVersion adds a resource version to a resource.
-func (res *Resource) AddVersion(version string, available, stableRelease, betaRelease bool) error {
+func (res *Resource) AddVersion(version string, available, currentRelease, preRelease bool) error {
 	res.Lock()
 	defer res.Unlock()
 
-	// reset stable or beta release flags
-	if stableRelease || betaRelease {
+	// reset current release flags
+	if currentRelease {
 		for _, rv := range res.Versions {
-			if stableRelease {
-				rv.StableRelease = false
-			}
-			if betaRelease {
-				rv.BetaRelease = false
-			}
+			rv.CurrentRelease = false
 		}
 	}
 
@@ -217,11 +211,11 @@ func (res *Resource) AddVersion(version string, available, stableRelease, betaRe
 	if available {
 		rv.Available = true
 	}
-	if stableRelease {
-		rv.StableRelease = true
+	if currentRelease {
+		rv.CurrentRelease = true
 	}
-	if betaRelease {
-		rv.BetaRelease = true
+	if preRelease || rv.semVer.Prerelease() != "" {
+		rv.PreRelease = true
 	}
 
 	return nil
@@ -280,58 +274,50 @@ func (res *Resource) selectVersion() {
 	}
 
 	// Target selection
+
 	// 1) Dev release if dev mode is active and ignore blacklisting
 	if res.registry.DevMode {
-		// get last element
+		// Get last version, as this will be v0.0.0, if available.
 		rv := res.Versions[len(res.Versions)-1]
-		// check if it's a dev version
+		// Check if it's v0.0.0.
 		if rv.semVer.Equal(devVersion) && rv.Available {
 			res.SelectedVersion = rv
 			return
 		}
 	}
 
-	// 2) Beta release if beta is active
-	if res.registry.Beta {
-		for _, rv := range res.Versions {
-			if rv.BetaRelease {
-				if rv.isSelectable() {
-					res.SelectedVersion = rv
-					return
-				}
-				break
-			}
-		}
-	}
-
-	// 3) Stable release
+	// 2) Find the current release. This may be also be a pre-release.
 	for _, rv := range res.Versions {
-		if rv.StableRelease {
+		if rv.CurrentRelease {
 			if rv.isSelectable() {
 				res.SelectedVersion = rv
 				return
 			}
+			// There can only be once current release,
+			// so we can abort after finding one.
 			break
 		}
 	}
 
-	// 4) Latest stable release
+	// 3) If UsePreReleases is set, find any newest version.
+	if res.registry.UsePreReleases {
+		for _, rv := range res.Versions {
+			if rv.isSelectable() {
+				res.SelectedVersion = rv
+				return
+			}
+		}
+	}
+
+	// 4) Find the newest stable version.
 	for _, rv := range res.Versions {
-		if !rv.isBetaVersionNumber() && rv.isSelectable() {
+		if !rv.PreRelease && rv.isSelectable() {
 			res.SelectedVersion = rv
 			return
 		}
 	}
 
-	// 5) Latest of any type
-	for _, rv := range res.Versions {
-		if rv.isSelectable() {
-			res.SelectedVersion = rv
-			return
-		}
-	}
-
-	// 6) Default to newest
+	// 5) Default to newest.
 	res.SelectedVersion = res.Versions[0]
 	log.Warningf("updater: falling back to version %s for %s because we failed to find a selectable one", res.SelectedVersion, res.Identifier)
 }
@@ -422,7 +408,7 @@ boundarySearch:
 		if rv == res.SelectedVersion {
 			skippedSelectedVersion = true
 		}
-		if rv.StableRelease {
+		if !rv.PreRelease {
 			skippedStableVersion = true
 		}
 	}

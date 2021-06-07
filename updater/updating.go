@@ -15,20 +15,26 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-// UpdateIndexes downloads all indexes and returns the first error encountered.
+// UpdateIndexes downloads all indexes. An error is only returned when all
+// indexes fail to update.
 func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
-	var firstErr error
+	var lastErr error
+	var anySuccess bool
 
 	client := &http.Client{}
 	for _, idx := range reg.getIndexes() {
 		if err := reg.downloadIndex(ctx, client, idx); err != nil {
-			if firstErr == nil {
-				firstErr = err
-			}
+			lastErr = err
+			log.Warningf("%s: failed to update index %s: %s", reg.Name, idx.Path, err)
+		} else {
+			anySuccess = true
 		}
 	}
 
-	return firstErr
+	if !anySuccess {
+		return fmt.Errorf("failed to update all indexes, last error was: %s", lastErr)
+	}
+	return nil
 }
 
 func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Client, idx Index) error {
@@ -74,7 +80,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 	}
 
 	// add resources to registry
-	err = reg.AddResources(cleanedData, false, idx.Stable, idx.Beta)
+	err = reg.AddResources(cleanedData, false, true, idx.PreRelease)
 	if err != nil {
 		log.Warningf("%s: failed to add resources: %s", reg.Name, err)
 	}
@@ -112,7 +118,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 
 			// add all non-available and eligible versions to update queue
 			for _, rv := range res.Versions {
-				if !rv.Available && (rv.StableRelease || reg.Beta && rv.BetaRelease) {
+				if !rv.Available && rv.CurrentRelease {
 					toUpdate = append(toUpdate, rv)
 				}
 			}

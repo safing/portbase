@@ -11,19 +11,27 @@ import (
 func TestVersionSelection(t *testing.T) {
 	res := registry.newResource("test/a")
 
-	err := res.AddVersion("1.2.3", true, true, false)
+	err := res.AddVersion("1.2.2", true, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = res.AddVersion("1.2.4b", true, false, true)
+	err = res.AddVersion("1.2.3", true, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = res.AddVersion("1.2.2", true, false, false)
+	err = res.AddVersion("1.2.4-beta", true, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = res.AddVersion("1.2.5", false, true, false)
+	err = res.AddVersion("1.2.4-staging", true, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = res.AddVersion("1.2.5", false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = res.AddVersion("1.2.6-beta", false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,9 +40,9 @@ func TestVersionSelection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registry.Online = true
-	registry.Beta = true
+	registry.UsePreReleases = true
 	registry.DevMode = true
+	registry.Online = true
 	res.selectVersion()
 	if res.SelectedVersion.VersionNumber != "0.0.0" {
 		t.Errorf("selected version should be 0.0.0, not %s", res.SelectedVersion.VersionNumber)
@@ -42,11 +50,11 @@ func TestVersionSelection(t *testing.T) {
 
 	registry.DevMode = false
 	res.selectVersion()
-	if res.SelectedVersion.VersionNumber != "1.2.4-b" {
-		t.Errorf("selected version should be 1.2.4-b, not %s", res.SelectedVersion.VersionNumber)
+	if res.SelectedVersion.VersionNumber != "1.2.6-beta" {
+		t.Errorf("selected version should be 1.2.6-beta, not %s", res.SelectedVersion.VersionNumber)
 	}
 
-	registry.Beta = false
+	registry.UsePreReleases = false
 	res.selectVersion()
 	if res.SelectedVersion.VersionNumber != "1.2.5" {
 		t.Errorf("selected version should be 1.2.5, not %s", res.SelectedVersion.VersionNumber)
