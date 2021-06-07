@@ -29,7 +29,8 @@ type ResourceRegistry struct {
 	AutoUnpack       []string
 
 	// UsePreReleases signifies that pre-releases should be used when selecting a
-	// version. This does not affect current releases that are also pre-releases.
+	// version. Even if false, a pre-release version will still be used if it is
+	// defined as the current version by an index.
 	UsePreReleases bool
 	DevMode        bool
 	Online         bool
@@ -189,7 +190,7 @@ func (reg *ResourceRegistry) ResetIndexes() {
 	reg.Lock()
 	defer reg.Unlock()
 
-	reg.indexes = make([]Index, 1)
+	reg.indexes = make([]Index, 0, 5)
 }
 
 // Cleanup removes temporary files.
