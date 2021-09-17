@@ -530,6 +530,10 @@ func (i *Interface) Query(q *query.Query) (*iterator.Iterator, error) {
 		return nil, err
 	}
 
+	// FIXME:
+	// Flush the cache before we query the database.
+	// i.FlushCache()
+
 	return db.Query(q, i.options.Local, i.options.Internal)
 }
 
