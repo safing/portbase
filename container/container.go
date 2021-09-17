@@ -274,11 +274,17 @@ func (c *Container) PrependLength() {
 }
 
 func (c *Container) gather(n int) []byte {
-	// check if first slice holds enough data
+	// Check requested length.
+	if n <= 0 {
+		return nil
+	}
+
+	// Check if the first slice holds enough data.
 	if len(c.compartments[c.offset]) >= n {
 		return c.compartments[c.offset][:n]
 	}
-	// start gathering data
+
+	// Start gathering data.
 	slice := make([]byte, n)
 	copySlice := slice
 	n = 0
@@ -295,6 +301,13 @@ func (c *Container) gather(n int) []byte {
 }
 
 func (c *Container) gatherAsContainer(n int) (new *Container) {
+	// Check requested length.
+	if n < 0 {
+		return nil
+	} else if n == 0 {
+		return &Container{}
+	}
+
 	new = &Container{}
 	for i := c.offset; i < len(c.compartments); i++ {
 		if n >= len(c.compartments[i]) {
@@ -383,7 +396,7 @@ func (c *Container) GetNextN32() (uint32, error) {
 
 // GetNextN64 parses and returns a varint of type uint64.
 func (c *Container) GetNextN64() (uint64, error) {
-	buf := c.gather(9)
+	buf := c.gather(10)
 	num, n, err := varint.Unpack64(buf)
 	if err != nil {
 		return 0, err
