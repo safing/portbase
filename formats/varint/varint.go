@@ -5,6 +5,9 @@ import (
 	"errors"
 )
 
+// ErrBufTooSmall is returned when there is not enough data for parsing a varint.
+var ErrBufTooSmall = errors.New("varint: buf too small")
+
 // Pack8 packs a uint8 into a VarInt.
 func Pack8(n uint8) []byte {
 	if n < 128 {
@@ -37,13 +40,13 @@ func Pack64(n uint64) []byte {
 // Unpack8 unpacks a VarInt into a uint8. It returns the extracted int, how many bytes were used and an error.
 func Unpack8(blob []byte) (uint8, int, error) {
 	if len(blob) < 1 {
-		return 0, 0, errors.New("varint: buf has zero length")
+		return 0, 0, ErrBufTooSmall
 	}
 	if blob[0] < 128 {
 		return blob[0], 1, nil
 	}
 	if len(blob) < 2 {
-		return 0, 0, errors.New("varint: buf too small")
+		return 0, 0, ErrBufTooSmall
 	}
 	if blob[1] != 0x01 {
 		return 0, 0, errors.New("varint: encoded integer greater than 255 (uint8)")
@@ -55,7 +58,7 @@ func Unpack8(blob []byte) (uint8, int, error) {
 func Unpack16(blob []byte) (uint16, int, error) {
 	n, r := binary.Uvarint(blob)
 	if r == 0 {
-		return 0, 0, errors.New("varint: buf too small")
+		return 0, 0, ErrBufTooSmall
 	}
 	if r < 0 {
 		return 0, 0, errors.New("varint: encoded integer greater than 18446744073709551615 (uint64)")
@@ -70,7 +73,7 @@ func Unpack16(blob []byte) (uint16, int, error) {
 func Unpack32(blob []byte) (uint32, int, error) {
 	n, r := binary.Uvarint(blob)
 	if r == 0 {
-		return 0, 0, errors.New("varint: buf too small")
+		return 0, 0, ErrBufTooSmall
 	}
 	if r < 0 {
 		return 0, 0, errors.New("varint: encoded integer greater than 18446744073709551615 (uint64)")
@@ -85,7 +88,7 @@ func Unpack32(blob []byte) (uint32, int, error) {
 func Unpack64(blob []byte) (uint64, int, error) {
 	n, r := binary.Uvarint(blob)
 	if r == 0 {
-		return 0, 0, errors.New("varint: buf too small")
+		return 0, 0, ErrBufTooSmall
 	}
 	if r < 0 {
 		return 0, 0, errors.New("varint: encoded integer greater than 18446744073709551615 (uint64)")
