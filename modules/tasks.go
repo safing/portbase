@@ -330,7 +330,6 @@ func (t *Task) executeWithLocking() {
 	// start for module
 	// hint: only queueWg global var is important for scheduling, others can be set here
 	atomic.AddInt32(t.module.taskCnt, 1)
-	t.module.waitGroup.Add(1)
 
 	defer func() {
 		// recover from panic
@@ -343,7 +342,7 @@ func (t *Task) executeWithLocking() {
 
 		// finish for module
 		atomic.AddInt32(t.module.taskCnt, -1)
-		t.module.waitGroup.Done()
+		t.module.checkIfStopComplete()
 
 		t.lock.Lock()
 

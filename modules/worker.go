@@ -39,10 +39,9 @@ func (m *Module) RunWorker(name string, fn func(context.Context) error) error {
 	}
 
 	atomic.AddInt32(m.workerCnt, 1)
-	m.waitGroup.Add(1)
 	defer func() {
 		atomic.AddInt32(m.workerCnt, -1)
-		m.waitGroup.Done()
+		m.checkIfStopComplete()
 	}()
 
 	return m.runWorker(name, fn)
@@ -60,10 +59,9 @@ func (m *Module) StartServiceWorker(name string, backoffDuration time.Duration, 
 
 func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn func(context.Context) error) {
 	atomic.AddInt32(m.workerCnt, 1)
-	m.waitGroup.Add(1)
 	defer func() {
 		atomic.AddInt32(m.workerCnt, -1)
-		m.waitGroup.Done()
+		m.checkIfStopComplete()
 	}()
 
 	if backoffDuration == 0 {
@@ -141,6 +139,10 @@ func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn fun
 func (m *Module) runCtrlFn(name string, fn func() error) (err error) {
 	if fn == nil {
 		return
+	}
+
+	if m.ctrlFuncRunning.SetToIf(false, true) {
+		defer m.ctrlFuncRunning.SetToIf(true, false)
 	}
 
 	defer func() {
