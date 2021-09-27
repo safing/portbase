@@ -224,10 +224,11 @@ func (m *Module) checkIfStopComplete() {
 }
 
 func (m *Module) stop(reports chan *report) {
-	// check and set intermediate status
 	m.Lock()
+	defer m.Unlock()
+
+	// check and set intermediate status
 	if m.status != StatusOnline {
-		m.Unlock()
 		go func() {
 			reports <- &report{
 				module: m,
@@ -248,8 +249,6 @@ func (m *Module) stop(reports chan *report) {
 	m.status = StatusStopping
 	m.stopFlag.Set()
 	m.cancelCtx()
-
-	m.Unlock()
 
 	go m.stopAllTasks(reports, stopComplete)
 }
