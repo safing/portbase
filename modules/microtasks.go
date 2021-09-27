@@ -130,7 +130,6 @@ func (m *Module) runMicroTask(name *string, fn func(context.Context) error) (err
 	// start for module
 	// hint: only microTasks global var is important for scheduling, others can be set here
 	atomic.AddInt32(m.microTaskCnt, 1)
-	m.waitGroup.Add(1)
 
 	// set up recovery
 	defer func() {
@@ -145,7 +144,7 @@ func (m *Module) runMicroTask(name *string, fn func(context.Context) error) (err
 
 		// finish for module
 		atomic.AddInt32(m.microTaskCnt, -1)
-		m.waitGroup.Done()
+		m.checkIfStopComplete()
 
 		// finish and possibly trigger next task
 		atomic.AddInt32(microTasks, -1)

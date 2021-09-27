@@ -52,15 +52,16 @@ type Module struct { //nolint:maligned // not worth the effort
 	// start
 	startComplete chan struct{}
 	// stop
-	Ctx       context.Context
-	cancelCtx func()
-	stopFlag  *abool.AtomicBool
+	Ctx          context.Context
+	cancelCtx    func()
+	stopFlag     *abool.AtomicBool
+	stopComplete chan struct{}
 
 	// workers/tasks
-	workerCnt    *int32
-	taskCnt      *int32
-	microTaskCnt *int32
-	waitGroup    sync.WaitGroup
+	ctrlFuncRunning *abool.AtomicBool
+	workerCnt       *int32
+	taskCnt         *int32
+	microTaskCnt    *int32
 
 	// events
 	eventHooks     map[string]*eventHooks
@@ -205,11 +206,29 @@ func (m *Module) start(reports chan *report) {
 	}()
 }
 
+func (m *Module) checkIfStopComplete() {
+	if m.stopFlag.IsSet() &&
+		m.ctrlFuncRunning.IsNotSet() &&
+		atomic.LoadInt32(m.workerCnt) == 0 &&
+		atomic.LoadInt32(m.taskCnt) == 0 &&
+		atomic.LoadInt32(m.microTaskCnt) == 0 {
+
+		m.Lock()
+		defer m.Unlock()
+
+		if m.stopComplete != nil {
+			close(m.stopComplete)
+			m.stopComplete = nil
+		}
+	}
+}
+
 func (m *Module) stop(reports chan *report) {
-	// check and set intermediate status
 	m.Lock()
+	defer m.Unlock()
+
+	// check and set intermediate status
 	if m.status != StatusOnline {
-		m.Unlock()
 		go func() {
 			reports <- &report{
 				module: m,
@@ -218,47 +237,46 @@ func (m *Module) stop(reports chan *report) {
 		}()
 		return
 	}
-	m.status = StatusStopping
 
-	// reset start management
+	// Reset start/stop signal channels.
 	m.startComplete = make(chan struct{})
-	// init stop management
-	m.cancelCtx()
+	m.stopComplete = make(chan struct{})
+
+	// Make a copy of the stop channel.
+	stopComplete := m.stopComplete
+
+	// Set status and cancel context.
+	m.status = StatusStopping
 	m.stopFlag.Set()
+	m.cancelCtx()
 
-	m.Unlock()
-
-	go m.stopAllTasks(reports)
+	go m.stopAllTasks(reports, stopComplete)
 }
 
-func (m *Module) stopAllTasks(reports chan *report) {
+func (m *Module) stopAllTasks(reports chan *report, stopComplete chan struct{}) {
 	// start shutdown function
-	stopFnFinished := abool.NewBool(false)
 	var stopFnError error
+	stopFuncRunning := abool.New()
 	if m.stopFn != nil {
-		m.waitGroup.Add(1)
+		stopFuncRunning.Set()
 		go func() {
 			stopFnError = m.runCtrlFn("stop module", m.stopFn)
-			stopFnFinished.Set()
-			m.waitGroup.Done()
+			stopFuncRunning.UnSet()
+			m.checkIfStopComplete()
 		}()
+	} else {
+		m.checkIfStopComplete()
 	}
-
-	// wait for workers and stop fn
-	done := make(chan struct{})
-	go func() {
-		m.waitGroup.Wait()
-		close(done)
-	}()
 
 	// wait for results
 	select {
-	case <-done:
-	case <-time.After(moduleStopTimeout):
+	case <-stopComplete:
+	// case <-time.After(moduleStopTimeout):
+	case <-time.After(3 * time.Second):
 		log.Warningf(
-			"%s: timed out while waiting for stopfn/workers/tasks to finish: stopFn=%v workers=%d tasks=%d microtasks=%d, continuing shutdown...",
+			"%s: timed out while waiting for stopfn/workers/tasks to finish: stopFn=%v/%v workers=%d tasks=%d microtasks=%d, continuing shutdown...",
 			m.Name,
-			stopFnFinished.IsSet(),
+			stopFuncRunning.IsSet(), m.ctrlFuncRunning.IsSet(),
 			atomic.LoadInt32(m.workerCnt),
 			atomic.LoadInt32(m.taskCnt),
 			atomic.LoadInt32(m.microTaskCnt),
@@ -267,7 +285,7 @@ func (m *Module) stopAllTasks(reports chan *report) {
 
 	// collect error
 	var err error
-	if stopFnFinished.IsSet() && stopFnError != nil {
+	if stopFuncRunning.IsNotSet() && stopFnError != nil {
 		err = stopFnError
 	}
 	// set status
@@ -328,10 +346,10 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		Ctx:                 ctx,
 		cancelCtx:           cancelCtx,
 		stopFlag:            abool.NewBool(false),
+		ctrlFuncRunning:     abool.NewBool(false),
 		workerCnt:           &workerCnt,
 		taskCnt:             &taskCnt,
 		microTaskCnt:        &microTaskCnt,
-		waitGroup:           sync.WaitGroup{},
 		eventHooks:          make(map[string]*eventHooks),
 		depNames:            dependencies,
 	}

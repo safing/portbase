@@ -287,7 +287,7 @@ func checkAuth(w http.ResponseWriter, r *http.Request, authRequired bool) (token
 
 		// Return authentication failure message if authentication is required.
 		if authRequired {
-			log.Tracer(r.Context()).Warningf("api: denying api access to %s", r.RemoteAddr)
+			log.Tracer(r.Context()).Warningf("api: denying api access from %s", r.RemoteAddr)
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return nil, true
 		}

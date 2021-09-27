@@ -44,9 +44,19 @@ func (c *Container) Append(data []byte) {
 	c.compartments = append(c.compartments, data)
 }
 
+// PrependNumber prepends a number (varint encoded).
+func (c *Container) PrependNumber(n uint64) {
+	c.Prepend(varint.Pack64(n))
+}
+
 // AppendNumber appends a number (varint encoded).
 func (c *Container) AppendNumber(n uint64) {
 	c.compartments = append(c.compartments, varint.Pack64(n))
+}
+
+// PrependInt prepends an int (varint encoded).
+func (c *Container) PrependInt(n int) {
+	c.Prepend(varint.Pack64(uint64(n)))
 }
 
 // AppendInt appends an int (varint encoded).
@@ -60,6 +70,12 @@ func (c *Container) AppendAsBlock(data []byte) {
 	c.Append(data)
 }
 
+// PrependAsBlock prepends the length of the data and the data itself. Data will NOT be copied.
+func (c *Container) PrependAsBlock(data []byte) {
+	c.Prepend(data)
+	c.PrependNumber(uint64(len(data)))
+}
+
 // AppendContainer appends another Container. Data will NOT be copied.
 func (c *Container) AppendContainer(data *Container) {
 	c.compartments = append(c.compartments, data.compartments...)
@@ -69,6 +85,16 @@ func (c *Container) AppendContainer(data *Container) {
 func (c *Container) AppendContainerAsBlock(data *Container) {
 	c.AppendNumber(uint64(data.Length()))
 	c.compartments = append(c.compartments, data.compartments...)
+}
+
+// HoldsData returns true if the Container holds any data.
+func (c *Container) HoldsData() bool {
+	for i := c.offset; i < len(c.compartments); i++ {
+		if len(c.compartments[i]) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Length returns the full length of all bytes held by the container.
@@ -107,6 +133,14 @@ func (c *Container) Get(n int) ([]byte, error) {
 	}
 	c.skip(len(buf))
 	return buf, nil
+}
+
+// GetAll returns all data. Data MAY be copied and IS consumed.
+func (c *Container) GetAll() []byte {
+	// TODO: Improve.
+	buf := c.gather(c.Length())
+	c.skip(len(buf))
+	return buf
 }
 
 // GetAsContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS consumed.
@@ -198,6 +232,9 @@ func (c *Container) checkOffset() {
 
 // Error Handling
 
+/*
+DEPRECATING... like.... NOW.
+
 // SetError sets an error.
 func (c *Container) SetError(err error) {
 	c.err = err
@@ -227,6 +264,7 @@ func (c *Container) Error() error {
 func (c *Container) ErrString() string {
 	return c.err.Error()
 }
+*/
 
 // Block Handling
 
@@ -236,11 +274,17 @@ func (c *Container) PrependLength() {
 }
 
 func (c *Container) gather(n int) []byte {
-	// check if first slice holds enough data
+	// Check requested length.
+	if n <= 0 {
+		return nil
+	}
+
+	// Check if the first slice holds enough data.
 	if len(c.compartments[c.offset]) >= n {
 		return c.compartments[c.offset][:n]
 	}
-	// start gathering data
+
+	// Start gathering data.
 	slice := make([]byte, n)
 	copySlice := slice
 	n = 0
@@ -257,6 +301,13 @@ func (c *Container) gather(n int) []byte {
 }
 
 func (c *Container) gatherAsContainer(n int) (new *Container) {
+	// Check requested length.
+	if n < 0 {
+		return nil
+	} else if n == 0 {
+		return &Container{}
+	}
+
 	new = &Container{}
 	for i := c.offset; i < len(c.compartments); i++ {
 		if n >= len(c.compartments[i]) {
@@ -345,7 +396,7 @@ func (c *Container) GetNextN32() (uint32, error) {
 
 // GetNextN64 parses and returns a varint of type uint64.
 func (c *Container) GetNextN64() (uint64, error) {
-	buf := c.gather(9)
+	buf := c.gather(10)
 	num, n, err := varint.Unpack64(buf)
 	if err != nil {
 		return 0, err

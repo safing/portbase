@@ -2,7 +2,6 @@ package container
 
 import (
 	"bytes"
-	"errors"
 	"testing"
 
 	"github.com/safing/portbase/utils"
@@ -80,38 +79,6 @@ func compareMany(t *testing.T, reference []byte, other ...[]byte) {
 			t.Errorf("sample %d does not match reference: sample is '%s'", i+1, string(cmp))
 		}
 	}
-}
-
-func TestContainerErrorHandling(t *testing.T) {
-
-	c1 := New(nil)
-
-	if c1.HasError() {
-		t.Error("should not have error")
-	}
-
-	c1.SetError(errors.New("test error"))
-
-	if !c1.HasError() {
-		t.Error("should have error")
-	}
-
-	c2 := New(append([]byte{0}, []byte("test error")...))
-
-	if c2.HasError() {
-		t.Error("should not have error")
-	}
-
-	c2.CheckError()
-
-	if !c2.HasError() {
-		t.Error("should have error")
-	}
-
-	if c2.Error().Error() != "test error" {
-		t.Errorf("error message mismatch, was %s", c2.Error())
-	}
-
 }
 
 func TestDataFetching(t *testing.T) {

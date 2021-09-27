@@ -11,6 +11,7 @@ import (
 	// "github.com/pkg/bson"
 
 	"github.com/safing/portbase/formats/varint"
+	"github.com/safing/portbase/utils"
 )
 
 // define types
@@ -64,7 +65,7 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 	case JSON:
 		err := json.Unmarshal(data, t)
 		if err != nil {
-			return nil, fmt.Errorf("dsd: failed to unpack json data: %s", data)
+			return nil, fmt.Errorf("dsd: failed to unpack json: %s, data: %s", err, utils.SafeFirst16Bytes(data))
 		}
 		return t, nil
 	case BSON:
@@ -81,11 +82,11 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 		}
 		_, err := genCodeStruct.GenCodeUnmarshal(data)
 		if err != nil {
-			return nil, fmt.Errorf("dsd: failed to unpack gencode data: %s", err)
+			return nil, fmt.Errorf("dsd: failed to unpack gencode: %s, data: %s", err, utils.SafeFirst16Bytes(data))
 		}
 		return t, nil
 	default:
-		return nil, fmt.Errorf("dsd: tried to load unknown type %d, data: %v", format, data)
+		return nil, fmt.Errorf("dsd: tried to load unknown type %d, data: %s", format, utils.SafeFirst16Bytes(data))
 	}
 }
 
