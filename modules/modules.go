@@ -272,7 +272,7 @@ func (m *Module) stopAllTasks(reports chan *report, stopComplete chan struct{}) 
 	select {
 	case <-stopComplete:
 	// case <-time.After(moduleStopTimeout):
-	case <-time.After(3 * time.Second):
+	case <-time.After(moduleStopTimeout):
 		log.Warningf(
 			"%s: timed out while waiting for stopfn/workers/tasks to finish: stopFn=%v/%v workers=%d tasks=%d microtasks=%d, continuing shutdown...",
 			m.Name,
