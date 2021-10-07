@@ -14,11 +14,13 @@ func ExampleDirStructure() {
 	// output:
 	// / [755]
 	// /repo [777]
-	// /repo/b [755]
+	// /repo/b [707]
 	// /repo/b/c [750]
-	// /repo/b/d [755]
-	// /repo/b/d/e [755]
-	// /repo/b/d/f [755]
+	// /repo/b/d [707]
+	// /repo/b/d/e [707]
+	// /repo/b/d/f [707]
+	// /repo/b/d/f/g [707]
+	// /repo/b/d/f/g/h [707]
 	// /secret [700]
 
 	basePath, err := ioutil.TempDir("", "")
@@ -31,7 +33,7 @@ func ExampleDirStructure() {
 	secret := ds.ChildDir("secret", 0700)
 	repo := ds.ChildDir("repo", 0777)
 	_ = repo.ChildDir("a", 0700)
-	b := repo.ChildDir("b", 0755)
+	b := repo.ChildDir("b", 0707)
 	c := b.ChildDir("c", 0750)
 
 	err = ds.Ensure()
@@ -54,7 +56,7 @@ func ExampleDirStructure() {
 		fmt.Println(err)
 	}
 
-	err = b.EnsureRelPath("d/f")
+	err = b.EnsureRelPath("d/f/g/h")
 	if err != nil {
 		fmt.Println(err)
 	}
