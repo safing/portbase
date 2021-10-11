@@ -90,7 +90,7 @@ func registerBasicOptions() error {
 	return Register(&Option{
 		Name:           "Development Mode",
 		Key:            CfgDevModeKey,
-		Description:    "In Development Mode, security restrictions are lifted/softened to enable unrestricted access for debugging and testing purposes.",
+		Description:    "In Development Mode, security restrictions are lifted/softened to enable unrestricted access for debugging and testing purposes. Disable before uninstalling.",
 		OptType:        OptTypeBool,
 		ExpertiseLevel: ExpertiseLevelDeveloper,
 		ReleaseLevel:   ReleaseLevelStable,
