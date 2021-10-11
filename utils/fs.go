@@ -10,7 +10,6 @@ const isWindows = runtime.GOOS == "windows"
 
 // EnsureDirectory ensures that the given directory exists and that is has the given permissions set.
 // If path is a file, it is deleted and a directory created.
-// If a directory is created, also all missing directories up to the required one are created with the given permissions.
 func EnsureDirectory(path string, perm os.FileMode) error {
 	// open path
 	f, err := os.Stat(path)
@@ -33,11 +32,11 @@ func EnsureDirectory(path string, perm os.FileMode) error {
 	}
 	// file does not exist (or has been deleted)
 	if err == nil || os.IsNotExist(err) {
-		err = os.MkdirAll(path, perm)
+		err = os.Mkdir(path, perm)
 		if err != nil {
 			return fmt.Errorf("could not create dir %s: %s", path, err)
 		}
-		return nil
+		return os.Chmod(path, perm)
 	}
 	// other error opening path
 	return fmt.Errorf("failed to access %s: %s", path, err)
