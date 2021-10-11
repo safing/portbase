@@ -14,7 +14,16 @@ var (
 	shutdownFlag   = abool.NewBool(false)
 
 	shutdownCompleteSignal = make(chan struct{})
+
+	globalShutdownFn func()
 )
+
+// SetGlobalShutdownFn sets a global shutdown function that is called first when shutting down.
+func SetGlobalShutdownFn(fn func()) {
+	if globalShutdownFn == nil {
+		globalShutdownFn = fn
+	}
+}
 
 // IsShuttingDown returns whether the global shutdown is in progress.
 func IsShuttingDown() bool {
@@ -37,6 +46,11 @@ func Shutdown() error {
 	} else {
 		// shutdown was already issued
 		return errors.New("shutdown already initiated")
+	}
+
+	// Execute global shutdown function.
+	if globalShutdownFn != nil {
+		globalShutdownFn()
 	}
 
 	if initialStartCompleted.IsSet() {

@@ -16,8 +16,9 @@ var (
 	globalPrepFn          func() error
 )
 
-// SetGlobalPrepFn sets a global prep function that is run before all modules. This can be used to pre-initialize modules, such as setting the data root or database path.
 // SetGlobalPrepFn sets a global prep function that is run before all modules.
+// This can be used to pre-initialize modules, such as setting the data root
+// or database path.
 func SetGlobalPrepFn(fn func() error) {
 	if globalPrepFn == nil {
 		globalPrepFn = fn
