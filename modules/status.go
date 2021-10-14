@@ -65,16 +65,16 @@ func (m *Module) OnlineSoon() bool {
 
 // Status returns the current module status.
 func (m *Module) Status() uint8 {
-	m.Lock()
-	defer m.Unlock()
+	m.RLock()
+	defer m.RUnlock()
 
 	return m.status
 }
 
 // FailureStatus returns the current failure status, ID and message.
 func (m *Module) FailureStatus() (failureStatus uint8, failureID, failureMsg string) {
-	m.Lock()
-	defer m.Unlock()
+	m.RLock()
+	defer m.RUnlock()
 
 	return m.failureStatus, m.failureID, m.failureMsg
 }
