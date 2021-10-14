@@ -65,16 +65,16 @@ func (m *Module) OnlineSoon() bool {
 
 // Status returns the current module status.
 func (m *Module) Status() uint8 {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	return m.status
 }
 
 // FailureStatus returns the current failure status, ID and message.
 func (m *Module) FailureStatus() (failureStatus uint8, failureID, failureMsg string) {
-	m.RLock()
-	defer m.RUnlock()
+	m.Lock()
+	defer m.Unlock()
 
 	return m.failureStatus, m.failureID, m.failureMsg
 }
@@ -88,10 +88,7 @@ func (m *Module) FailureStatus() (failureStatus uint8, failureID, failureMsg str
 // Hint(), Warning() or Error() with the same ID as the existing one will be
 // ignored.
 func (m *Module) Hint(id, title, msg string) {
-	m.Lock()
-	defer m.Unlock()
-
-	m.setFailure(FailureHint, id, title, msg)
+	m.setFailure(FailureHint, id, title, msg, true)
 }
 
 // Warning sets failure status to warning. The supplied failureID is for
@@ -101,10 +98,7 @@ func (m *Module) Hint(id, title, msg string) {
 // Hint(), Warning() or Error() with the same ID as the existing one will be
 // ignored.
 func (m *Module) Warning(id, title, msg string) {
-	m.Lock()
-	defer m.Unlock()
-
-	m.setFailure(FailureWarning, id, title, msg)
+	m.setFailure(FailureWarning, id, title, msg, true)
 }
 
 // Error sets failure status to error. The supplied failureID is for improved
@@ -113,26 +107,31 @@ func (m *Module) Warning(id, title, msg string) {
 // Hint(), Warning() or Error() with the same ID as the existing one will be
 // ignored.
 func (m *Module) Error(id, title, msg string) {
-	m.Lock()
-	defer m.Unlock()
-
-	m.setFailure(FailureError, id, title, msg)
+	m.setFailure(FailureError, id, title, msg, true)
 }
 
-func (m *Module) setFailure(status uint8, id, title, msg string) {
-	// Ignore calls with the same ID.
-	if id == m.failureID {
-		return
-	}
+func (m *Module) setFailure(status uint8, id, title, msg string, lockModule bool) {
+	var resolveFailureID string
+	func() {
+		if lockModule {
+			m.Lock()
+			defer m.Unlock()
+		}
 
-	// Copy data for failure status update worker.
-	resolveFailureID := m.failureID
+		// Ignore calls with the same ID.
+		if id == m.failureID {
+			return
+		}
 
-	// Set new failure status.
-	m.failureStatus = status
-	m.failureID = id
-	m.failureTitle = title
-	m.failureMsg = msg
+		// Copy data for failure status update worker.
+		resolveFailureID = m.failureID
+
+		// Set new failure status.
+		m.failureStatus = status
+		m.failureID = id
+		m.failureTitle = title
+		m.failureMsg = msg
+	}()
 
 	// Notify of module change.
 	m.notifyOfChange()
