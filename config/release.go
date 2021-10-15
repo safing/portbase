@@ -41,7 +41,7 @@ func registerReleaseLevelOption() {
 		Key:            releaseLevelKey,
 		Description:    `May break things. Decide if you want to experiment with unstable features. "Beta" has been tested roughly by the Safing team while "Experimental" is really raw. When "Beta" or "Experimental" are disabled, their settings use the default again.`,
 		OptType:        OptTypeString,
-		ExpertiseLevel: ExpertiseLevelExpert,
+		ExpertiseLevel: ExpertiseLevelDeveloper,
 		ReleaseLevel:   ReleaseLevelStable,
 		DefaultValue:   ReleaseLevelNameStable,
 		Annotations: Annotations{
