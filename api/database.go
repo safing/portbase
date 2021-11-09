@@ -346,6 +346,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 				data, err := marshalRecord(r, true)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
+					continue
 				}
 				api.send(opID, dbMsgTypeOk, r.Key(), data)
 			} else {
