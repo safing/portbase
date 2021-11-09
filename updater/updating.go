@@ -99,7 +99,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}
 
-	log.Infof("%s: updated index %s", reg.Name, idx.Path)
+	log.Infof("%s: updated index %s with %d entries", reg.Name, idx.Path, len(newIndexData))
 	return nil
 }
 
