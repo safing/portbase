@@ -8,6 +8,8 @@ import (
 	"github.com/safing/portbase/database/storage"
 )
 
+const StorageTypeInjected = "injected"
+
 var (
 	controllers     = make(map[string]*Controller)
 	controllersLock sync.RWMutex
@@ -39,6 +41,11 @@ func getController(name string) (*Controller, error) {
 		return nil, fmt.Errorf(`could not start database %s: %s`, name, err)
 	}
 
+	// Check if database is injected.
+	if registeredDB.StorageType == StorageTypeInjected {
+		return nil, fmt.Errorf("database storage is not injected")
+	}
+
 	// get location
 	dbLocation, err := getLocation(name, registeredDB.StorageType)
 	if err != nil {
@@ -51,7 +58,7 @@ func getController(name string) (*Controller, error) {
 		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
 	}
 
-	controller = newController(storageInt, registeredDB.ShadowDelete)
+	controller = newController(registeredDB, storageInt, registeredDB.ShadowDelete)
 	controllers[name] = controller
 	return controller, nil
 }
@@ -76,13 +83,23 @@ func InjectDatabase(name string, storageInt storage.Interface) (*Controller, err
 	// check if database is registered
 	registeredDB, ok := registry[name]
 	if !ok {
-		return nil, fmt.Errorf(`database "%s" not registered`, name)
+		return nil, fmt.Errorf("database %q not registered", name)
 	}
-	if registeredDB.StorageType != "injected" {
-		return nil, fmt.Errorf(`database not of type "injected"`)
+	if registeredDB.StorageType != StorageTypeInjected {
+		return nil, fmt.Errorf("database not of type %q", StorageTypeInjected)
 	}
 
-	controller := newController(storageInt, false)
+	controller := newController(registeredDB, storageInt, false)
 	controllers[name] = controller
 	return controller, nil
+}
+
+// Withdraw withdraws an injected database, but leaves the database registered.
+func (c *Controller) Withdraw() {
+	if c != nil && c.Injected() {
+		controllersLock.Lock()
+		defer controllersLock.Unlock()
+
+		delete(controllers, c.database.Name)
+	}
 }
