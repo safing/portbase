@@ -53,17 +53,17 @@ func registerExpertiseLevelOption() {
 		},
 		PossibleValues: []PossibleValue{
 			{
-				Name:        "Simple",
+				Name:        "Simple Interface",
 				Value:       ExpertiseLevelNameUser,
 				Description: "Hide complex settings and information.",
 			},
 			{
-				Name:        "Advanced",
+				Name:        "Advanced Interface",
 				Value:       ExpertiseLevelNameExpert,
 				Description: "Show technical details.",
 			},
 			{
-				Name:        "Developer",
+				Name:        "Developer Interface",
 				Value:       ExpertiseLevelNameDeveloper,
 				Description: "Developer mode. Please be careful!",
 			},
