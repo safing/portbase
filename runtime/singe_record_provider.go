@@ -38,7 +38,7 @@ func (sr *singleRecordReader) Set(_ record.Record) (record.Record, error) {
 // Get implements ValueProvider.Get and returns the wrapped record.Record
 // but only if keyOrPrefix exactly matches the records database key.
 func (sr *singleRecordReader) Get(keyOrPrefix string) ([]record.Record, error) {
-	if keyOrPrefix != sr.Record.Key() {
+	if keyOrPrefix != sr.Record.DatabaseKey() {
 		return nil, nil
 	}
 	return []record.Record{sr.Record}, nil
