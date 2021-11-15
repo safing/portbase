@@ -14,6 +14,7 @@ import (
 
 // A Controller takes care of all the extra database logic.
 type Controller struct {
+	database     *Database
 	storage      storage.Interface
 	shadowDelete bool
 
@@ -25,8 +26,9 @@ type Controller struct {
 }
 
 // newController creates a new controller for a storage.
-func newController(storageInt storage.Interface, shadowDelete bool) *Controller {
+func newController(database *Database, storageInt storage.Interface, shadowDelete bool) *Controller {
 	return &Controller{
+		database:     database,
 		storage:      storageInt,
 		shadowDelete: shadowDelete,
 	}
