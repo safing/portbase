@@ -10,8 +10,8 @@ func registerModulesEndpoints() error {
 		Path:        "modules/{moduleName:.+}/trigger/{eventName:.+}",
 		Write:       PermitSelf,
 		ActionFunc:  triggerEvent,
-		Name:        "Export Configuration Options",
-		Description: "Returns a list of all registered configuration options and their metadata. This does not include the current active or default settings.",
+		Name:        "Trigger Event",
+		Description: "Triggers an event of an internal module.",
 	}); err != nil {
 		return err
 	}
