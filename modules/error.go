@@ -43,6 +43,7 @@ func (m *Module) NewErrorMessage(taskName string, err error) *ModuleError {
 	return &ModuleError{
 		Message:    err.Error(),
 		ModuleName: m.Name,
+		TaskName:   taskName,
 		Severity:   "error",
 		StackTrace: string(debug.Stack()),
 	}

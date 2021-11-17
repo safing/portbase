@@ -106,6 +106,7 @@ func stopModules() error {
 			rep = <-reports
 			if rep.err != nil {
 				lastErr = rep.err
+				rep.module.NewErrorMessage("stop module", rep.err).Report()
 				log.Warningf("modules: could not stop module %s: %s", rep.module.Name, rep.err)
 			}
 			reportCnt++
