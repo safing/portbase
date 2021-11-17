@@ -3,11 +3,10 @@ package dsd
 
 import (
 	"bytes"
+	"math/big"
 	"reflect"
 	"testing"
 )
-
-//go:generate msgp
 
 // SimpleTestStruct is used for testing.
 type SimpleTestStruct struct {
@@ -26,6 +25,7 @@ type ComplexTestStruct struct {
 	UI16 uint16
 	UI32 uint32
 	UI64 uint64
+	BI   *big.Int
 	S    string
 	Sp   *string
 	Sa   []string
@@ -113,6 +113,7 @@ func TestConversion(t *testing.T) {
 			3,
 			4,
 			5,
+			big.NewInt(6),
 			"a",
 			&bString,
 			[]string{"c", "d", "e"},
@@ -153,7 +154,7 @@ func TestConversion(t *testing.T) {
 		}
 
 		// test all formats (complex)
-		formats := []uint8{JSON}
+		formats := []uint8{JSON, CBOR}
 
 		for _, format := range formats {
 
@@ -217,6 +218,9 @@ func TestConversion(t *testing.T) {
 			if complexSubject.UI64 != co.UI64 {
 				t.Errorf("Load (complex struct): struct.UI64 is not equal (%v != %v)", complexSubject.UI64, co.UI64)
 			}
+			if complexSubject.BI.Cmp(co.BI) != 0 {
+				t.Errorf("Load (complex struct): struct.BI is not equal (%v != %v)", complexSubject.BI, co.BI)
+			}
 			if complexSubject.S != co.S {
 				t.Errorf("Load (complex struct): struct.S is not equal (%v != %v)", complexSubject.S, co.S)
 			}
@@ -251,7 +255,7 @@ func TestConversion(t *testing.T) {
 		}
 
 		// test all formats
-		formats = []uint8{JSON, GenCode}
+		formats = []uint8{JSON, CBOR, GenCode}
 
 		for _, format := range formats {
 			// simple
