@@ -151,6 +151,7 @@ func prepareModules() error {
 				if rep.err == ErrCleanExit {
 					return rep.err
 				}
+				rep.module.NewErrorMessage("prep module", rep.err).Report()
 				return fmt.Errorf("failed to prep module %s: %s", rep.module.Name, rep.err)
 			}
 			reportCnt++
@@ -198,6 +199,7 @@ func startModules() error {
 			// wait for reports
 			rep = <-reports
 			if rep.err != nil {
+				rep.module.NewErrorMessage("start module", rep.err).Report()
 				return fmt.Errorf("modules: could not start module %s: %s", rep.module.Name, rep.err)
 			}
 			reportCnt++

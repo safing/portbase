@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/safing/portbase/info"
@@ -155,7 +156,7 @@ func (di *Info) AddLastReportedModuleError() {
 	}
 
 	di.AddSection(
-		"Module Error",
+		fmt.Sprintf("%s Module Error", strings.Title(me.ModuleName)),
 		UseCodeSection,
 		me.Format(),
 	)

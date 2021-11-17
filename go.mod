@@ -12,6 +12,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgraph-io/badger v1.6.2
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.3.0
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang/glog v1.0.0 // indirect

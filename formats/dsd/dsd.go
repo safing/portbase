@@ -8,34 +8,36 @@ import (
 	"errors"
 	"fmt"
 
-	// "github.com/pkg/bson"
-
+	"github.com/fxamacker/cbor/v2"
 	"github.com/safing/portbase/formats/varint"
 	"github.com/safing/portbase/utils"
 )
 
-// define types
+// Types.
 const (
 	AUTO = 0
 	NONE = 1
 
-	// special
+	// Special types.
 	LIST = 76 // L
 
-	// serialization
+	// Serialization types.
+	BSON    = 66 // B
+	CBOR    = 67 // C
+	GenCode = 71 // G
+	JSON    = 74 // J
 	STRING  = 83 // S
 	BYTES   = 88 // X
-	JSON    = 74 // J
-	BSON    = 66 // B
-	GenCode = 71 // G
 
-	// compression
+	// Compression types.
 	GZIP = 90 // Z
 )
 
-// define errors
-var errNoMoreSpace = errors.New("dsd: no more space left after reading dsd type")
-var errNotImplemented = errors.New("dsd: this type is not yet implemented")
+// Errors.
+var (
+	errNoMoreSpace    = errors.New("dsd: no more space left after reading dsd type")
+	errNotImplemented = errors.New("dsd: this type is not yet implemented")
+)
 
 // Load loads an dsd structured data blob into the given interface.
 func Load(data []byte, t interface{}) (interface{}, error) {
@@ -75,6 +77,12 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 	// 		return nil, err
 	// 	}
 	// 	return t, nil
+	case CBOR:
+		err := cbor.Unmarshal(data, t)
+		if err != nil {
+			return nil, fmt.Errorf("dsd: failed to unpack cbor: %s, data: %s", err, utils.SafeFirst16Bytes(data))
+		}
+		return t, nil
 	case GenCode:
 		genCodeStruct, ok := t.(GenCodeCompatible)
 		if !ok {
@@ -132,6 +140,11 @@ func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
 	// 	if err != nil {
 	// 		return nil, err
 	// 	}
+	case CBOR:
+		data, err = cbor.Marshal(t)
+		if err != nil {
+			return nil, err
+		}
 	case GenCode:
 		genCodeStruct, ok := t.(GenCodeCompatible)
 		if !ok {

@@ -305,6 +305,9 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case e.ActionFunc != nil:
 		var msg string
 		msg, err = e.ActionFunc(apiRequest)
+		if !strings.HasSuffix(msg, "\n") {
+			msg += "\n"
+		}
 		if err == nil {
 			responseData = []byte(msg)
 		}
