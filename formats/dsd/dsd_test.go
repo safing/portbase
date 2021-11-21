@@ -1,8 +1,7 @@
-//nolint:maligned,unparam,gocyclo,gocognit
+//nolint:maligned,gocyclo,gocognit
 package dsd
 
 import (
-	"bytes"
 	"math/big"
 	"reflect"
 	"testing"
@@ -57,136 +56,115 @@ type GenCodeTestStruct struct {
 	Bap  *[]byte
 }
 
+var (
+	simpleSubject = &SimpleTestStruct{
+		"a",
+		0x01,
+	}
+
+	bString      = "b"
+	bBytes  byte = 0x02
+
+	complexSubject = &ComplexTestStruct{
+		-1,
+		-2,
+		-3,
+		-4,
+		-5,
+		1,
+		2,
+		3,
+		4,
+		5,
+		big.NewInt(6),
+		"a",
+		&bString,
+		[]string{"c", "d", "e"},
+		&[]string{"f", "g", "h"},
+		0x01,
+		&bBytes,
+		[]byte{0x03, 0x04, 0x05},
+		&[]byte{0x05, 0x06, 0x07},
+		map[string]string{
+			"a": "b",
+			"c": "d",
+			"e": "f",
+		},
+		&map[string]string{
+			"g": "h",
+			"i": "j",
+			"k": "l",
+		},
+	}
+
+	genCodeSubject = &GenCodeTestStruct{
+		-2,
+		-3,
+		-4,
+		-5,
+		2,
+		3,
+		4,
+		5,
+		"a",
+		&bString,
+		[]string{"c", "d", "e"},
+		&[]string{"f", "g", "h"},
+		0x01,
+		&bBytes,
+		[]byte{0x03, 0x04, 0x05},
+		&[]byte{0x05, 0x06, 0x07},
+	}
+)
+
 func TestConversion(t *testing.T) {
-	compressionFormats := []uint8{NONE, GZIP}
+	t.Parallel()
+
+	compressionFormats := []CompressionFormat{AutoCompress, GZIP}
+	formats := []SerializationFormat{JSON, CBOR}
+
 	for _, compression := range compressionFormats {
-
-		// STRING
-		d, err := DumpAndCompress("abc", STRING, compression)
-		if err != nil {
-			t.Fatalf("Dump error (string): %s", err)
-		}
-
-		s, err := Load(d, nil)
-		if err != nil {
-			t.Fatalf("Load error (string): %s", err)
-		}
-		ts := s.(string)
-
-		if ts != "abc" {
-			t.Errorf("Load (string): subject and loaded object are not equal (%v != %v)", ts, "abc")
-		}
-
-		// BYTES
-		d, err = DumpAndCompress([]byte("def"), BYTES, compression)
-		if err != nil {
-			t.Fatalf("Dump error (string): %s", err)
-		}
-
-		b, err := Load(d, nil)
-		if err != nil {
-			t.Fatalf("Load error (string): %s", err)
-		}
-		tb := b.([]byte)
-
-		if !bytes.Equal(tb, []byte("def")) {
-			t.Errorf("Load (string): subject and loaded object are not equal (%v != %v)", tb, []byte("def"))
-		}
-
-		// STRUCTS
-		simpleSubject := SimpleTestStruct{
-			"a",
-			0x01,
-		}
-
-		bString := "b"
-		var bBytes byte = 0x02
-
-		complexSubject := ComplexTestStruct{
-			-1,
-			-2,
-			-3,
-			-4,
-			-5,
-			1,
-			2,
-			3,
-			4,
-			5,
-			big.NewInt(6),
-			"a",
-			&bString,
-			[]string{"c", "d", "e"},
-			&[]string{"f", "g", "h"},
-			0x01,
-			&bBytes,
-			[]byte{0x03, 0x04, 0x05},
-			&[]byte{0x05, 0x06, 0x07},
-			map[string]string{
-				"a": "b",
-				"c": "d",
-				"e": "f",
-			},
-			&map[string]string{
-				"g": "h",
-				"i": "j",
-				"k": "l",
-			},
-		}
-
-		genCodeSubject := GenCodeTestStruct{
-			-2,
-			-3,
-			-4,
-			-5,
-			2,
-			3,
-			4,
-			5,
-			"a",
-			&bString,
-			[]string{"c", "d", "e"},
-			&[]string{"f", "g", "h"},
-			0x01,
-			&bBytes,
-			[]byte{0x03, 0x04, 0x05},
-			&[]byte{0x05, 0x06, 0x07},
-		}
-
-		// test all formats (complex)
-		formats := []uint8{JSON, CBOR}
-
 		for _, format := range formats {
 
 			// simple
-			b, err := DumpAndCompress(&simpleSubject, format, compression)
+			var b []byte
+			var err error
+			if compression != AutoCompress {
+				b, err = DumpAndCompress(simpleSubject, format, compression)
+			} else {
+				b, err = Dump(simpleSubject, format)
+			}
 			if err != nil {
 				t.Fatalf("Dump error (simple struct): %s", err)
 			}
 
-			o, err := Load(b, &SimpleTestStruct{})
+			si := &SimpleTestStruct{}
+			_, err = Load(b, si)
 			if err != nil {
 				t.Fatalf("Load error (simple struct): %s", err)
 			}
 
-			if !reflect.DeepEqual(&simpleSubject, o) {
+			if !reflect.DeepEqual(simpleSubject, si) {
 				t.Errorf("Load (simple struct): subject does not match loaded object")
 				t.Errorf("Encoded: %v", string(b))
-				t.Errorf("Compared: %v == %v", &simpleSubject, o)
+				t.Errorf("Compared: %v == %v", simpleSubject, si)
 			}
 
 			// complex
-			b, err = DumpAndCompress(&complexSubject, format, compression)
+			if compression != AutoCompress {
+				b, err = DumpAndCompress(complexSubject, format, compression)
+			} else {
+				b, err = Dump(complexSubject, format)
+			}
 			if err != nil {
 				t.Fatalf("Dump error (complex struct): %s", err)
 			}
 
-			o, err = Load(b, &ComplexTestStruct{})
+			co := &ComplexTestStruct{}
+			_, err = Load(b, co)
 			if err != nil {
 				t.Fatalf("Load error (complex struct): %s", err)
 			}
-
-			co := o.(*ComplexTestStruct)
 
 			if complexSubject.I != co.I {
 				t.Errorf("Load (complex struct): struct.I is not equal (%v != %v)", complexSubject.I, co.I)
@@ -255,38 +233,45 @@ func TestConversion(t *testing.T) {
 		}
 
 		// test all formats
-		formats = []uint8{JSON, CBOR, GenCode}
+		simplifiedFormatTesting := []SerializationFormat{JSON, CBOR, GenCode}
 
-		for _, format := range formats {
+		for _, format := range simplifiedFormatTesting {
+
 			// simple
-			b, err := DumpAndCompress(&simpleSubject, format, compression)
+			var b []byte
+			var err error
+			if compression != AutoCompress {
+				b, err = DumpAndCompress(simpleSubject, format, compression)
+			} else {
+				b, err = Dump(simpleSubject, format)
+			}
 			if err != nil {
 				t.Fatalf("Dump error (simple struct): %s", err)
 			}
 
-			o, err := Load(b, &SimpleTestStruct{})
+			si := &SimpleTestStruct{}
+			_, err = Load(b, si)
 			if err != nil {
 				t.Fatalf("Load error (simple struct): %s", err)
 			}
 
-			if !reflect.DeepEqual(&simpleSubject, o) {
+			if !reflect.DeepEqual(simpleSubject, si) {
 				t.Errorf("Load (simple struct): subject does not match loaded object")
 				t.Errorf("Encoded: %v", string(b))
-				t.Errorf("Compared: %v == %v", &simpleSubject, o)
+				t.Errorf("Compared: %v == %v", simpleSubject, si)
 			}
 
 			// complex
-			b, err = DumpAndCompress(&genCodeSubject, format, compression)
+			b, err = DumpAndCompress(genCodeSubject, format, compression)
 			if err != nil {
 				t.Fatalf("Dump error (complex struct): %s", err)
 			}
 
-			o, err = Load(b, &GenCodeTestStruct{})
+			co := &GenCodeTestStruct{}
+			_, err = Load(b, co)
 			if err != nil {
 				t.Fatalf("Load error (complex struct): %s", err)
 			}
-
-			co := o.(*GenCodeTestStruct)
 
 			if genCodeSubject.I8 != co.I8 {
 				t.Errorf("Load (complex struct): struct.I8 is not equal (%v != %v)", genCodeSubject.I8, co.I8)
