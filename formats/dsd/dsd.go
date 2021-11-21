@@ -22,7 +22,6 @@ const (
 	LIST = 76 // L
 
 	// Serialization types.
-	BSON    = 66 // B
 	CBOR    = 67 // C
 	GenCode = 71 // G
 	JSON    = 74 // J
@@ -70,13 +69,6 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (interface{}, error)
 			return nil, fmt.Errorf("dsd: failed to unpack json: %s, data: %s", err, utils.SafeFirst16Bytes(data))
 		}
 		return t, nil
-	case BSON:
-		return nil, errNotImplemented
-	// 	err := bson.Unmarshal(data[read:], t)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	return t, nil
 	case CBOR:
 		err := cbor.Unmarshal(data, t)
 		if err != nil {
@@ -134,12 +126,6 @@ func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-	case BSON:
-		return nil, errNotImplemented
-	// 	data, err = bson.Marshal(t)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
 	case CBOR:
 		data, err = cbor.Marshal(t)
 		if err != nil {
