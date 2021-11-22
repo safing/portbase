@@ -31,6 +31,8 @@ func Load(data []byte, t interface{}) (format SerializationFormat, err error) {
 // LoadAsFormat loads a data blob into the interface using the specified format.
 func LoadAsFormat(data []byte, format SerializationFormat, t interface{}) (err error) {
 	switch format {
+	case RAW:
+		return ErrIsRaw
 	case JSON:
 		err = json.Unmarshal(data, t)
 		if err != nil {
@@ -86,6 +88,12 @@ func DumpIndent(t interface{}, format SerializationFormat, indent string) ([]byt
 	var data []byte
 	var err error
 	switch format {
+	case RAW:
+		var ok bool
+		data, ok = t.([]byte)
+		if !ok {
+			return nil, ErrIncompatibleFormat
+		}
 	case JSON:
 		// TODO: use SetEscapeHTML(false)
 		if indent != "" {

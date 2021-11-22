@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrIncompatibleFormat = errors.New("dsd: format is incompatible with operation")
+	ErrIsRaw              = errors.New("dsd: given data is in raw format")
 	ErrNoMoreSpace        = errors.New("dsd: no more space left after reading dsd type")
 	ErrUnknownFormat      = errors.New("dsd: format is unknown")
 )
@@ -12,6 +13,7 @@ type SerializationFormat uint8
 
 const (
 	AUTO    SerializationFormat = 0
+	RAW     SerializationFormat = 1
 	CBOR    SerializationFormat = 67 // C
 	GenCode SerializationFormat = 71 // G
 	JSON    SerializationFormat = 74 // J
@@ -43,6 +45,8 @@ func (format SerializationFormat) ValidateSerializationFormat() (validated Seria
 	switch format {
 	case AUTO:
 		return DefaultSerializationFormat, true
+	case RAW:
+		return format, true
 	case CBOR:
 		return format, true
 	case GenCode:
