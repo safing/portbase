@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/safing/portbase/formats/varint"
 	"github.com/safing/portbase/utils"
@@ -43,6 +44,12 @@ func LoadAsFormat(data []byte, format SerializationFormat, t interface{}) (err e
 		err = cbor.Unmarshal(data, t)
 		if err != nil {
 			return fmt.Errorf("dsd: failed to unpack cbor: %w, data: %s", err, utils.SafeFirst16Bytes(data))
+		}
+		return nil
+	case MsgPack:
+		err = msgpack.Unmarshal(data, t)
+		if err != nil {
+			return fmt.Errorf("dsd: failed to unpack msgpack: %w, data: %s", err, utils.SafeFirst16Bytes(data))
 		}
 		return nil
 	case GenCode:
@@ -106,6 +113,11 @@ func DumpIndent(t interface{}, format SerializationFormat, indent string) ([]byt
 		}
 	case CBOR:
 		data, err = cbor.Marshal(t)
+		if err != nil {
+			return nil, err
+		}
+	case MsgPack:
+		data, err = msgpack.Marshal(t)
 		if err != nil {
 			return nil, err
 		}

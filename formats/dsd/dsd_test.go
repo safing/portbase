@@ -121,7 +121,7 @@ func TestConversion(t *testing.T) {
 	t.Parallel()
 
 	compressionFormats := []CompressionFormat{AutoCompress, GZIP}
-	formats := []SerializationFormat{JSON, CBOR}
+	formats := []SerializationFormat{JSON, CBOR, MsgPack}
 
 	for _, compression := range compressionFormats {
 		for _, format := range formats {
@@ -233,7 +233,7 @@ func TestConversion(t *testing.T) {
 		}
 
 		// test all formats
-		simplifiedFormatTesting := []SerializationFormat{JSON, CBOR, GenCode}
+		simplifiedFormatTesting := []SerializationFormat{JSON, CBOR, MsgPack, GenCode}
 
 		for _, format := range simplifiedFormatTesting {
 
