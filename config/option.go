@@ -9,6 +9,7 @@ import (
 	"github.com/tidwall/sjson"
 
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/formats/dsd"
 )
 
 // OptionType defines the value type of an option.
@@ -303,7 +304,7 @@ func (option *Option) export() (record.Record, error) {
 		}
 	}
 
-	r, err := record.NewWrapper(fmt.Sprintf("config:%s", option.Key), nil, record.JSON, data)
+	r, err := record.NewWrapper(fmt.Sprintf("config:%s", option.Key), nil, dsd.JSON, data)
 	if err != nil {
 		return nil, err
 	}

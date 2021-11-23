@@ -42,7 +42,7 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 		return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
 	}
 
-	var format uint8 = dsd.NONE
+	var format uint8 = dsd.RAW
 	if !newMeta.IsDeleted() {
 		format, n, err = varint.Unpack8(data[offset:])
 		if err != nil {
@@ -89,7 +89,7 @@ func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 		return nil, nil
 	}
 
-	if format != AUTO && format != w.Format {
+	if format != dsd.AUTO && format != w.Format {
 		return nil, errors.New("could not dump model, wrapped object format mismatch")
 	}
 
@@ -112,14 +112,14 @@ func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 	c := container.New([]byte{1})
 
 	// meta
-	metaSection, err := dsd.Dump(w.meta, GenCode)
+	metaSection, err := dsd.Dump(w.meta, dsd.GenCode)
 	if err != nil {
 		return nil, err
 	}
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := w.Marshal(r, JSON)
+	dataSection, err := w.Marshal(r, dsd.JSON)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func Unwrap(wrapped, new Record) error {
 		return fmt.Errorf("cannot unwrap %T", wrapped)
 	}
 
-	_, err := dsd.LoadAsFormat(wrapper.Data, wrapper.Format, new)
+	err := dsd.LoadAsFormat(wrapper.Data, wrapper.Format, new)
 	if err != nil {
 		return fmt.Errorf("failed to unwrap %T: %s", new, err)
 	}
@@ -153,7 +153,7 @@ func Unwrap(wrapped, new Record) error {
 
 // GetAccessor returns an accessor for this record, if available.
 func (w *Wrapper) GetAccessor(self Record) accessor.Accessor {
-	if w.Format == JSON && len(w.Data) > 0 {
+	if w.Format == dsd.JSON && len(w.Data) > 0 {
 		return accessor.NewJSONBytesAccessor(&w.Data)
 	}
 	return nil

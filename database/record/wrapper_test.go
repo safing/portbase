@@ -3,6 +3,8 @@ package record
 import (
 	"bytes"
 	"testing"
+
+	"github.com/safing/portbase/formats/dsd"
 )
 
 func TestWrapper(t *testing.T) {
@@ -18,18 +20,18 @@ func TestWrapper(t *testing.T) {
 	encodedTestData := []byte(`J{"a": "b"}`)
 
 	// test wrapper
-	wrapper, err := NewWrapper("test:a", &Meta{}, JSON, testData)
+	wrapper, err := NewWrapper("test:a", &Meta{}, dsd.JSON, testData)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if wrapper.Format != JSON {
+	if wrapper.Format != dsd.JSON {
 		t.Error("format mismatch")
 	}
 	if !bytes.Equal(testData, wrapper.Data) {
 		t.Error("data mismatch")
 	}
 
-	encoded, err := wrapper.Marshal(wrapper, JSON)
+	encoded, err := wrapper.Marshal(wrapper, dsd.JSON)
 	if err != nil {
 		t.Fatal(err)
 	}

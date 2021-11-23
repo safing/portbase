@@ -11,6 +11,7 @@ import (
 	"github.com/tidwall/sjson"
 
 	"github.com/safing/portbase/database/iterator"
+	"github.com/safing/portbase/formats/dsd"
 	"github.com/safing/portbase/formats/varint"
 
 	"github.com/gorilla/websocket"
@@ -534,9 +535,9 @@ func (api *DatabaseAPI) handlePut(opID []byte, key string, data []byte, create b
 	}
 
 	// TODO - staged for deletion: remove transition code
-	// if data[0] != record.JSON {
+	// if data[0] != dsd.JSON {
 	// 	typedData := make([]byte, len(data)+1)
-	// 	typedData[0] = record.JSON
+	// 	typedData[0] = dsd.JSON
 	// 	copy(typedData[1:], data)
 	// 	data = typedData
 	// }
@@ -631,13 +632,13 @@ func marshalRecord(r record.Record, withDSDIdentifier bool) ([]byte, error) {
 	defer r.Unlock()
 
 	// Pour record into JSON.
-	jsonData, err := r.Marshal(r, record.JSON)
+	jsonData, err := r.Marshal(r, dsd.JSON)
 	if err != nil {
 		return nil, err
 	}
 
 	// Remove JSON identifier for manual editing.
-	jsonData = bytes.TrimPrefix(jsonData, varint.Pack8(record.JSON))
+	jsonData = bytes.TrimPrefix(jsonData, varint.Pack8(dsd.JSON))
 
 	// Add metadata.
 	jsonData, err = sjson.SetBytes(jsonData, "_meta", r.Meta())
@@ -653,7 +654,7 @@ func marshalRecord(r record.Record, withDSDIdentifier bool) ([]byte, error) {
 
 	// Add JSON identifier again.
 	if withDSDIdentifier {
-		formatID := varint.Pack8(record.JSON)
+		formatID := varint.Pack8(dsd.JSON)
 		finalData := make([]byte, 0, len(formatID)+len(jsonData))
 		finalData = append(finalData, formatID...)
 		finalData = append(finalData, jsonData...)
