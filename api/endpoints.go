@@ -24,9 +24,9 @@ import (
 type Endpoint struct {
 	Path      string
 	MimeType  string
-	Read      Permission
-	Write     Permission
-	BelongsTo *modules.Module
+	Read      Permission      `json:",omitempty"`
+	Write     Permission      `json:",omitempty"`
+	BelongsTo *modules.Module `json:"-"`
 
 	// ActionFunc is for simple actions with a return message for the user.
 	ActionFunc ActionFunc `json:"-"`
@@ -48,7 +48,7 @@ type Endpoint struct {
 
 	Name        string
 	Description string
-	Parameters  []Parameter
+	Parameters  []Parameter `json:",omitempty"`
 }
 
 // Parameter describes a parameterized variation of an endpoint.
