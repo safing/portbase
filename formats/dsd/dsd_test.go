@@ -120,8 +120,8 @@ var (
 func TestConversion(t *testing.T) {
 	t.Parallel()
 
-	compressionFormats := []CompressionFormat{AutoCompress, GZIP}
-	formats := []SerializationFormat{JSON, CBOR, MsgPack}
+	compressionFormats := []uint8{AUTO, GZIP}
+	formats := []uint8{JSON, CBOR, MsgPack}
 
 	for _, compression := range compressionFormats {
 		for _, format := range formats {
@@ -129,7 +129,7 @@ func TestConversion(t *testing.T) {
 			// simple
 			var b []byte
 			var err error
-			if compression != AutoCompress {
+			if compression != AUTO {
 				b, err = DumpAndCompress(simpleSubject, format, compression)
 			} else {
 				b, err = Dump(simpleSubject, format)
@@ -151,7 +151,7 @@ func TestConversion(t *testing.T) {
 			}
 
 			// complex
-			if compression != AutoCompress {
+			if compression != AUTO {
 				b, err = DumpAndCompress(complexSubject, format, compression)
 			} else {
 				b, err = Dump(complexSubject, format)
@@ -233,14 +233,14 @@ func TestConversion(t *testing.T) {
 		}
 
 		// test all formats
-		simplifiedFormatTesting := []SerializationFormat{JSON, CBOR, MsgPack, GenCode}
+		simplifiedFormatTesting := []uint8{JSON, CBOR, MsgPack, GenCode}
 
 		for _, format := range simplifiedFormatTesting {
 
 			// simple
 			var b []byte
 			var err error
-			if compression != AutoCompress {
+			if compression != AUTO {
 				b, err = DumpAndCompress(simpleSubject, format, compression)
 			} else {
 				b, err = Dump(simpleSubject, format)

@@ -9,39 +9,36 @@ var (
 	ErrUnknownFormat      = errors.New("dsd: format is unknown")
 )
 
-type SerializationFormat uint8
-
+// Format types.
 const (
-	AUTO    SerializationFormat = 0
-	RAW     SerializationFormat = 1
-	CBOR    SerializationFormat = 67 // C
-	GenCode SerializationFormat = 71 // G
-	JSON    SerializationFormat = 74 // J
-	MsgPack SerializationFormat = 77 // M
-)
+	AUTO = 0
 
-type CompressionFormat uint8
+	// Serialization types.
+	RAW     = 1
+	CBOR    = 67 // C
+	GenCode = 71 // G
+	JSON    = 74 // J
+	MsgPack = 77 // M
 
-const (
-	AutoCompress CompressionFormat = 0
-	GZIP         CompressionFormat = 90 // Z
-)
+	// Compression types.
+	GZIP = 90 // Z
 
-type SpecialFormat uint8
+	// Special types.
+	LIST = 76 // L
 
-const (
-	LIST SpecialFormat = 76 // L
+	// Deprecated: NONE is deprecated, please use RAW instead.
+	NONE = 1
 )
 
 var (
-	DefaultSerializationFormat = JSON
-	DefaultCompressionFormat   = GZIP
+	DefaultSerializationFormat uint8 = JSON
+	DefaultCompressionFormat   uint8 = GZIP
 )
 
 // ValidateSerializationFormat validates if the format is for serialization,
 // and returns the validated format as well as the result of the validation.
 // If called on the AUTO format, it returns the default serialization format.
-func (format SerializationFormat) ValidateSerializationFormat() (validated SerializationFormat, ok bool) {
+func ValidateSerializationFormat(format uint8) (validatedFormat uint8, ok bool) {
 	switch format {
 	case AUTO:
 		return DefaultSerializationFormat, true
@@ -63,9 +60,9 @@ func (format SerializationFormat) ValidateSerializationFormat() (validated Seria
 // ValidateCompressionFormat validates if the format is for compression,
 // and returns the validated format as well as the result of the validation.
 // If called on the AUTO format, it returns the default compression format.
-func (format CompressionFormat) ValidateCompressionFormat() (validated CompressionFormat, ok bool) {
+func ValidateCompressionFormat(format uint8) (validatedFormat uint8, ok bool) {
 	switch format {
-	case AutoCompress:
+	case AUTO:
 		return DefaultCompressionFormat, true
 	case GZIP:
 		return format, true

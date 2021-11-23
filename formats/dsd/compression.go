@@ -9,9 +9,9 @@ import (
 )
 
 // DumpAndCompress stores the interface as a dsd formatted data structure and compresses the resulting data.
-func DumpAndCompress(t interface{}, format SerializationFormat, compression CompressionFormat) ([]byte, error) {
+func DumpAndCompress(t interface{}, format uint8, compression uint8) ([]byte, error) {
 	// Check if compression format is valid.
-	compression, ok := compression.ValidateCompressionFormat()
+	compression, ok := ValidateCompressionFormat(compression)
 	if !ok {
 		return nil, ErrIncompatibleFormat
 	}
@@ -23,7 +23,7 @@ func DumpAndCompress(t interface{}, format SerializationFormat, compression Comp
 	}
 
 	// prepare writer
-	packetFormat := varint.Pack8(uint8(compression))
+	packetFormat := varint.Pack8(compression)
 	buf := bytes.NewBuffer(nil)
 	buf.Write(packetFormat)
 
@@ -58,9 +58,9 @@ func DumpAndCompress(t interface{}, format SerializationFormat, compression Comp
 }
 
 // DecompressAndLoad decompresses the data using the specified compression format and then loads the resulting data blob into the interface.
-func DecompressAndLoad(data []byte, compression CompressionFormat, t interface{}) (format SerializationFormat, err error) {
+func DecompressAndLoad(data []byte, compression uint8, t interface{}) (format uint8, err error) {
 	// Check if compression format is valid.
-	compression, ok := compression.ValidateCompressionFormat()
+	_, ok := ValidateCompressionFormat(compression)
 	if !ok {
 		return 0, ErrIncompatibleFormat
 	}
@@ -95,14 +95,9 @@ func DecompressAndLoad(data []byte, compression CompressionFormat, t interface{}
 	// assign decompressed data
 	data = buf.Bytes()
 
-	formatID, read, err := loadFormat(data)
+	format, read, err := loadFormat(data)
 	if err != nil {
 		return 0, err
 	}
-	format, ok = SerializationFormat(formatID).ValidateSerializationFormat()
-	if !ok {
-		return 0, ErrIncompatibleFormat
-	}
-
 	return format, LoadAsFormat(data[read:], format, t)
 }

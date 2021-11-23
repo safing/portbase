@@ -16,21 +16,21 @@ import (
 )
 
 // Load loads an dsd structured data blob into the given interface.
-func Load(data []byte, t interface{}) (format SerializationFormat, err error) {
-	formatID, read, err := loadFormat(data)
+func Load(data []byte, t interface{}) (format uint8, err error) {
+	format, read, err := loadFormat(data)
 	if err != nil {
 		return 0, err
 	}
 
-	format, ok := SerializationFormat(formatID).ValidateSerializationFormat()
+	_, ok := ValidateSerializationFormat(format)
 	if ok {
 		return format, LoadAsFormat(data[read:], format, t)
 	}
-	return DecompressAndLoad(data[read:], CompressionFormat(format), t)
+	return DecompressAndLoad(data[read:], format, t)
 }
 
 // LoadAsFormat loads a data blob into the interface using the specified format.
-func LoadAsFormat(data []byte, format SerializationFormat, t interface{}) (err error) {
+func LoadAsFormat(data []byte, format uint8, t interface{}) (err error) {
 	switch format {
 	case RAW:
 		return ErrIsRaw
@@ -80,18 +80,18 @@ func loadFormat(data []byte) (format uint8, read int, err error) {
 }
 
 // Dump stores the interface as a dsd formatted data structure.
-func Dump(t interface{}, format SerializationFormat) ([]byte, error) {
+func Dump(t interface{}, format uint8) ([]byte, error) {
 	return DumpIndent(t, format, "")
 }
 
 // DumpIndent stores the interface as a dsd formatted data structure with indentation, if available.
-func DumpIndent(t interface{}, format SerializationFormat, indent string) ([]byte, error) {
-	format, ok := format.ValidateSerializationFormat()
+func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
+	format, ok := ValidateSerializationFormat(format)
 	if !ok {
 		return nil, ErrIncompatibleFormat
 	}
 
-	f := varint.Pack8(uint8(format))
+	f := varint.Pack8(format)
 	var data []byte
 	var err error
 	switch format {
