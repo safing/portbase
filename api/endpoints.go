@@ -59,6 +59,41 @@ type Parameter struct {
 	Description string
 }
 
+// HTTPStatusProvider is an interface for errors to provide a custom HTTP
+// status code.
+type HTTPStatusProvider interface {
+	HTTPStatus() int
+}
+
+// HTTPStatusError represents an error with an HTTP status code.
+type HTTPStatusError struct {
+	err  error
+	code int
+}
+
+// Error returns the error message.
+func (e *HTTPStatusError) Error() string {
+	return e.err.Error()
+}
+
+// Unwrap return the wrapped error.
+func (e *HTTPStatusError) Unwrap() error {
+	return e.err
+}
+
+// HTTPStatus returns the HTTP status code this error.
+func (e *HTTPStatusError) HTTPStatus() int {
+	return e.code
+}
+
+// ErrorWithStatus adds the HTTP status code to the error.
+func ErrorWithStatus(err error, code int) error {
+	return &HTTPStatusError{
+		err:  err,
+		code: code,
+	}
+}
+
 type (
 	// ActionFunc is for simple actions with a return message for the user.
 	ActionFunc func(ar *Request) (msg string, err error)
@@ -340,7 +375,19 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Check for handler error.
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// if statusProvider, ok := err.(HTTPStatusProvider); ok {
+		var statusProvider HTTPStatusProvider
+		if errors.As(err, &statusProvider) {
+			http.Error(w, err.Error(), statusProvider.HTTPStatus())
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Check if there is no response data.
+	if len(responseData) == 0 {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
