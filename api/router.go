@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/safing/portbase/utils"
 
 	"github.com/gorilla/mux"
 
@@ -21,6 +24,11 @@ var (
 	// main server and lock
 	server      = &http.Server{}
 	handlerLock sync.RWMutex
+
+	allowedDevCORSOrigins = []string{
+		"127.0.0.1",
+		"localhost",
+	}
 )
 
 // RegisterHandler registers a handler with the API endoint.
@@ -139,6 +147,12 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Add security headers.
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "deny")
+	w.Header().Set("X-XSS-Protection", "1; mode=block")
+	w.Header().Set("X-DNS-Prefetch-Control", "off")
+	// Add CSP Header in production mode.
 	if !devMode() {
 		w.Header().Set(
 			"Content-Security-Policy",
@@ -147,13 +161,12 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 				"style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data:",
 		)
-		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "deny")
-		w.Header().Set("X-XSS-Protection", "1; mode=block")
-		w.Header().Set("X-DNS-Prefetch-Control", "off")
-	} else {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+	} else if origin := r.Header.Get("Origin"); origin != "" {
+		// Allow cross origin requests from localhost in dev mode.
+		if u, err := url.Parse(origin); err == nil &&
+			utils.StringInSlice(allowedDevCORSOrigins, u.Host) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 	}
 
 	// Handle request.
