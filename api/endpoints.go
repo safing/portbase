@@ -22,10 +22,40 @@ import (
 // Path and at least one permission are required.
 // As is exactly one function.
 type Endpoint struct {
-	Path      string
-	MimeType  string
-	Read      Permission      `json:",omitempty"`
-	Write     Permission      `json:",omitempty"`
+	// Path describes the URL path of the endpoint.
+	Path string
+
+	// MimeType defines the content type of the returned data.
+	MimeType string
+
+	// Read defines the required read permission.
+	Read Permission `json:",omitempty"`
+
+	// ReadMethod sets the required read method for the endpoint.
+	// Available methods are:
+	// GET: Returns data only, no action is taken, nothing is changed.
+	// If omitted, defaults to GET.
+	//
+	// This field is currently being introduced and will only warn and not deny
+	// access if the write method does not match.
+	ReadMethod string `json:",omitempty"`
+
+	// Write defines the required write permission.
+	Write Permission `json:",omitempty"`
+
+	// WriteMethod sets the required write method for the endpoint.
+	// Available methods are:
+	// POST: Create a new resource; Change a status; Execute a function
+	// PUT: Update an existing resource
+	// DELETE: Remove an existing resource
+	// If omitted, defaults to POST.
+	//
+	// This field is currently being introduced and will only warn and not deny
+	// access if the write method does not match.
+	WriteMethod string `json:",omitempty"`
+
+	// BelongsTo defines which module this endpoint belongs to.
+	// The endpoint will not be accessible if the module is not online.
 	BelongsTo *modules.Module `json:"-"`
 
 	// ActionFunc is for simple actions with a return message for the user.
@@ -207,6 +237,36 @@ func (e *Endpoint) check() error {
 		return errors.New("invalid write permission")
 	}
 
+	// Check methods.
+	if e.Read != NotSupported {
+		switch e.ReadMethod {
+		case http.MethodGet:
+			// All good.
+		case "":
+			// Set to default.
+			e.ReadMethod = http.MethodGet
+		default:
+			return errors.New("invalid read method")
+		}
+	} else {
+		e.ReadMethod = ""
+	}
+	if e.Write != NotSupported {
+		switch e.WriteMethod {
+		case http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete:
+			// All good.
+		case "":
+			// Set to default.
+			e.WriteMethod = http.MethodPost
+		default:
+			return errors.New("invalid write method")
+		}
+	} else {
+		e.WriteMethod = ""
+	}
+
 	// Check functions.
 	var defaultMimeType string
 	fnCnt := 0
@@ -309,6 +369,27 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !moduleIsReady(e.BelongsTo) {
 		http.Error(w, "The API endpoint is not ready yet or the its module is not enabled. Please try again later.", http.StatusServiceUnavailable)
 		return
+	}
+
+	// TODO: Return errors instead of warnings, also update the field docs.
+	if isReadMethod(r.Method) {
+		if r.Method != e.ReadMethod {
+			log.Tracer(r.Context()).Warningf(
+				"api: method %q does not match required read method %q%s",
+				" - this will be an error and abort the request in the future",
+				r.Method,
+				e.ReadMethod,
+			)
+		}
+	} else {
+		if r.Method != e.WriteMethod {
+			log.Tracer(r.Context()).Warningf(
+				"api: method %q does not match required write method %q%s",
+				" - this will be an error and abort the request in the future",
+				r.Method,
+				e.ReadMethod,
+			)
+		}
 	}
 
 	switch r.Method {
