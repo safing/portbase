@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/vmihailenco/msgpack/v5"
@@ -73,7 +74,7 @@ func loadFormat(data []byte) (format uint8, read int, err error) {
 		return 0, 0, err
 	}
 	if len(data) <= read {
-		return 0, 0, ErrNoMoreSpace
+		return 0, 0, io.ErrUnexpectedEOF
 	}
 
 	return format, read, nil

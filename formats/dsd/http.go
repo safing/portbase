@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
-	"strings"
 )
 
 var (
@@ -19,21 +19,14 @@ const (
 	httpHeaderContentType = "Content-Type"
 )
 
+// LoadFromHTTPRequest loads the data from the body into the given interface.
 func LoadFromHTTPRequest(r *http.Request, t interface{}) (format uint8, err error) {
-	if r.Body == nil {
-		return 0, ErrMissingBody
-	}
-	defer r.Body.Close()
-
 	return loadFromHTTP(r.Body, r.Header.Get(httpHeaderContentType), t)
 }
 
+// LoadFromHTTPResponse loads the data from the body into the given interface.
+// Closing the body is left to the caller.
 func LoadFromHTTPResponse(resp *http.Response, t interface{}) (format uint8, err error) {
-	if resp.Body == nil {
-		return 0, ErrMissingBody
-	}
-	defer resp.Body.Close()
-
 	return loadFromHTTP(resp.Body, resp.Header.Get(httpHeaderContentType), t)
 }
 
@@ -48,8 +41,9 @@ func loadFromHTTP(body io.Reader, mimeType string, t interface{}) (format uint8,
 	if mimeType == "" {
 		return 0, ErrMissingContentType
 	}
-	if strings.Contains(mimeType, ";") {
-		mimeType = strings.SplitN(mimeType, ";", 2)[0]
+	mimeType, _, err = mime.ParseMediaType(mimeType)
+	if err != nil {
+		return 0, fmt.Errorf("dsd: failed to parse content type: %w", err)
 	}
 	format, ok := MimeTypeToFormat[mimeType]
 	if !ok {
@@ -60,6 +54,7 @@ func loadFromHTTP(body io.Reader, mimeType string, t interface{}) (format uint8,
 	return format, LoadAsFormat(data, format, t)
 }
 
+// RequestHTTPResponseFormat sets the Accept header to the given format.
 func RequestHTTPResponseFormat(r *http.Request, format uint8) (mimeType string, err error) {
 	// Get mime type.
 	mimeType, ok := FormatToMimeType[format]
@@ -73,6 +68,8 @@ func RequestHTTPResponseFormat(r *http.Request, format uint8) (mimeType string, 
 	return mimeType, nil
 }
 
+// DumpToHTTPRequest dumps the given data to the HTTP request using the given
+// format. It also sets the Accept header to the same format.
 func DumpToHTTPRequest(r *http.Request, t interface{}, format uint8) error {
 	mimeType, err := RequestHTTPResponseFormat(r, format)
 	if err != nil {
@@ -92,13 +89,13 @@ func DumpToHTTPRequest(r *http.Request, t interface{}, format uint8) error {
 	return nil
 }
 
-func DumpToHTTPResponse(w http.ResponseWriter, r *http.Request, t interface{}, fallbackFormat uint8) error {
+// DumpToHTTPResponse dumpts the given data to the HTTP response, using the
+// format defined in the request's Accept header.
+func DumpToHTTPResponse(w http.ResponseWriter, r *http.Request, t interface{}) error {
 	// Get format from Accept header.
-	format, ok := MimeTypeToFormat[r.Header.Get("Accept")]
-	if !ok {
-		format = fallbackFormat
-	}
-	mimeType, ok := FormatToMimeType[format]
+	// TODO: Improve parsing of Accept header.
+	mimeType := r.Header.Get("Accept")
+	format, ok := MimeTypeToFormat[mimeType]
 	if !ok {
 		return ErrIncompatibleFormat
 	}

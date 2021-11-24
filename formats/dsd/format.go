@@ -5,7 +5,6 @@ import "errors"
 var (
 	ErrIncompatibleFormat = errors.New("dsd: format is incompatible with operation")
 	ErrIsRaw              = errors.New("dsd: given data is in raw format")
-	ErrNoMoreSpace        = errors.New("dsd: no more space left after reading dsd type")
 	ErrUnknownFormat      = errors.New("dsd: format is unknown")
 )
 
@@ -25,9 +24,6 @@ const (
 
 	// Special types.
 	LIST = 76 // L
-
-	// Deprecated: NONE is deprecated, please use RAW instead.
-	NONE = 1
 )
 
 var (
