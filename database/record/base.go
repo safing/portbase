@@ -122,14 +122,14 @@ func (b *Base) MarshalRecord(self Record) ([]byte, error) {
 	c := container.New([]byte{1})
 
 	// meta encoding
-	metaSection, err := dsd.Dump(b.meta, GenCode)
+	metaSection, err := dsd.Dump(b.meta, dsd.GenCode)
 	if err != nil {
 		return nil, err
 	}
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := b.Marshal(self, JSON)
+	dataSection, err := b.Marshal(self, dsd.JSON)
 	if err != nil {
 		return nil, err
 	}

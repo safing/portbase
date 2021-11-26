@@ -22,11 +22,41 @@ import (
 // Path and at least one permission are required.
 // As is exactly one function.
 type Endpoint struct {
-	Path      string
-	MimeType  string
-	Read      Permission
-	Write     Permission
-	BelongsTo *modules.Module
+	// Path describes the URL path of the endpoint.
+	Path string
+
+	// MimeType defines the content type of the returned data.
+	MimeType string
+
+	// Read defines the required read permission.
+	Read Permission `json:",omitempty"`
+
+	// ReadMethod sets the required read method for the endpoint.
+	// Available methods are:
+	// GET: Returns data only, no action is taken, nothing is changed.
+	// If omitted, defaults to GET.
+	//
+	// This field is currently being introduced and will only warn and not deny
+	// access if the write method does not match.
+	ReadMethod string `json:",omitempty"`
+
+	// Write defines the required write permission.
+	Write Permission `json:",omitempty"`
+
+	// WriteMethod sets the required write method for the endpoint.
+	// Available methods are:
+	// POST: Create a new resource; Change a status; Execute a function
+	// PUT: Update an existing resource
+	// DELETE: Remove an existing resource
+	// If omitted, defaults to POST.
+	//
+	// This field is currently being introduced and will only warn and not deny
+	// access if the write method does not match.
+	WriteMethod string `json:",omitempty"`
+
+	// BelongsTo defines which module this endpoint belongs to.
+	// The endpoint will not be accessible if the module is not online.
+	BelongsTo *modules.Module `json:"-"`
 
 	// ActionFunc is for simple actions with a return message for the user.
 	ActionFunc ActionFunc `json:"-"`
@@ -48,7 +78,7 @@ type Endpoint struct {
 
 	Name        string
 	Description string
-	Parameters  []Parameter
+	Parameters  []Parameter `json:",omitempty"`
 }
 
 // Parameter describes a parameterized variation of an endpoint.
@@ -57,6 +87,41 @@ type Parameter struct {
 	Field       string
 	Value       string
 	Description string
+}
+
+// HTTPStatusProvider is an interface for errors to provide a custom HTTP
+// status code.
+type HTTPStatusProvider interface {
+	HTTPStatus() int
+}
+
+// HTTPStatusError represents an error with an HTTP status code.
+type HTTPStatusError struct {
+	err  error
+	code int
+}
+
+// Error returns the error message.
+func (e *HTTPStatusError) Error() string {
+	return e.err.Error()
+}
+
+// Unwrap return the wrapped error.
+func (e *HTTPStatusError) Unwrap() error {
+	return e.err
+}
+
+// HTTPStatus returns the HTTP status code this error.
+func (e *HTTPStatusError) HTTPStatus() int {
+	return e.code
+}
+
+// ErrorWithStatus adds the HTTP status code to the error.
+func ErrorWithStatus(err error, code int) error {
+	return &HTTPStatusError{
+		err:  err,
+		code: code,
+	}
 }
 
 type (
@@ -172,6 +237,36 @@ func (e *Endpoint) check() error {
 		return errors.New("invalid write permission")
 	}
 
+	// Check methods.
+	if e.Read != NotSupported {
+		switch e.ReadMethod {
+		case http.MethodGet:
+			// All good.
+		case "":
+			// Set to default.
+			e.ReadMethod = http.MethodGet
+		default:
+			return errors.New("invalid read method")
+		}
+	} else {
+		e.ReadMethod = ""
+	}
+	if e.Write != NotSupported {
+		switch e.WriteMethod {
+		case http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete:
+			// All good.
+		case "":
+			// Set to default.
+			e.WriteMethod = http.MethodPost
+		default:
+			return errors.New("invalid write method")
+		}
+	} else {
+		e.WriteMethod = ""
+	}
+
 	// Check functions.
 	var defaultMimeType string
 	fnCnt := 0
@@ -276,6 +371,27 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: Return errors instead of warnings, also update the field docs.
+	if isReadMethod(r.Method) {
+		if r.Method != e.ReadMethod {
+			log.Tracer(r.Context()).Warningf(
+				"api: method %q does not match required read method %q%s",
+				" - this will be an error and abort the request in the future",
+				r.Method,
+				e.ReadMethod,
+			)
+		}
+	} else {
+		if r.Method != e.WriteMethod {
+			log.Tracer(r.Context()).Warningf(
+				"api: method %q does not match required write method %q%s",
+				" - this will be an error and abort the request in the future",
+				r.Method,
+				e.ReadMethod,
+			)
+		}
+	}
+
 	switch r.Method {
 	case http.MethodHead:
 		w.WriteHeader(http.StatusOK)
@@ -340,7 +456,19 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Check for handler error.
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// if statusProvider, ok := err.(HTTPStatusProvider); ok {
+		var statusProvider HTTPStatusProvider
+		if errors.As(err, &statusProvider) {
+			http.Error(w, err.Error(), statusProvider.HTTPStatus())
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Check if there is no response data.
+	if len(responseData) == 0 {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

@@ -1,4 +1,4 @@
-//nolint:nakedret,unconvert,gocognit
+//nolint:nakedret,unconvert,gocognit,wastedassign,gofumpt
 package dsd
 
 import (

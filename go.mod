@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/VictoriaMetrics/metrics v1.18.0
+	github.com/VictoriaMetrics/metrics v1.18.1
 	github.com/aead/serpent v0.0.0-20160714141033-fba169763ea6
 	github.com/andyleap/gencode v0.0.0-20171124163308-e1423834d4b4 // indirect
 	github.com/andyleap/parser v0.0.0-20160126201130-db5a13a7cd46 // indirect
@@ -33,8 +33,9 @@ require (
 	github.com/tidwall/gjson v1.11.0
 	github.com/tidwall/sjson v1.2.3
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.etcd.io/bbolt v1.3.6
-	golang.org/x/net v0.0.0-20211013171255-e13a2654a71e // indirect
+	golang.org/x/net v0.0.0-20211116231205-47ca1ff31462 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20211116061358-0a5406a5449c
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
