@@ -133,16 +133,13 @@ func SetAuthenticator(fn AuthenticatorFunc) error {
 	return nil
 }
 
-func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler http.Handler) *AuthToken {
+func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler http.Handler, readMethod bool) *AuthToken {
 	tracer := log.Tracer(r.Context())
-
-	// Check if request is read only.
-	readRequest := isReadMethod(r.Method)
 
 	// Get required permission for target handler.
 	requiredPermission := PermitSelf
 	if authdHandler, ok := targetHandler.(AuthenticatedHandler); ok {
-		if readRequest {
+		if readMethod {
 			requiredPermission = authdHandler.ReadPermission(r)
 		} else {
 			requiredPermission = authdHandler.WritePermission(r)
@@ -200,7 +197,7 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 
 	// Get effective permission for request.
 	var requestPermission Permission
-	if readRequest {
+	if readMethod {
 		requestPermission = token.Read
 	} else {
 		requestPermission = token.Write
@@ -221,7 +218,10 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 	if requestPermission < requiredPermission {
 		// If the token is strictly public, return an authentication request.
 		if token.Read == PermitAnyone && token.Write == PermitAnyone {
-			w.Header().Set("WWW-Authenticate", "Bearer realm=Portmaster API")
+			w.Header().Set(
+				"WWW-Authenticate",
+				`Bearer realm="Portmaster API" domain="/"`,
+			)
 			http.Error(w, "Authorization required.", http.StatusUnauthorized)
 			return nil
 		}
@@ -477,12 +477,24 @@ func deleteSession(sessionKey string) {
 	delete(sessions, sessionKey)
 }
 
-func isReadMethod(method string) bool {
+func getEffectiveMethod(r *http.Request) (eMethod string, readMethod bool, ok bool) {
+	method := r.Method
+
+	// Get CORS request method if OPTIONS request.
+	if r.Method == http.MethodOptions {
+		method = r.Header.Get("Access-Control-Request-Method")
+		if method == "" {
+			return "", false, false
+		}
+	}
+
 	switch method {
-	case http.MethodGet, http.MethodHead, http.MethodOptions:
-		return true
+	case http.MethodGet, http.MethodHead:
+		return http.MethodGet, true, true
+	case http.MethodPost, http.MethodPut, http.MethodDelete:
+		return method, false, true
 	default:
-		return false
+		return "", false, false
 	}
 }
 

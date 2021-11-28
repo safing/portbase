@@ -47,7 +47,7 @@ func prepConfig() error {
 	instanceOption = config.Concurrent.GetAsString(CfgOptionInstanceKey, instanceFlag)
 
 	err = config.Register(&config.Option{
-		Name:            "Push Metrics",
+		Name:            "Push Prometheus Metrics",
 		Key:             CfgOptionPushKey,
 		Description:     "Push metrics to this URL in the prometheus format.",
 		OptType:         config.OptTypeString,

@@ -102,7 +102,7 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 			} {
 
 				// Set request permission for test requests.
-				reading := isReadMethod(method)
+				reading := method == http.MethodGet
 				if reading {
 					testToken.Read = requestPerm
 					testToken.Write = NotSupported
