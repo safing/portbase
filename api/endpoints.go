@@ -371,9 +371,20 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Return errors instead of warnings, also update the field docs.
-	if isReadMethod(r.Method) {
-		if r.Method != e.ReadMethod {
+	// Return OPTIONS request before starting to handle normal requests.
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	eMethod, readMethod, ok := getEffectiveMethod(r)
+	if !ok {
+		http.Error(w, "unsupported method for the actions API", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if readMethod {
+		if eMethod != e.ReadMethod {
 			log.Tracer(r.Context()).Warningf(
 				"api: method %q does not match required read method %q%s",
 				" - this will be an error and abort the request in the future",
@@ -382,7 +393,7 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 	} else {
-		if r.Method != e.WriteMethod {
+		if eMethod != e.WriteMethod {
 			log.Tracer(r.Context()).Warningf(
 				"api: method %q does not match required write method %q%s",
 				" - this will be an error and abort the request in the future",
@@ -392,10 +403,9 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	switch r.Method {
-	case http.MethodHead:
-		w.WriteHeader(http.StatusOK)
-		return
+	switch eMethod {
+	case http.MethodGet, http.MethodDelete:
+		// Nothing to do for these.
 	case http.MethodPost, http.MethodPut:
 		// Read body data.
 		inputData, ok := readBody(w, r)
@@ -403,12 +413,8 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		apiRequest.InputData = inputData
-	case http.MethodGet:
-		// Nothing special to do here.
-	case http.MethodOptions:
-		w.WriteHeader(http.StatusNoContent)
-		return
 	default:
+		// Defensive.
 		http.Error(w, "unsupported method for the actions API", http.StatusMethodNotAllowed)
 		return
 	}
@@ -466,8 +472,8 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if there is no response data.
-	if len(responseData) == 0 {
+	// Return no content if there is none, or if request is HEAD.
+	if len(responseData) == 0 || r.Method == http.MethodHead {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}

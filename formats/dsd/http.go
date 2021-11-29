@@ -61,6 +61,11 @@ func RequestHTTPResponseFormat(r *http.Request, format uint8) (mimeType string, 
 	if !ok {
 		return "", ErrIncompatibleFormat
 	}
+	// Omit charset.
+	mimeType, _, err = mime.ParseMediaType(mimeType)
+	if err != nil {
+		return "", fmt.Errorf("dsd: failed to parse content type: %w", err)
+	}
 
 	// Request response format.
 	r.Header.Set("Accept", mimeType)
@@ -77,7 +82,7 @@ func DumpToHTTPRequest(r *http.Request, t interface{}, format uint8) error {
 	}
 
 	// Serialize data.
-	data, err := Dump(t, format)
+	data, err := dumpWithoutIdentifier(t, format, "")
 	if err != nil {
 		return fmt.Errorf("dsd: failed to serialize: %w", err)
 	}
@@ -101,7 +106,7 @@ func DumpToHTTPResponse(w http.ResponseWriter, r *http.Request, t interface{}) e
 	}
 
 	// Serialize data.
-	data, err := Dump(t, format)
+	data, err := dumpWithoutIdentifier(t, format, "")
 	if err != nil {
 		return fmt.Errorf("dsd: failed to serialize: %w", err)
 	}

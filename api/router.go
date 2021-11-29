@@ -125,14 +125,31 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		apiRequest.Route = match.Route
 		apiRequest.URLVars = match.Vars
 	}
+	switch {
+	case match.MatchErr == nil:
+		// All good.
+	case errors.Is(match.MatchErr, mux.ErrMethodMismatch):
+		http.Error(lrw, "Method not allowed.", http.StatusMethodNotAllowed)
+		return nil
+	default:
+		http.Error(lrw, "Not found.", http.StatusNotFound)
+		return nil
+	}
 
 	// Be sure that URLVars always is a map.
 	if apiRequest.URLVars == nil {
 		apiRequest.URLVars = make(map[string]string)
 	}
 
+	// Check method.
+	_, readMethod, ok := getEffectiveMethod(r)
+	if !ok {
+		http.Error(lrw, "Method not allowed.", http.StatusMethodNotAllowed)
+		return nil
+	}
+
 	// Check authentication.
-	apiRequest.AuthToken = authenticateRequest(lrw, r, handler)
+	apiRequest.AuthToken = authenticateRequest(lrw, r, handler, readMethod)
 	if apiRequest.AuthToken == nil {
 		// Authenticator already replied.
 		return nil
@@ -164,18 +181,21 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	} else if origin := r.Header.Get("Origin"); origin != "" {
 		// Allow cross origin requests from localhost in dev mode.
 		if u, err := url.Parse(origin); err == nil &&
-			utils.StringInSlice(allowedDevCORSOrigins, u.Host) {
+			utils.StringInSlice(allowedDevCORSOrigins, u.Hostname()) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "*")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Expose-Headers", "*")
+			w.Header().Set("Access-Control-Max-Age", "60")
+			w.Header().Add("Vary", "Origin")
 		}
 	}
 
 	// Handle request.
-	switch {
-	case handler != nil:
+	if handler != nil {
 		handler.ServeHTTP(lrw, r)
-	case errors.Is(match.MatchErr, mux.ErrMethodMismatch):
-		http.Error(lrw, "Method not allowed.", http.StatusMethodNotAllowed)
-	default: // handler == nil or other error
+	} else {
 		http.Error(lrw, "Not found.", http.StatusNotFound)
 	}
 

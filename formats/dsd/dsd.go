@@ -87,12 +87,21 @@ func Dump(t interface{}, format uint8) ([]byte, error) {
 
 // DumpIndent stores the interface as a dsd formatted data structure with indentation, if available.
 func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
+	data, err := dumpWithoutIdentifier(t, format, indent)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Find a better way to do this.
+	return append(varint.Pack8(format), data...), nil
+}
+
+func dumpWithoutIdentifier(t interface{}, format uint8, indent string) ([]byte, error) {
 	format, ok := ValidateSerializationFormat(format)
 	if !ok {
 		return nil, ErrIncompatibleFormat
 	}
 
-	f := varint.Pack8(format)
 	var data []byte
 	var err error
 	switch format {
@@ -135,7 +144,5 @@ func DumpIndent(t interface{}, format uint8, indent string) ([]byte, error) {
 		return nil, ErrIncompatibleFormat
 	}
 
-	// TODO: Find a better way to do this.
-	f = append(f, data...)
-	return f, nil
+	return data, nil
 }
