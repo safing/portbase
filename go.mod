@@ -16,7 +16,7 @@ require (
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.3.0
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/gofrs/uuid v4.1.0+incompatible
+	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0
@@ -30,14 +30,14 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.6.1
 	github.com/tevino/abool v1.2.0
-	github.com/tidwall/gjson v1.11.0
+	github.com/tidwall/gjson v1.12.0
 	github.com/tidwall/sjson v1.2.3
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.etcd.io/bbolt v1.3.6
-	golang.org/x/net v0.0.0-20211116231205-47ca1ff31462 // indirect
+	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20211116061358-0a5406a5449c
+	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
