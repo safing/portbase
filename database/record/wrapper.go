@@ -119,7 +119,7 @@ func (w *Wrapper) MarshalRecord(r Record) ([]byte, error) {
 	c.AppendAsBlock(metaSection)
 
 	// data
-	dataSection, err := w.Marshal(r, dsd.JSON)
+	dataSection, err := w.Marshal(r, dsd.AUTO)
 	if err != nil {
 		return nil, err
 	}
