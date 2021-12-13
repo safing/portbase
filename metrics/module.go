@@ -55,6 +55,10 @@ func start() error {
 		return err
 	}
 
+	if err := registeHostMetrics(); err != nil {
+		return err
+	}
+
 	if err := registerAPI(); err != nil {
 		return err
 	}
