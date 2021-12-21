@@ -5,64 +5,64 @@ import (
 	"sync"
 	"time"
 
-	"github.com/safing/portbase/api"
-	"github.com/safing/portbase/dataroot"
-
-	"github.com/safing/portbase/log"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
+
+	"github.com/safing/portbase/api"
+	"github.com/safing/portbase/dataroot"
+	"github.com/safing/portbase/log"
 )
 
 const hostStatTTL = 1 * time.Second
 
 func registeHostMetrics() (err error) {
 	// Register load average metrics.
-	_, err = NewGauge("host_load_avg_1", nil, getFloat64HostStat(LoadAvg1), &Options{Name: "Host Load Avg 1min", Permission: api.PermitUser})
+	_, err = NewGauge("host/load/avg/1", nil, getFloat64HostStat(LoadAvg1), &Options{Name: "Host Load Avg 1min", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_load_avg_5", nil, getFloat64HostStat(LoadAvg5), &Options{Name: "Host Load Avg 5min", Permission: api.PermitUser})
+	_, err = NewGauge("host/load/avg/5", nil, getFloat64HostStat(LoadAvg5), &Options{Name: "Host Load Avg 5min", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_load_avg_15", nil, getFloat64HostStat(LoadAvg15), &Options{Name: "Host Load Avg 15min", Permission: api.PermitUser})
+	_, err = NewGauge("host/load/avg/15", nil, getFloat64HostStat(LoadAvg15), &Options{Name: "Host Load Avg 15min", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
 
 	// Register memory usage metrics.
-	_, err = NewGauge("host_mem_total", nil, getUint64HostStat(MemTotal), &Options{Name: "Host Memory Total", Permission: api.PermitUser})
+	_, err = NewGauge("host/mem/total", nil, getUint64HostStat(MemTotal), &Options{Name: "Host Memory Total", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_mem_used", nil, getUint64HostStat(MemUsed), &Options{Name: "Host Memory Used", Permission: api.PermitUser})
+	_, err = NewGauge("host/mem/used", nil, getUint64HostStat(MemUsed), &Options{Name: "Host Memory Used", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_mem_available", nil, getUint64HostStat(MemAvailable), &Options{Name: "Host Memory Available", Permission: api.PermitUser})
+	_, err = NewGauge("host/mem/available", nil, getUint64HostStat(MemAvailable), &Options{Name: "Host Memory Available", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_mem_used_percent", nil, getFloat64HostStat(MemUsedPercent), &Options{Name: "Host Memory Used in Percent", Permission: api.PermitUser})
+	_, err = NewGauge("host/mem/used/percent", nil, getFloat64HostStat(MemUsedPercent), &Options{Name: "Host Memory Used in Percent", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
 
 	// Register disk usage metrics.
-	_, err = NewGauge("host_disk_total", nil, getUint64HostStat(DiskTotal), &Options{Name: "Host Disk Total", Permission: api.PermitUser})
+	_, err = NewGauge("host/disk/total", nil, getUint64HostStat(DiskTotal), &Options{Name: "Host Disk Total", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_disk_used", nil, getUint64HostStat(DiskUsed), &Options{Name: "Host Disk Used", Permission: api.PermitUser})
+	_, err = NewGauge("host/disk/used", nil, getUint64HostStat(DiskUsed), &Options{Name: "Host Disk Used", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_disk_free", nil, getUint64HostStat(DiskFree), &Options{Name: "Host Disk Free", Permission: api.PermitUser})
+	_, err = NewGauge("host/disk/free", nil, getUint64HostStat(DiskFree), &Options{Name: "Host Disk Free", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}
-	_, err = NewGauge("host_disk_used_percent", nil, getFloat64HostStat(DiskUsedPercent), &Options{Name: "Host Disk Used in Percent", Permission: api.PermitUser})
+	_, err = NewGauge("host/disk/used/percent", nil, getFloat64HostStat(DiskUsedPercent), &Options{Name: "Host Disk Used in Percent", Permission: api.PermitUser})
 	if err != nil {
 		return err
 	}

@@ -6,10 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tevino/abool"
+
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/log"
-	"github.com/tevino/abool"
 )
 
 var (
@@ -96,6 +97,7 @@ func storePersistentMetrics() {
 
 	// Create new storage.
 	newStorage := &metricsStorage{
+		// TODO: This timestamp should be taken from previous save, if possible.
 		Start:    time.Now(),
 		Counters: make(map[string]uint64),
 	}
@@ -134,18 +136,18 @@ func getMetricsStorage(key string) (*metricsStorage, error) {
 	// unwrap
 	if r.IsWrapped() {
 		// only allocate a new struct, if we need it
-		new := &metricsStorage{}
-		err = record.Unwrap(r, new)
+		newStorage := &metricsStorage{}
+		err = record.Unwrap(r, newStorage)
 		if err != nil {
 			return nil, err
 		}
-		return new, nil
+		return newStorage, nil
 	}
 
 	// or adjust type
-	new, ok := r.(*metricsStorage)
+	newStorage, ok := r.(*metricsStorage)
 	if !ok {
 		return nil, fmt.Errorf("record not of type *metricsStorage, but %T", r)
 	}
-	return new, nil
+	return newStorage, nil
 }

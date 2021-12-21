@@ -2,11 +2,12 @@ package metrics
 
 import (
 	"flag"
+	"os"
 
 	"github.com/safing/portbase/config"
 )
 
-// Configuration Keys
+// Configuration Keys.
 var (
 	CfgOptionInstanceKey   = "core/metrics/instance"
 	instanceOption         config.StringOption
@@ -16,13 +17,19 @@ var (
 	pushOption         config.StringOption
 	cfgOptionPushOrder = 0
 
-	pushFlag     string
-	instanceFlag string
+	pushFlag        string
+	instanceFlag    string
+	defaultInstance string
 )
 
 func init() {
+	hostname, err := os.Hostname()
+	if err == nil {
+		defaultInstance = hostname
+	}
+
 	flag.StringVar(&pushFlag, "push-metrics", "", "set default URL to push prometheus metrics to")
-	flag.StringVar(&instanceFlag, "metrics-instance", "", "set the default global instance label")
+	flag.StringVar(&instanceFlag, "metrics-instance", defaultInstance, "set the default global instance label")
 }
 
 func prepConfig() error {

@@ -7,16 +7,18 @@ import (
 	"sort"
 	"strings"
 
+	vm "github.com/VictoriaMetrics/metrics"
+
 	"github.com/safing/portbase/api"
 	"github.com/safing/portbase/config"
-
-	vm "github.com/VictoriaMetrics/metrics"
 )
 
 // PrometheusFormatRequirement is required format defined by prometheus for
 // metric and label names.
-const prometheusBaseFormt = "[a-zA-Z_][a-zA-Z0-9_]*"
-const PrometheusFormatRequirement = "^" + prometheusBaseFormt + "$"
+const (
+	prometheusBaseFormt         = "[a-zA-Z_][a-zA-Z0-9_]*"
+	PrometheusFormatRequirement = "^" + prometheusBaseFormt + "$"
+)
 
 var prometheusFormat = regexp.MustCompile(PrometheusFormatRequirement)
 

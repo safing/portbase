@@ -4,6 +4,7 @@ import (
 	"io"
 
 	vm "github.com/VictoriaMetrics/metrics"
+
 	"github.com/safing/portbase/api"
 	"github.com/safing/portbase/config"
 )
