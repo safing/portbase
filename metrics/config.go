@@ -3,6 +3,7 @@ package metrics
 import (
 	"flag"
 	"os"
+	"strings"
 
 	"github.com/safing/portbase/config"
 )
@@ -25,7 +26,10 @@ var (
 func init() {
 	hostname, err := os.Hostname()
 	if err == nil {
-		defaultInstance = hostname
+		hostname = strings.ReplaceAll(hostname, "-", "")
+		if prometheusFormat.MatchString(hostname) {
+			defaultInstance = hostname
+		}
 	}
 
 	flag.StringVar(&pushFlag, "push-metrics", "", "set default URL to push prometheus metrics to")

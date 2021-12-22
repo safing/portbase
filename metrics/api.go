@@ -120,7 +120,7 @@ func writeMetricsTo(ctx context.Context, url string) error {
 
 func metricsWriter(ctx context.Context) error {
 	pushURL := pushOption()
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	for {
