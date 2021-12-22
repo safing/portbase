@@ -29,10 +29,13 @@ var (
 
 	// ErrAlreadySet is returned when a value is already set and cannot be changed.
 	ErrAlreadySet = errors.New("already set")
+
+	// ErrInvalidOptions is returned when invalid options where provided.
+	ErrInvalidOptions = errors.New("invalid options")
 )
 
 func init() {
-	module = modules.Register("metrics", prep, start, stop, "database", "api")
+	module = modules.Register("metrics", prep, start, stop, "config", "database", "api")
 }
 
 func prep() error {
@@ -52,6 +55,14 @@ func start() error {
 	}
 
 	if err := registerRuntimeMetric(); err != nil {
+		return err
+	}
+
+	if err := registeHostMetrics(); err != nil {
+		return err
+	}
+
+	if err := registeLogMetrics(); err != nil {
 		return err
 	}
 

@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+var (
+	warnLogLines = new(uint64)
+	errLogLines  = new(uint64)
+	critLogLines = new(uint64)
+)
+
 func log(level Severity, msg string, tracer *ContextTracer) {
 
 	if !started.IsSet() {
@@ -146,6 +152,7 @@ func Infof(format string, things ...interface{}) {
 
 // Warning is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func Warning(msg string) {
+	atomic.AddUint64(warnLogLines, 1)
 	if fastcheck(WarningLevel) {
 		log(WarningLevel, msg, nil)
 	}
@@ -153,6 +160,7 @@ func Warning(msg string) {
 
 // Warningf is used to log (potentially) bad events, but nothing broke (even a little) and there is no need to panic yet.
 func Warningf(format string, things ...interface{}) {
+	atomic.AddUint64(warnLogLines, 1)
 	if fastcheck(WarningLevel) {
 		log(WarningLevel, fmt.Sprintf(format, things...), nil)
 	}
@@ -160,6 +168,7 @@ func Warningf(format string, things ...interface{}) {
 
 // Error is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational. Maybe User/Admin should be informed.
 func Error(msg string) {
+	atomic.AddUint64(errLogLines, 1)
 	if fastcheck(ErrorLevel) {
 		log(ErrorLevel, msg, nil)
 	}
@@ -167,6 +176,7 @@ func Error(msg string) {
 
 // Errorf is used to log errors that break or impair functionality. The task/process may have to be aborted and tried again later. The system is still operational.
 func Errorf(format string, things ...interface{}) {
+	atomic.AddUint64(errLogLines, 1)
 	if fastcheck(ErrorLevel) {
 		log(ErrorLevel, fmt.Sprintf(format, things...), nil)
 	}
@@ -174,6 +184,7 @@ func Errorf(format string, things ...interface{}) {
 
 // Critical is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func Critical(msg string) {
+	atomic.AddUint64(critLogLines, 1)
 	if fastcheck(CriticalLevel) {
 		log(CriticalLevel, msg, nil)
 	}
@@ -181,7 +192,26 @@ func Critical(msg string) {
 
 // Criticalf is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
 func Criticalf(format string, things ...interface{}) {
+	atomic.AddUint64(critLogLines, 1)
 	if fastcheck(CriticalLevel) {
 		log(CriticalLevel, fmt.Sprintf(format, things...), nil)
 	}
+}
+
+// TotalWarningLogLines returns the total amount of warning log lines since
+// start of the program.
+func TotalWarningLogLines() uint64 {
+	return atomic.LoadUint64(warnLogLines)
+}
+
+// TotalErrorLogLines returns the total amount of error log lines since start
+// of the program.
+func TotalErrorLogLines() uint64 {
+	return atomic.LoadUint64(errLogLines)
+}
+
+// TotalCriticalLogLines returns the total amount of critical log lines since
+// start of the program.
+func TotalCriticalLogLines() uint64 {
+	return atomic.LoadUint64(critLogLines)
 }

@@ -106,9 +106,9 @@ func Start() error {
 
 	// complete startup
 	if moduleMgmtEnabled.IsSet() {
-		log.Info("modules: initiated subsystems manager")
+		log.Info("modules: started enabled modules")
 	} else {
-		log.Infof("modules: started %d modules", len(modules))
+		log.Infof("modules: started all %d modules", len(modules))
 	}
 
 	go taskQueueHandler()
