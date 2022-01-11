@@ -104,6 +104,40 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		tracer.Submit()
 	}()
 
+	// Check Cross-Origin Requests.
+	isCrossSite := false
+	origin := r.Header.Get("Origin")
+	if origin != "" {
+		isCrossSite = true
+
+		// Parse origin URL.
+		originURL, err := url.Parse(origin)
+		if err != nil {
+			http.Error(lrw, "Invalid Origin.", http.StatusForbidden)
+			return nil
+		}
+
+		// Check if the Origin matches the Host.
+		host := r.Header.Get("Host")
+		switch {
+		case originURL.Host == host:
+			// Origin (with port) matches Host.
+		case originURL.Hostname() == host:
+			// Origin (without port) matches Host.
+		case devMode() &&
+			utils.StringInSlice(allowedDevCORSOrigins, originURL.Hostname()):
+			// We are in dev mode and the request is coming from the allowed
+			// development origins.
+		default:
+			// Origin and Host do NOT match!
+			http.Error(lrw, "Cross-Origin Request Denied.", http.StatusForbidden)
+			return nil
+
+			// If the Host header has a port, and the Origin does not, requests will
+			// also end up here, as we cannot properly check for equality.
+		}
+	}
+
 	// Clean URL.
 	cleanedRequestPath := cleanRequestPath(r.URL.Path)
 
@@ -169,6 +203,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("X-Frame-Options", "deny")
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
 	w.Header().Set("X-DNS-Prefetch-Control", "off")
+
 	// Add CSP Header in production mode.
 	if !devMode() {
 		w.Header().Set(
@@ -178,18 +213,17 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 				"style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data:",
 		)
-	} else if origin := r.Header.Get("Origin"); origin != "" {
-		// Allow cross origin requests from localhost in dev mode.
-		if u, err := url.Parse(origin); err == nil &&
-			utils.StringInSlice(allowedDevCORSOrigins, u.Hostname()) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "*")
-			w.Header().Set("Access-Control-Allow-Headers", "*")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Expose-Headers", "*")
-			w.Header().Set("Access-Control-Max-Age", "60")
-			w.Header().Add("Vary", "Origin")
-		}
+	}
+
+	// Add Cross-Site Headers when handling Cross-Site Requests.
+	if isCrossSite {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Expose-Headers", "*")
+		w.Header().Set("Access-Control-Max-Age", "60")
+		w.Header().Add("Vary", "Origin")
 	}
 
 	// Handle request.
