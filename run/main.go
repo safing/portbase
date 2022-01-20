@@ -47,7 +47,7 @@ func Run() int {
 
 	// Shutdown
 	// catch interrupt for clean shutdown
-	signalCh := make(chan os.Signal)
+	signalCh := make(chan os.Signal, 1)
 	if enableInputSignals {
 		go inputSignals(signalCh)
 	}
