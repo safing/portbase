@@ -113,16 +113,16 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		// Parse origin URL.
 		originURL, err := url.Parse(origin)
 		if err != nil {
+			tracer.Warningf("api: denied request from %s: failed to parse origin header: %s", r.RemoteAddr, err)
 			http.Error(lrw, "Invalid Origin.", http.StatusForbidden)
 			return nil
 		}
 
 		// Check if the Origin matches the Host.
-		host := r.Header.Get("Host")
 		switch {
-		case originURL.Host == host:
+		case originURL.Host == r.Host:
 			// Origin (with port) matches Host.
-		case originURL.Hostname() == host:
+		case originURL.Hostname() == r.Host:
 			// Origin (without port) matches Host.
 		case devMode() &&
 			utils.StringInSlice(allowedDevCORSOrigins, originURL.Hostname()):
@@ -130,6 +130,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 			// development origins.
 		default:
 			// Origin and Host do NOT match!
+			tracer.Warningf("api: denied request from %s: Origin (`%s`) and Host (`%s`) do not match", r.RemoteAddr, origin, r.Host)
 			http.Error(lrw, "Cross-Origin Request Denied.", http.StatusForbidden)
 			return nil
 
