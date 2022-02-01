@@ -55,7 +55,7 @@ jobs:
       run: ./golint -set_exit_status -min_confidence 1.0 ./...
    
     - name: Run gofmt
-      run: bash -c "test -z $(gofmt -s -l .)"
+      run: bash -c 'test -z "$(gofmt -s -l .)"'
 
   test:
     name: Test
