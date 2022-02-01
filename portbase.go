@@ -3,11 +3,9 @@ package main
 import (
 	"os"
 
+	_ "github.com/safing/portbase/api"
 	"github.com/safing/portbase/info"
 	"github.com/safing/portbase/run"
-
-	// include packages here
-	_ "github.com/safing/portbase/api"
 )
 
 func main() {

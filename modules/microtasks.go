@@ -5,8 +5,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
+
+	"github.com/safing/portbase/log"
 )
 
 // TODO: getting some errors when in nanosecond precision for tests:
@@ -159,9 +160,7 @@ func (m *Module) runMicroTask(name *string, fn func(context.Context) error) (err
 	return //nolint:nakedret // need to use named return val in order to change in defer
 }
 
-var (
-	microTaskSchedulerStarted = abool.NewBool(false)
-)
+var microTaskSchedulerStarted = abool.NewBool(false)
 
 func microTaskScheduler() {
 	// only ever start once

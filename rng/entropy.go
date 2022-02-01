@@ -13,9 +13,7 @@ const (
 	minFeedEntropy = 256
 )
 
-var (
-	rngFeeder = make(chan []byte)
-)
+var rngFeeder = make(chan []byte)
 
 // The Feeder is used to feed entropy to the RNG.
 type Feeder struct {
@@ -32,13 +30,13 @@ type entropyData struct {
 
 // NewFeeder returns a new entropy Feeder.
 func NewFeeder() *Feeder {
-	new := &Feeder{
+	newFeeder := &Feeder{
 		input:        make(chan *entropyData),
 		needsEntropy: abool.NewBool(true),
 		buffer:       container.New(),
 	}
-	module.StartServiceWorker("feeder", 0, new.run)
-	return new
+	module.StartServiceWorker("feeder", 0, newFeeder.run)
+	return newFeeder
 }
 
 // NeedsEntropy returns whether the feeder is currently gathering entropy.

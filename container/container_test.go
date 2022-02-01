@@ -23,6 +23,7 @@ var (
 )
 
 func TestContainerDataHandling(t *testing.T) {
+	t.Parallel()
 
 	c1 := New(utils.DuplicateBytes(testData))
 	c1c := c1.carbonCopy()
@@ -74,6 +75,8 @@ func TestContainerDataHandling(t *testing.T) {
 }
 
 func compareMany(t *testing.T, reference []byte, other ...[]byte) {
+	t.Helper()
+
 	for i, cmp := range other {
 		if !bytes.Equal(reference, cmp) {
 			t.Errorf("sample %d does not match reference: sample is '%s'", i+1, string(cmp))
@@ -82,6 +85,8 @@ func compareMany(t *testing.T, reference []byte, other ...[]byte) {
 }
 
 func TestDataFetching(t *testing.T) {
+	t.Parallel()
+
 	c1 := New(utils.DuplicateBytes(testData))
 	data := c1.GetMax(1)
 	if string(data[0]) != "T" {
@@ -100,6 +105,8 @@ func TestDataFetching(t *testing.T) {
 }
 
 func TestBlocks(t *testing.T) {
+	t.Parallel()
+
 	c1 := New(utils.DuplicateBytes(testData))
 	c1.PrependLength()
 
@@ -137,10 +144,10 @@ func TestBlocks(t *testing.T) {
 	if n4 != 43 {
 		t.Errorf("n should be 43, was %d", n4)
 	}
-
 }
 
 func TestContainerBlockHandling(t *testing.T) {
+	t.Parallel()
 
 	c1 := New(utils.DuplicateBytes(testData))
 	c1.PrependLength()
@@ -185,6 +192,8 @@ func TestContainerBlockHandling(t *testing.T) {
 }
 
 func TestContainerMisc(t *testing.T) {
+	t.Parallel()
+
 	c1 := New()
 	d1 := c1.CompileData()
 	if len(d1) > 0 {
@@ -193,5 +202,7 @@ func TestContainerMisc(t *testing.T) {
 }
 
 func TestDeprecated(t *testing.T) {
+	t.Parallel()
+
 	NewContainer(utils.DuplicateBytes(testData))
 }

@@ -24,6 +24,8 @@ func (vc *valueCache) getData(opt *Option) interface{} {
 		return vc.stringVal
 	case OptTypeStringArray:
 		return vc.stringArrayVal
+	case optTypeAny:
+		return nil
 	default:
 		return nil
 	}
@@ -90,7 +92,6 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 			s, ok := entry.(string)
 			if !ok {
 				return nil, fmt.Errorf("validation of option %s failed: element %+v at index %d is not a string", option.Key, entry, pos)
-
 			}
 			vConverted[pos] = s
 		}

@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
+	semver "github.com/hashicorp/go-version"
+
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
-
-	semver "github.com/hashicorp/go-version"
 )
 
 // File represents a file from the update system.
@@ -50,7 +50,7 @@ func (file *File) Blacklist() error {
 	return file.resource.Blacklist(file.version.VersionNumber)
 }
 
-// used marks the file as active
+// markActiveWithLocking marks the file as active, locking the resource in the process.
 func (file *File) markActiveWithLocking() {
 	file.resource.Lock()
 	defer file.resource.Unlock()

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+
 	"github.com/safing/portbase/log"
 )
 
@@ -32,9 +33,7 @@ type Request struct {
 // apiRequestContextKey is a key used for the context key/value storage.
 type apiRequestContextKey struct{}
 
-var (
-	requestContextKey = apiRequestContextKey{}
-)
+var requestContextKey = apiRequestContextKey{}
 
 // GetAPIRequest returns the API Request of the given http request.
 func GetAPIRequest(r *http.Request) *Request {

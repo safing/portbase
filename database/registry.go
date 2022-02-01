@@ -32,7 +32,7 @@ var (
 // If the database is already registered, only
 // the description and the primary API will be
 // updated and the effective object will be returned.
-func Register(new *Database) (*Database, error) {
+func Register(db *Database) (*Database, error) {
 	if !initialized.IsSet() {
 		return nil, errors.New("database not initialized")
 	}
@@ -40,31 +40,31 @@ func Register(new *Database) (*Database, error) {
 	registryLock.Lock()
 	defer registryLock.Unlock()
 
-	registeredDB, ok := registry[new.Name]
+	registeredDB, ok := registry[db.Name]
 	save := false
 
 	if ok {
 		// update database
-		if registeredDB.Description != new.Description {
-			registeredDB.Description = new.Description
+		if registeredDB.Description != db.Description {
+			registeredDB.Description = db.Description
 			save = true
 		}
-		if registeredDB.ShadowDelete != new.ShadowDelete {
-			registeredDB.ShadowDelete = new.ShadowDelete
+		if registeredDB.ShadowDelete != db.ShadowDelete {
+			registeredDB.ShadowDelete = db.ShadowDelete
 			save = true
 		}
 	} else {
 		// register new database
-		if !nameConstraint.MatchString(new.Name) {
+		if !nameConstraint.MatchString(db.Name) {
 			return nil, errors.New("database name must only contain alphanumeric and `_-` characters and must be at least 3 characters long")
 		}
 
 		now := time.Now().Round(time.Second)
-		new.Registered = now
-		new.LastUpdated = now
-		new.LastLoaded = time.Time{}
+		db.Registered = now
+		db.LastUpdated = now
+		db.LastLoaded = time.Time{}
 
-		registry[new.Name] = new
+		registry[db.Name] = db
 		save = true
 	}
 
@@ -124,14 +124,14 @@ func loadRegistry() error {
 	}
 
 	// parse
-	new := make(map[string]*Database)
-	err = json.Unmarshal(data, &new)
+	databases := make(map[string]*Database)
+	err = json.Unmarshal(data, &databases)
 	if err != nil {
 		return err
 	}
 
 	// set
-	registry = new
+	registry = databases
 	return nil
 }
 
@@ -150,7 +150,7 @@ func saveRegistry(lock bool) error {
 	// write file
 	// TODO: write atomically (best effort)
 	filePath := path.Join(rootStructure.Path, registryFileName)
-	return ioutil.WriteFile(filePath, data, 0600)
+	return ioutil.WriteFile(filePath, data, 0o0600)
 }
 
 func registryWriter() {

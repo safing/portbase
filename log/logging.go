@@ -88,7 +88,7 @@ func (ll *logLine) Equal(ol *logLine) bool {
 	return true
 }
 
-// Log Levels
+// Log Levels.
 const (
 	TraceLevel    Severity = 1
 	DebugLevel    Severity = 2
@@ -185,7 +185,6 @@ func ParseLevel(level string) Severity {
 
 // Start starts the logging system. Must be called in order to see logs.
 func Start() (err error) {
-
 	if !initializing.SetToIf(false, true) {
 		return nil
 	}

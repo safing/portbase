@@ -2,12 +2,14 @@ package migration
 
 import "errors"
 
+// DiagnosticStep describes one migration step in the Diagnostics.
 type DiagnosticStep struct {
 	Version     string
 	Description string
 }
 
-type Diagnostics struct {
+// Diagnostics holds a detailed error report about a failed migration.
+type Diagnostics struct { //nolint:errname
 	// Message holds a human readable message of the encountered
 	// error.
 	Message string
@@ -45,9 +47,9 @@ func (err *Diagnostics) Error() string {
 	return msg
 }
 
-// Unwrap returns the actual error that happend when executing
+// Unwrap returns the actual error that happened when executing
 // a migration. It implements the interface required by the stdlib
-// errors package to support errors.Is and errors.As
+// errors package to support errors.Is() and errors.As().
 func (err *Diagnostics) Unwrap() error {
 	if u := errors.Unwrap(err.Wrapped); u != nil {
 		return u

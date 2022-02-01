@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-version"
+
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/formats/dsd"
@@ -37,6 +38,7 @@ type Migration struct {
 	MigrateFunc MigrateFunc
 }
 
+// Registry holds a migration stack.
 type Registry struct {
 	key string
 
@@ -200,7 +202,7 @@ func (reg *Registry) getExecutionPlan(startOfMigration *version.Version) ([]Migr
 	}
 
 	// prepare our diagnostics and the execution plan
-	var execPlan []Migration
+	execPlan := make([]Migration, 0, len(versions))
 	for _, ver := range versions {
 		// skip an migration that has already been applied.
 		if startOfMigration != nil && startOfMigration.GreaterThanOrEqual(ver) {

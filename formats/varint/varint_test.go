@@ -7,10 +7,9 @@ import (
 )
 
 func TestConversion(t *testing.T) {
+	t.Parallel()
 
-	// t.Run("Basic Static Encoding and Decoding", func(t *testing.T) { ... }
-
-	var subjects = []struct {
+	subjects := []struct {
 		intType uint8
 		bytes   []byte
 		integer uint64
@@ -100,14 +99,12 @@ func TestConversion(t *testing.T) {
 		}
 
 	}
-
 }
 
 func TestFails(t *testing.T) {
+	t.Parallel()
 
-	// t.Run("Basic Static Encoding and Decoding", func(t *testing.T) { ... }
-
-	var subjects = []struct {
+	subjects := []struct {
 		intType uint8
 		bytes   []byte
 	}{
@@ -141,5 +138,4 @@ func TestFails(t *testing.T) {
 		}
 
 	}
-
 }

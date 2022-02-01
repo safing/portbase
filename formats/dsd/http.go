@@ -10,6 +10,7 @@ import (
 	"net/http"
 )
 
+// HTTP Related Errors.
 var (
 	ErrMissingBody        = errors.New("dsd: missing http body")
 	ErrMissingContentType = errors.New("dsd: missing http content type")
@@ -120,6 +121,7 @@ func DumpToHTTPResponse(w http.ResponseWriter, r *http.Request, t interface{}) e
 	return nil
 }
 
+// Format and MimeType mappings.
 var (
 	FormatToMimeType = map[uint8]string{
 		JSON:    "application/json; charset=utf-8",

@@ -2,7 +2,7 @@ package record
 
 import "time"
 
-// Meta holds
+// Meta holds metadata about the record.
 type Meta struct {
 	Created   int64
 	Modified  int64

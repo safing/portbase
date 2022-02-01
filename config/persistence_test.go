@@ -36,6 +36,7 @@ var (
 )
 
 func TestJSONMapConversion(t *testing.T) {
+	t.Parallel()
 
 	// convert to json
 	j, err := MapToJSON(mapData)
@@ -67,6 +68,8 @@ func TestJSONMapConversion(t *testing.T) {
 }
 
 func TestConfigCleaning(t *testing.T) {
+	t.Parallel()
+
 	// load
 	configFlat, err := JSONToMap(jsonBytes)
 	if err != nil {

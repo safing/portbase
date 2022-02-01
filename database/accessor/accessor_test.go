@@ -49,6 +49,8 @@ var (
 )
 
 func testGetString(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue string) {
+	t.Helper()
+
 	v, ok := acc.GetString(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -62,6 +64,8 @@ func testGetString(t *testing.T, acc Accessor, key string, shouldSucceed bool, e
 }
 
 func testGetStringArray(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue []string) {
+	t.Helper()
+
 	v, ok := acc.GetStringArray(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -75,6 +79,8 @@ func testGetStringArray(t *testing.T, acc Accessor, key string, shouldSucceed bo
 }
 
 func testGetInt(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue int64) {
+	t.Helper()
+
 	v, ok := acc.GetInt(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -88,6 +94,8 @@ func testGetInt(t *testing.T, acc Accessor, key string, shouldSucceed bool, expe
 }
 
 func testGetFloat(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue float64) {
+	t.Helper()
+
 	v, ok := acc.GetFloat(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -101,6 +109,8 @@ func testGetFloat(t *testing.T, acc Accessor, key string, shouldSucceed bool, ex
 }
 
 func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed bool, expectedValue bool) {
+	t.Helper()
+
 	v, ok := acc.GetBool(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -114,6 +124,8 @@ func testGetBool(t *testing.T, acc Accessor, key string, shouldSucceed bool, exp
 }
 
 func testExists(t *testing.T, acc Accessor, key string, shouldSucceed bool) {
+	t.Helper()
+
 	ok := acc.Exists(key)
 	switch {
 	case !ok && shouldSucceed:
@@ -124,6 +136,8 @@ func testExists(t *testing.T, acc Accessor, key string, shouldSucceed bool) {
 }
 
 func testSet(t *testing.T, acc Accessor, key string, shouldSucceed bool, valueToSet interface{}) {
+	t.Helper()
+
 	err := acc.Set(key, valueToSet)
 	switch {
 	case err != nil && shouldSucceed:
@@ -134,8 +148,9 @@ func testSet(t *testing.T, acc Accessor, key string, shouldSucceed bool, valueTo
 }
 
 func TestAccessor(t *testing.T) {
+	t.Parallel()
 
-	// Test interface compliance
+	// Test interface compliance.
 	accs := []Accessor{
 		NewJSONAccessor(&testJSON),
 		NewJSONBytesAccessor(&testJSONBytes),
@@ -273,5 +288,4 @@ func TestAccessor(t *testing.T) {
 	for _, acc := range accs {
 		testExists(t, acc, "X", false)
 	}
-
 }

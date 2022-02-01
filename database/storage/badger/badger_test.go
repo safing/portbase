@@ -1,4 +1,3 @@
-//nolint:unparam,maligned
 package badger
 
 import (
@@ -20,7 +19,7 @@ var (
 	_ storage.Maintainer = &Badger{}
 )
 
-type TestRecord struct {
+type TestRecord struct { //nolint:maligned
 	record.Base
 	sync.Mutex
 	S    string
@@ -40,6 +39,8 @@ type TestRecord struct {
 }
 
 func TestBadger(t *testing.T) {
+	t.Parallel()
+
 	testDir, err := ioutil.TempDir("", "testing-")
 	if err != nil {
 		t.Fatal(err)

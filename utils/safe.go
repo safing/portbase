@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// SafeFirst16Bytes return the first 16 bytes of the given data in safe form.
 func SafeFirst16Bytes(data []byte) string {
 	if len(data) == 0 {
 		return "<empty>"
@@ -16,6 +17,7 @@ func SafeFirst16Bytes(data []byte) string {
 	)
 }
 
+// SafeFirst16Chars return the first 16 characters of the given data in safe form.
 func SafeFirst16Chars(s string) string {
 	return SafeFirst16Bytes([]byte(s))
 }

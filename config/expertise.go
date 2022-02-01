@@ -1,5 +1,3 @@
-// Package config ... (linter fix)
-//nolint:dupl
 package config
 
 import (

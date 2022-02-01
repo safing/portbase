@@ -5,8 +5,7 @@ import (
 )
 
 // HookBase implements the Hook interface and provides dummy functions to reduce boilerplate.
-type HookBase struct {
-}
+type HookBase struct{}
 
 // UsesPreGet implements the Hook interface and returns false.
 func (b *HookBase) UsesPreGet() bool {

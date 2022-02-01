@@ -1,4 +1,3 @@
-//nolint:unparam,maligned
 package hashmap
 
 import (
@@ -6,10 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/safing/portbase/database/storage"
-
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/database/storage"
 )
 
 var (
@@ -18,7 +16,7 @@ var (
 	_ storage.Batcher   = &HashMap{}
 )
 
-type TestRecord struct {
+type TestRecord struct { //nolint:maligned
 	record.Base
 	sync.Mutex
 	S    string
@@ -38,6 +36,8 @@ type TestRecord struct {
 }
 
 func TestHashMap(t *testing.T) {
+	t.Parallel()
+
 	// start
 	db, err := NewHashMap("test", "")
 	if err != nil {

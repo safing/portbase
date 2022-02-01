@@ -1,4 +1,4 @@
-// +build !windows
+// go:build !windows
 
 package log
 
@@ -8,14 +8,16 @@ const (
 )
 
 const (
-	// colorBlack   = "\033[30m"
-	colorRed = "\033[31m"
-	// colorGreen   = "\033[32m"
+	colorRed     = "\033[31m"
 	colorYellow  = "\033[33m"
 	colorBlue    = "\033[34m"
 	colorMagenta = "\033[35m"
 	colorCyan    = "\033[36m"
-	// colorWhite   = "\033[37m"
+
+	// Saved for later:
+	// colorBlack   = "\033[30m" //.
+	// colorGreen   = "\033[32m" //.
+	// colorWhite   = "\033[37m" //.
 )
 
 func (s Severity) color() string {
@@ -30,6 +32,8 @@ func (s Severity) color() string {
 		return colorRed
 	case CriticalLevel:
 		return colorMagenta
+	case TraceLevel:
+		return ""
 	default:
 		return ""
 	}

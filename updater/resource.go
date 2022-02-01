@@ -8,14 +8,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/safing/portbase/log"
-
 	semver "github.com/hashicorp/go-version"
+
+	"github.com/safing/portbase/log"
 )
 
-var (
-	devVersion *semver.Version
-)
+var devVersion *semver.Version
 
 func init() {
 	var err error
@@ -106,7 +104,7 @@ func (rv *ResourceVersion) isSelectable() bool {
 
 // isBetaVersionNumber checks if rv is marked as a beta version by checking
 // the version string. It does not honor the BetaRelease field of rv!
-func (rv *ResourceVersion) isBetaVersionNumber() bool {
+func (rv *ResourceVersion) isBetaVersionNumber() bool { //nolint:unused
 	// "b" suffix check if for backwards compatibility
 	// new versions should use the pre-release suffix as
 	// declared by https://semver.org
@@ -264,7 +262,6 @@ func (res *Resource) selectVersion() {
 
 			log.Debugf("updater: active version of %s is %s, update available", res.Identifier, res.ActiveVersion.VersionNumber)
 		}
-
 	}()
 
 	if len(res.Versions) == 0 {

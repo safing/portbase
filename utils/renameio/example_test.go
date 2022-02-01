@@ -13,7 +13,9 @@ func ExampleTempFile_justone() {
 		if err != nil {
 			return err
 		}
-		defer t.Cleanup()
+		defer func() {
+			_ = t.Cleanup()
+		}()
 		if _, err := fmt.Fprintf(t, "temperature_degc %f\n", temperature); err != nil {
 			return err
 		}
@@ -35,7 +37,9 @@ func ExampleTempFile_many() {
 		if err != nil {
 			return err
 		}
-		defer t.Cleanup()
+		defer func() {
+			_ = t.Cleanup()
+		}()
 		if _, err := fmt.Fprintf(t, "temperature_degc %f\n", temperature); err != nil {
 			return err
 		}

@@ -19,9 +19,7 @@ type ContextTracer struct {
 	logs []*logLine
 }
 
-var (
-	key = ContextTracerKey{}
-)
+var key = ContextTracerKey{}
 
 // AddTracer adds a ContextTracer to the returned Context. Will return a nil ContextTracer if logging level is not set to trace. Will return a nil ContextTracer if one already exists. Will return a nil ContextTracer in case of an error. Will return a nil context if nil.
 func AddTracer(ctx context.Context) (context.Context, *ContextTracer) {

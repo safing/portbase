@@ -5,10 +5,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/safing/portbase/database/query"
-	"github.com/safing/portbase/database/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/safing/portbase/database/query"
+	"github.com/safing/portbase/database/record"
 )
 
 type testRecord struct {
@@ -71,6 +72,8 @@ func getTestRegistry(t *testing.T) *Registry {
 }
 
 func TestRegistryGet(t *testing.T) {
+	t.Parallel()
+
 	var (
 		r   record.Record
 		err error
@@ -98,6 +101,8 @@ func TestRegistryGet(t *testing.T) {
 }
 
 func TestRegistryQuery(t *testing.T) {
+	t.Parallel()
+
 	reg := getTestRegistry(t)
 
 	q := query.New("runtime:p")
@@ -122,6 +127,8 @@ func TestRegistryQuery(t *testing.T) {
 }
 
 func TestRegistryRegister(t *testing.T) {
+	t.Parallel()
+
 	r := NewRegistry()
 
 	cases := []struct {

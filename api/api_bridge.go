@@ -37,6 +37,7 @@ type endpointBridgeStorage struct {
 	storage.InjectBase
 }
 
+// EndpointBridgeRequest holds a bridged request API request.
 type EndpointBridgeRequest struct {
 	record.Base
 	sync.Mutex
@@ -48,6 +49,7 @@ type EndpointBridgeRequest struct {
 	MimeType string
 }
 
+// EndpointBridgeResponse holds a bridged request API response.
 type EndpointBridgeResponse struct {
 	record.Base
 	sync.Mutex

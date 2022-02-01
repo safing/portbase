@@ -9,11 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tevino/abool"
+
 	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/runtime"
-	"github.com/tevino/abool"
 )
 
 var (
@@ -94,7 +95,7 @@ func (mng *Manager) Start() error {
 	return nil
 }
 
-// Get implements runtime.ValueProvider
+// Get implements runtime.ValueProvider.
 func (mng *Manager) Get(keyOrPrefix string) ([]record.Record, error) {
 	mng.l.RLock()
 	defer mng.l.RUnlock()

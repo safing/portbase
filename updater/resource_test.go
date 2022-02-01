@@ -9,6 +9,8 @@ import (
 )
 
 func TestVersionSelection(t *testing.T) {
+	t.Parallel()
+
 	res := registry.newResource("test/a")
 
 	err := res.AddVersion("1.2.2", true, false, false)
@@ -93,6 +95,8 @@ func TestVersionSelection(t *testing.T) {
 }
 
 func TestVersionParsing(t *testing.T) {
+	t.Parallel()
+
 	assert.Equal(t, "1.2.3", parseVersion("1.2.3"))
 	assert.Equal(t, "1.2.0", parseVersion("1.2.0"))
 	assert.Equal(t, "0.2.0", parseVersion("0.2.0"))

@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Database holds information about registered databases
+// Database holds information about a registered database.
 type Database struct {
 	Name         string
 	Description  string

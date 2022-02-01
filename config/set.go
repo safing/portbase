@@ -74,7 +74,7 @@ func replaceConfig(newValues map[string]interface{}) error {
 
 	if firstErr != nil {
 		if errCnt > 0 {
-			return fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+			return fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
 		}
 		return firstErr
 	}
@@ -117,7 +117,7 @@ func replaceDefaultConfig(newValues map[string]interface{}) error {
 
 	if firstErr != nil {
 		if errCnt > 0 {
-			return fmt.Errorf("encountered %d errors, first was: %s", errCnt, firstErr)
+			return fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
 		}
 		return firstErr
 	}

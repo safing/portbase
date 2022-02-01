@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestRegistry(t *testing.T) {
+func TestRegistry(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
@@ -46,5 +46,4 @@ func TestRegistry(t *testing.T) {
 	}); err == nil {
 		t.Error("should fail")
 	}
-
 }

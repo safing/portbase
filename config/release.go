@@ -1,5 +1,3 @@
-// Package config ... (linter fix)
-//nolint:dupl
 package config
 
 import (
@@ -12,7 +10,7 @@ import (
 // configuration setting.
 type ReleaseLevel uint8
 
-// Release Level constants
+// Release Level constants.
 const (
 	ReleaseLevelStable       ReleaseLevel = 0
 	ReleaseLevelBeta         ReleaseLevel = 1

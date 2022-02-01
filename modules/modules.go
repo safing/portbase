@@ -8,15 +8,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
+
+	"github.com/safing/portbase/log"
 )
 
 var (
 	modules  = make(map[string]*Module)
 	mgmtLock sync.Mutex
 
-	// lock modules when starting
+	// modulesLocked locks `modules` during starting.
 	modulesLocked = abool.New()
 
 	moduleStartTimeout = 2 * time.Minute
@@ -27,7 +28,7 @@ var (
 )
 
 // Module represents a module.
-type Module struct { //nolint:maligned // not worth the effort
+type Module struct {
 	sync.RWMutex
 
 	Name string

@@ -78,7 +78,7 @@ func (c *Controller) Get(key string) (record.Record, error) {
 	return r, nil
 }
 
-// Get returns the metadata of the record with the given key.
+// GetMeta returns the metadata of the record with the given key.
 func (c *Controller) GetMeta(key string) (*record.Meta, error) {
 	if shuttingDown.IsSet() {
 		return nil, ErrShuttingDown

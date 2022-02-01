@@ -13,8 +13,8 @@ func init() {
 	}
 }
 
-// test waiting
 func TestLogging(t *testing.T) {
+	t.Parallel()
 
 	// skip
 	if testing.Short() {
@@ -61,5 +61,4 @@ func TestLogging(t *testing.T) {
 
 	// do not really shut down, we may need logging for other tests
 	// ShutdownLogging()
-
 }

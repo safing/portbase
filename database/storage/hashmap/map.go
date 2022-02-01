@@ -113,7 +113,7 @@ func (hm *HashMap) Delete(key string) error {
 func (hm *HashMap) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	queryIter := iterator.New()

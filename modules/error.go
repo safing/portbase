@@ -11,7 +11,7 @@ import (
 var (
 	errorReportingChannel chan *ModuleError
 	reportToStdErr        = true
-	lastReportedError     *ModuleError
+	lastReportedError     *ModuleError //nolint:errname
 	reportingLock         sync.Mutex
 )
 
@@ -120,7 +120,7 @@ func (me *ModuleError) Report() {
 
 // IsPanic returns whether the given error is a wrapped panic by the modules package and additionally returns it, if true.
 func IsPanic(err error) (bool, *ModuleError) {
-	switch val := err.(type) {
+	switch val := err.(type) { //nolint:errorlint // TODO: improve
 	case *ModuleError:
 		return true, val
 	default:

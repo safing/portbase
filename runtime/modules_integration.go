@@ -10,9 +10,7 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
-var (
-	modulesIntegrationUpdatePusher func(...record.Record)
-)
+var modulesIntegrationUpdatePusher func(...record.Record)
 
 func startModulesIntegration() (err error) {
 	modulesIntegrationUpdatePusher, err = Register("modules/", &ModulesIntegration{})
@@ -27,6 +25,7 @@ func startModulesIntegration() (err error) {
 	return nil
 }
 
+// ModulesIntegration provides integration with the modules system.
 type ModulesIntegration struct{}
 
 // Set is called when the value is set from outside.
@@ -45,13 +44,13 @@ func (mi *ModulesIntegration) Get(keyOrPrefix string) ([]record.Record, error) {
 	return nil, database.ErrNotFound
 }
 
-type eventData struct { //nolint:unused // This is a cascading false positive.
+type eventData struct {
 	record.Base
 	sync.Mutex
 	Data interface{}
 }
 
-func pushModuleEvent(moduleName, eventName string, internal bool, data interface{}) { //nolint:unused // This is a false positive, the function is provided to modules.SetEventSubscriptionFunc().
+func pushModuleEvent(moduleName, eventName string, internal bool, data interface{}) {
 	// Create event record and set key.
 	eventRecord := &eventData{
 		Data: data,

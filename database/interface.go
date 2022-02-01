@@ -120,19 +120,19 @@ func NewInterface(opts *Options) *Interface {
 		opts = &Options{}
 	}
 
-	new := &Interface{
+	newIface := &Interface{
 		options: opts,
 	}
 	if opts.CacheSize > 0 {
 		cacheBuilder := gcache.New(opts.CacheSize).ARC()
 		if opts.DelayCachedWrites != "" {
-			cacheBuilder.EvictedFunc(new.cacheEvictHandler)
-			new.writeCache = make(map[string]record.Record, opts.CacheSize/2)
-			new.triggerCacheWrite = make(chan struct{})
+			cacheBuilder.EvictedFunc(newIface.cacheEvictHandler)
+			newIface.writeCache = make(map[string]record.Record, opts.CacheSize/2)
+			newIface.triggerCacheWrite = make(chan struct{})
 		}
-		new.cache = cacheBuilder.Build()
+		newIface.cache = cacheBuilder.Build()
 	}
-	return new
+	return newIface
 }
 
 // Exists return whether a record with the given key exists.
@@ -157,7 +157,7 @@ func (i *Interface) Get(key string) (record.Record, error) {
 	return r, err
 }
 
-func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool) (r record.Record, db *Controller, err error) {
+func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool) (r record.Record, db *Controller, err error) { //nolint:unparam
 	if dbName == "" {
 		dbName, dbKey = record.ParseKey(dbKey)
 	}
@@ -201,7 +201,7 @@ func (i *Interface) getRecord(dbName string, dbKey string, mustBeWriteable bool)
 	return r, db, nil
 }
 
-func (i *Interface) getMeta(dbName string, dbKey string, mustBeWriteable bool) (m *record.Meta, db *Controller, err error) {
+func (i *Interface) getMeta(dbName string, dbKey string, mustBeWriteable bool) (m *record.Meta, db *Controller, err error) { //nolint:unparam
 	if dbName == "" {
 		dbName, dbKey = record.ParseKey(dbKey)
 	}
@@ -258,7 +258,7 @@ func (i *Interface) InsertValue(key string, attribute string, value interface{})
 
 	err = acc.Set(attribute, value)
 	if err != nil {
-		return fmt.Errorf("failed to set value with %s: %s", acc.Type(), err)
+		return fmt.Errorf("failed to set value with %s: %w", acc.Type(), err)
 	}
 
 	i.options.Apply(r)
@@ -271,7 +271,7 @@ func (i *Interface) Put(r record.Record) (err error) {
 	var db *Controller
 	if !i.options.HasAllPermissions() {
 		_, db, err = i.getMeta(r.DatabaseName(), r.DatabaseKey(), true)
-		if err != nil && err != ErrNotFound {
+		if err != nil && !errors.Is(err, ErrNotFound) {
 			return err
 		}
 	} else {
@@ -309,7 +309,7 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 	var db *Controller
 	if !i.options.HasAllPermissions() {
 		_, db, err = i.getMeta(r.DatabaseName(), r.DatabaseKey(), true)
-		if err != nil && err != ErrNotFound {
+		if err != nil && !errors.Is(err, ErrNotFound) {
 			return err
 		}
 	} else {
@@ -344,11 +344,13 @@ func (i *Interface) PutNew(r record.Record) (err error) {
 	return db.Put(r)
 }
 
-// PutMany stores many records in the database. Warning: This is nearly a direct database access and omits many things:
+// PutMany stores many records in the database.
+// Warning: This is nearly a direct database access and omits many things:
 // - Record locking
 // - Hooks
 // - Subscriptions
 // - Caching
+// Use with care.
 func (i *Interface) PutMany(dbName string) (put func(record.Record) error) {
 	interfaceBatch := make(chan record.Record, 100)
 
@@ -519,6 +521,8 @@ func (i *Interface) Delete(key string) error {
 }
 
 // Query executes the given query on the database.
+// Will not see data that is in the write cache, waiting to be written.
+// Use with care with caching.
 func (i *Interface) Query(q *query.Query) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
@@ -530,7 +534,7 @@ func (i *Interface) Query(q *query.Query) (*iterator.Iterator, error) {
 		return nil, err
 	}
 
-	// FIXME:
+	// TODO: Finish caching system integration.
 	// Flush the cache before we query the database.
 	// i.FlushCache()
 

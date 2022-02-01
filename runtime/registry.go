@@ -7,13 +7,14 @@ import (
 	"sync"
 
 	"github.com/armon/go-radix"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/iterator"
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
 	"github.com/safing/portbase/log"
-	"golang.org/x/sync/errgroup"
 )
 
 var (

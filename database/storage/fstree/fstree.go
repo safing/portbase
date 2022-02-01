@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	defaultFileMode = os.FileMode(int(0644))
-	defaultDirMode  = os.FileMode(int(0755))
+	defaultFileMode = os.FileMode(0o0644)
+	defaultDirMode  = os.FileMode(0o0755)
 	onWindows       = runtime.GOOS == "windows"
 )
 
@@ -42,7 +42,7 @@ func init() {
 func NewFSTree(name, location string) (storage.Interface, error) {
 	basePath, err := filepath.Abs(location)
 	if err != nil {
-		return nil, fmt.Errorf("fstree: failed to validate path %s: %s", location, err)
+		return nil, fmt.Errorf("fstree: failed to validate path %s: %w", location, err)
 	}
 
 	file, err := os.Stat(basePath)
@@ -50,10 +50,10 @@ func NewFSTree(name, location string) (storage.Interface, error) {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(basePath, defaultDirMode)
 			if err != nil {
-				return nil, fmt.Errorf("fstree: failed to create directory %s: %s", basePath, err)
+				return nil, fmt.Errorf("fstree: failed to create directory %s: %w", basePath, err)
 			}
 		} else {
-			return nil, fmt.Errorf("fstree: failed to stat path %s: %s", basePath, err)
+			return nil, fmt.Errorf("fstree: failed to stat path %s: %w", basePath, err)
 		}
 	} else {
 		if !file.IsDir() {
@@ -93,7 +93,7 @@ func (fst *FSTree) Get(key string) (record.Record, error) {
 		if os.IsNotExist(err) {
 			return nil, storage.ErrNotFound
 		}
-		return nil, fmt.Errorf("fstree: failed to read file %s: %s", dstPath, err)
+		return nil, fmt.Errorf("fstree: failed to read file %s: %w", dstPath, err)
 	}
 
 	r, err := record.NewRawWrapper(fst.name, key, data)
@@ -132,11 +132,11 @@ func (fst *FSTree) Put(r record.Record) (record.Record, error) {
 		// create dir and try again
 		err = os.MkdirAll(filepath.Dir(dstPath), defaultDirMode)
 		if err != nil {
-			return nil, fmt.Errorf("fstree: failed to create directory %s: %s", filepath.Dir(dstPath), err)
+			return nil, fmt.Errorf("fstree: failed to create directory %s: %w", filepath.Dir(dstPath), err)
 		}
 		err = writeFile(dstPath, data, defaultFileMode)
 		if err != nil {
-			return nil, fmt.Errorf("fstree: could not write file %s: %s", dstPath, err)
+			return nil, fmt.Errorf("fstree: could not write file %s: %w", dstPath, err)
 		}
 	}
 
@@ -153,7 +153,7 @@ func (fst *FSTree) Delete(key string) error {
 	// remove entry
 	err = os.Remove(dstPath)
 	if err != nil {
-		return fmt.Errorf("fstree: could not delete %s: %s", dstPath, err)
+		return fmt.Errorf("fstree: could not delete %s: %w", dstPath, err)
 	}
 
 	return nil
@@ -163,7 +163,7 @@ func (fst *FSTree) Delete(key string) error {
 func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	walkPrefix, err := fst.buildFilePath(q.DatabaseKeyPrefix(), false)
@@ -180,7 +180,7 @@ func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 	case os.IsNotExist(err):
 		walkRoot = filepath.Dir(walkPrefix)
 	default: // err != nil
-		return nil, fmt.Errorf("fstree: could not stat query root %s: %s", walkPrefix, err)
+		return nil, fmt.Errorf("fstree: could not stat query root %s: %w", walkPrefix, err)
 	}
 
 	queryIter := iterator.New()
@@ -191,10 +191,8 @@ func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 
 func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, q *query.Query, local, internal bool) {
 	err := filepath.Walk(walkRoot, func(path string, info os.FileInfo, err error) error {
-
-		// check for error
 		if err != nil {
-			return fmt.Errorf("fstree: error in walking fs: %s", err)
+			return fmt.Errorf("fstree: error in walking fs: %w", err)
 		}
 
 		if info.IsDir() {
@@ -217,17 +215,17 @@ func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, 
 			if os.IsNotExist(err) {
 				return nil
 			}
-			return fmt.Errorf("fstree: failed to read file %s: %s", path, err)
+			return fmt.Errorf("fstree: failed to read file %s: %w", path, err)
 		}
 
 		// parse
 		key, err := filepath.Rel(fst.basePath, path)
 		if err != nil {
-			return fmt.Errorf("fstree: failed to extract key from filepath %s: %s", path, err)
+			return fmt.Errorf("fstree: failed to extract key from filepath %s: %w", path, err)
 		}
 		r, err := record.NewRawWrapper(fst.name, key, data)
 		if err != nil {
-			return fmt.Errorf("fstree: failed to load file %s: %s", path, err)
+			return fmt.Errorf("fstree: failed to load file %s: %w", path, err)
 		}
 
 		if !r.Meta().CheckValidity() {

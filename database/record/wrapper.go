@@ -32,21 +32,21 @@ func NewRawWrapper(database, key string, data []byte) (*Wrapper, error) {
 
 	metaSection, n, err := varint.GetNextBlock(data[offset:])
 	if err != nil {
-		return nil, fmt.Errorf("could not get meta section: %s", err)
+		return nil, fmt.Errorf("could not get meta section: %w", err)
 	}
 	offset += n
 
 	newMeta := &Meta{}
 	_, err = dsd.Load(metaSection, newMeta)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal meta section: %s", err)
+		return nil, fmt.Errorf("could not unmarshal meta section: %w", err)
 	}
 
 	var format uint8 = dsd.RAW
 	if !newMeta.IsDeleted() {
 		format, n, err = varint.Unpack8(data[offset:])
 		if err != nil {
-			return nil, fmt.Errorf("could not get dsd format: %s", err)
+			return nil, fmt.Errorf("could not get dsd format: %w", err)
 		}
 		offset += n
 	}
@@ -79,7 +79,7 @@ func NewWrapper(key string, meta *Meta, format uint8, data []byte) (*Wrapper, er
 	}, nil
 }
 
-// Marshal marshals the object, without the database key or metadata
+// Marshal marshals the object, without the database key or metadata.
 func (w *Wrapper) Marshal(r Record, format uint8) ([]byte, error) {
 	if w.Meta() == nil {
 		return nil, errors.New("missing meta")
@@ -134,19 +134,19 @@ func (w *Wrapper) IsWrapped() bool {
 }
 
 // Unwrap unwraps data into a record.
-func Unwrap(wrapped, new Record) error {
+func Unwrap(wrapped, r Record) error {
 	wrapper, ok := wrapped.(*Wrapper)
 	if !ok {
 		return fmt.Errorf("cannot unwrap %T", wrapped)
 	}
 
-	err := dsd.LoadAsFormat(wrapper.Data, wrapper.Format, new)
+	err := dsd.LoadAsFormat(wrapper.Data, wrapper.Format, r)
 	if err != nil {
-		return fmt.Errorf("failed to unwrap %T: %s", new, err)
+		return fmt.Errorf("failed to unwrap %T: %w", r, err)
 	}
 
-	new.SetKey(wrapped.Key())
-	new.SetMeta(wrapped.Meta())
+	r.SetKey(wrapped.Key())
+	r.SetMeta(wrapped.Meta())
 
 	return nil
 }

@@ -26,6 +26,8 @@ func parseAndReplaceDefaultConfig(jsonData string) error {
 }
 
 func quickRegister(t *testing.T, key string, optType OptionType, defaultValue interface{}) {
+	t.Helper()
+
 	err := Register(&Option{
 		Name:           key,
 		Key:            key,
@@ -40,7 +42,7 @@ func quickRegister(t *testing.T, key string, optType OptionType, defaultValue in
 	}
 }
 
-func TestGet(t *testing.T) { //nolint:gocognit
+func TestGet(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
@@ -181,7 +183,7 @@ func TestGet(t *testing.T) { //nolint:gocognit
 	}
 }
 
-func TestReleaseLevel(t *testing.T) {
+func TestReleaseLevel(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 	registerReleaseLevelOption()

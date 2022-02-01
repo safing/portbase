@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/host"
+
 	"github.com/safing/portbase/info"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
-	"github.com/shirou/gopsutil/host"
 )
 
 // Info gathers debugging information and stores everything in a buffer in

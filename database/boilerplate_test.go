@@ -15,12 +15,10 @@ type Example struct {
 	Score int
 }
 
-var (
-	exampleDB = NewInterface(&Options{
-		Internal: true,
-		Local:    true,
-	})
-)
+var exampleDB = NewInterface(&Options{
+	Internal: true,
+	Local:    true,
+})
 
 // GetExample gets an Example from the database.
 func GetExample(key string) (*Example, error) {
@@ -32,20 +30,20 @@ func GetExample(key string) (*Example, error) {
 	// unwrap
 	if r.IsWrapped() {
 		// only allocate a new struct, if we need it
-		new := &Example{}
-		err = record.Unwrap(r, new)
+		newExample := &Example{}
+		err = record.Unwrap(r, newExample)
 		if err != nil {
 			return nil, err
 		}
-		return new, nil
+		return newExample, nil
 	}
 
 	// or adjust type
-	new, ok := r.(*Example)
+	newExample, ok := r.(*Example)
 	if !ok {
 		return nil, fmt.Errorf("record not of type *Example, but %T", r)
 	}
-	return new, nil
+	return newExample, nil
 }
 
 func (e *Example) Save() error {
@@ -58,10 +56,10 @@ func (e *Example) SaveAs(key string) error {
 }
 
 func NewExample(key, name string, score int) *Example {
-	new := &Example{
+	newExample := &Example{
 		Name:  name,
 		Score: score,
 	}
-	new.SetKey(key)
-	return new
+	newExample.SetKey(key)
+	return newExample
 }

@@ -10,9 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/safing/portbase/utils"
-
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils"
 )
 
 // UpdateIndexes downloads all indexes. An error is only returned when all
@@ -32,7 +31,7 @@ func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 	}
 
 	if !anySuccess {
-		return fmt.Errorf("failed to update all indexes, last error was: %s", lastErr)
+		return fmt.Errorf("failed to update all indexes, last error was: %w", lastErr)
 	}
 	return nil
 }
@@ -94,7 +93,8 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 
 	// save index
 	indexPath := filepath.FromSlash(idx.Path)
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, indexPath), data, 0644)
+	// Index files must be readable by portmaster-staert with user permissions in order to load the index.
+	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, indexPath), data, 0o0644) //nolint:gosec
 	if err != nil {
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}

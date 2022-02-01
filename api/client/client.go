@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/safing/portbase/log"
-
 	"github.com/tevino/abool"
+
+	"github.com/safing/portbase/log"
 )
 
 const (

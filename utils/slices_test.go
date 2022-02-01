@@ -13,6 +13,8 @@ var (
 )
 
 func TestStringInSlice(t *testing.T) {
+	t.Parallel()
+
 	if !StringInSlice(stringTestSlice, "a") {
 		t.Fatal("string reported not in slice (1), but it is")
 	}
@@ -35,6 +37,8 @@ func TestStringInSlice(t *testing.T) {
 }
 
 func TestRemoveFromStringSlice(t *testing.T) {
+	t.Parallel()
+
 	test1 := DuplicateStrings(stringTestSlice)
 	test1 = RemoveFromStringSlice(test1, "b")
 	if StringInSlice(test1, "b") {
@@ -47,6 +51,8 @@ func TestRemoveFromStringSlice(t *testing.T) {
 }
 
 func TestDuplicateStrings(t *testing.T) {
+	t.Parallel()
+
 	a := DuplicateStrings(stringTestSlice)
 	if !StringSliceEqual(a, stringTestSlice) {
 		t.Fatal("copied string slice is not equal")
@@ -58,6 +64,8 @@ func TestDuplicateStrings(t *testing.T) {
 }
 
 func TestStringSliceEqual(t *testing.T) {
+	t.Parallel()
+
 	if !StringSliceEqual(stringTestSlice, stringTestSlice) {
 		t.Fatal("strings are equal, but are reported as not")
 	}
@@ -70,6 +78,8 @@ func TestStringSliceEqual(t *testing.T) {
 }
 
 func TestDuplicateBytes(t *testing.T) {
+	t.Parallel()
+
 	a := DuplicateBytes(byteTestSlice)
 	if !bytes.Equal(a, byteTestSlice) {
 		t.Fatal("copied bytes slice is not equal")

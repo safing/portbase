@@ -8,20 +8,18 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tidwall/sjson"
-
-	"github.com/safing/portbase/database/iterator"
-	"github.com/safing/portbase/formats/dsd"
-	"github.com/safing/portbase/formats/varint"
-
 	"github.com/gorilla/websocket"
 	"github.com/tevino/abool"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 
 	"github.com/safing/portbase/container"
 	"github.com/safing/portbase/database"
+	"github.com/safing/portbase/database/iterator"
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/formats/dsd"
+	"github.com/safing/portbase/formats/varint"
 	"github.com/safing/portbase/log"
 )
 
@@ -75,7 +73,6 @@ func allowAnyOrigin(r *http.Request) bool {
 }
 
 func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
-
 	upgrader := websocket.Upgrader{
 		CheckOrigin:     allowAnyOrigin,
 		ReadBufferSize:  1024,
@@ -89,7 +86,7 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	new := &DatabaseAPI{
+	newDBAPI := &DatabaseAPI{
 		conn:           wsConn,
 		sendQueue:      make(chan []byte, 100),
 		queries:        make(map[string]*iterator.Iterator),
@@ -99,14 +96,13 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 		db:             database.NewInterface(nil),
 	}
 
-	module.StartWorker("database api handler", new.handler)
-	module.StartWorker("database api writer", new.writer)
+	module.StartWorker("database api handler", newDBAPI.handler)
+	module.StartWorker("database api writer", newDBAPI.writer)
 
 	log.Tracer(r.Context()).Infof("api request: init websocket %s %s", r.RemoteAddr, r.RequestURI)
 }
 
 func (api *DatabaseAPI) handler(context.Context) error {
-
 	// 123|get|<key>
 	//    123|ok|<key>|<data>
 	//    123|error|<message>
@@ -429,12 +425,12 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 				// TODO: use upd, new and delete msgTypes
 				r.Lock()
 				isDeleted := r.Meta().IsDeleted()
-				new := r.Meta().Created == r.Meta().Modified
+				isNew := r.Meta().Created == r.Meta().Modified
 				r.Unlock()
 				switch {
 				case isDeleted:
 					api.send(opID, dbMsgTypeDel, r.Key(), nil)
-				case new:
+				case isNew:
 					api.send(opID, dbMsgTypeNew, r.Key(), data)
 				default:
 					api.send(opID, dbMsgTypeUpd, r.Key(), data)

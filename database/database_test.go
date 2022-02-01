@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,11 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/safing/portbase/database/storage"
-
 	q "github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
-
+	"github.com/safing/portbase/database/storage"
 	_ "github.com/safing/portbase/database/storage/badger"
 	_ "github.com/safing/portbase/database/storage/bbolt"
 	_ "github.com/safing/portbase/database/storage/fstree"
@@ -46,7 +45,7 @@ func makeKey(dbName, key string) string {
 	return fmt.Sprintf("%s:%s", dbName, key)
 }
 
-func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolint:gocognit,gocyclo
+func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolint:gocognit,gocyclo,thelper
 	t.Run(fmt.Sprintf("TestStorage_%s_%v", storageType, shadowDelete), func(t *testing.T) {
 		dbName := fmt.Sprintf("testing-%s-%v", storageType, shadowDelete)
 		fmt.Println(dbName)
@@ -180,7 +179,7 @@ func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolin
 
 			// check status individually
 			_, err = dbController.storage.Get("A")
-			if err != storage.ErrNotFound {
+			if !errors.Is(err, storage.ErrNotFound) {
 				t.Errorf("A should be deleted and purged, err=%s", err)
 			}
 			B1, err := dbController.storage.Get("B")
@@ -208,13 +207,13 @@ func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolin
 			B2, err := dbController.storage.Get("B")
 			if err == nil {
 				t.Errorf("B should be deleted and purged, meta: %+v", B2.Meta())
-			} else if err != storage.ErrNotFound {
+			} else if !errors.Is(err, storage.ErrNotFound) {
 				t.Errorf("B should be deleted and purged, err=%s", err)
 			}
 			C2, err := dbController.storage.Get("C")
 			if err == nil {
 				t.Errorf("C should be deleted and purged, meta: %+v", C2.Meta())
-			} else if err != storage.ErrNotFound {
+			} else if !errors.Is(err, storage.ErrNotFound) {
 				t.Errorf("C should be deleted and purged, err=%s", err)
 			}
 
@@ -233,11 +232,11 @@ func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolin
 		if err != nil {
 			t.Fatal(err)
 		}
-
 	})
 }
 
-func TestDatabaseSystem(t *testing.T) {
+func TestDatabaseSystem(t *testing.T) { //nolint:tparallel
+	t.Parallel()
 
 	// panic after 10 seconds, to check for locks
 	finished := make(chan struct{})
@@ -282,6 +281,8 @@ func TestDatabaseSystem(t *testing.T) {
 }
 
 func countRecords(t *testing.T, db *Interface, query *q.Query) int {
+	t.Helper()
+
 	_, err := query.Check()
 	if err != nil {
 		t.Fatal(err)

@@ -7,11 +7,9 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
-var (
-	// DefaultRegistry is the default registry
-	// that is used by the module-level API.
-	DefaultRegistry = NewRegistry()
-)
+// DefaultRegistry is the default registry
+// that is used by the module-level API.
+var DefaultRegistry = NewRegistry()
 
 func init() {
 	modules.Register("runtime", nil, startModule, nil, "database")

@@ -52,15 +52,15 @@ func prep() error {
 	if len(os.Args) > 3 {
 		n, err := strconv.ParseUint(os.Args[3], 10, 64)
 		if err != nil {
-			return fmt.Errorf("failed to parse output size: %s", err)
+			return fmt.Errorf("failed to parse output size: %w", err)
 		}
 		outputSize = n * 1000000
 	}
 
 	var err error
-	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0660)
+	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0o0644)
 	if err != nil {
-		return fmt.Errorf("failed to open output file: %s", err)
+		return fmt.Errorf("failed to open output file: %w", err)
 	}
 
 	return nil

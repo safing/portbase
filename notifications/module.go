@@ -6,9 +6,7 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
-var (
-	module *modules.Module
-)
+var module *modules.Module
 
 func init() {
 	module = modules.Register("notifications", prep, start, nil, "database", "base")

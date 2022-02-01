@@ -57,7 +57,6 @@ func (i *Interface) DelayedCacheWriter(ctx context.Context) error {
 			// of a total crash.
 			i.flushWriteCache(0)
 		}
-
 	}
 }
 

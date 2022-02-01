@@ -13,7 +13,7 @@ var (
 	errTest = errors.New("test error")
 )
 
-func TestWorker(t *testing.T) {
+func TestWorker(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 	// test basic functionality
 	err := wModule.RunWorker("test worker", func(ctx context.Context) error {
 		return nil
@@ -26,7 +26,7 @@ func TestWorker(t *testing.T) {
 	err = wModule.RunWorker("test worker", func(ctx context.Context) error {
 		return errTest
 	})
-	if err != errTest {
+	if !errors.Is(err, errTest) {
 		t.Errorf("worker failed with unexpected error: %s", err)
 	}
 
@@ -52,7 +52,7 @@ func TestWorker(t *testing.T) {
 	// test panic recovery
 	err = wModule.RunWorker("test worker", func(ctx context.Context) error {
 		var a []byte
-		_ = a[0] //nolint // we want to runtime panic!
+		_ = a[0]
 		return nil
 	})
 	t.Logf("panic error message: %s", err)

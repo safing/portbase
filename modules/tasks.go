@@ -8,8 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
+
+	"github.com/safing/portbase/log"
 )
 
 // Task is managed task bound to a module.
@@ -92,7 +93,7 @@ func (m *Module) newTask(name string, fn func(context.Context, *Task) error) *Ta
 	}
 
 	// create new task
-	new := &Task{
+	newTask := &Task{
 		name:     name,
 		module:   m,
 		taskFn:   fn,
@@ -100,9 +101,9 @@ func (m *Module) newTask(name string, fn func(context.Context, *Task) error) *Ta
 	}
 
 	// create context
-	new.ctx, new.cancelCtx = context.WithCancel(m.Ctx)
+	newTask.ctx, newTask.cancelCtx = context.WithCancel(m.Ctx)
 
-	return new
+	return newTask
 }
 
 func (t *Task) isActive() bool {
@@ -397,7 +398,7 @@ func (t *Task) addToSchedule(overtime bool) {
 	// insert task into schedule
 	for e := taskSchedule.Front(); e != nil; e = e.Next() {
 		// check for self
-		eVal := e.Value.(*Task)
+		eVal := e.Value.(*Task) //nolint:forcetypeassert // Can only be *Task.
 		if eVal == t {
 			continue
 		}
@@ -480,7 +481,7 @@ func taskQueueHandler() {
 			}
 
 			// value -> Task
-			t := e.Value.(*Task)
+			t := e.Value.(*Task) //nolint:forcetypeassert // Can only be *Task.
 			// run
 			t.runWithLocking()
 		}
@@ -507,7 +508,7 @@ func taskScheduleHandler() {
 				scheduleLock.Unlock()
 				continue
 			}
-			t := e.Value.(*Task)
+			t := e.Value.(*Task) //nolint:forcetypeassert // Can only be *Task.
 
 			// process Task
 			if t.overtime {

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func benchmarkCacheWriting(b *testing.B, storageType string, cacheSize int, sampleSize int, delayWrites bool) { //nolint:gocognit,gocyclo
+func benchmarkCacheWriting(b *testing.B, storageType string, cacheSize int, sampleSize int, delayWrites bool) { //nolint:gocognit,gocyclo,thelper
 	b.Run(fmt.Sprintf("CacheWriting_%s_%d_%d_%v", storageType, cacheSize, sampleSize, delayWrites), func(b *testing.B) {
 		// Setup Benchmark.
 
@@ -66,11 +66,10 @@ func benchmarkCacheWriting(b *testing.B, storageType string, cacheSize int, samp
 		// End cache writer and wait
 		cancelCtx()
 		wg.Wait()
-
 	})
 }
 
-func benchmarkCacheReadWrite(b *testing.B, storageType string, cacheSize int, sampleSize int, delayWrites bool) { //nolint:gocognit,gocyclo
+func benchmarkCacheReadWrite(b *testing.B, storageType string, cacheSize int, sampleSize int, delayWrites bool) { //nolint:gocognit,gocyclo,thelper
 	b.Run(fmt.Sprintf("CacheReadWrite_%s_%d_%d_%v", storageType, cacheSize, sampleSize, delayWrites), func(b *testing.B) {
 		// Setup Benchmark.
 
@@ -135,7 +134,6 @@ func benchmarkCacheReadWrite(b *testing.B, storageType string, cacheSize int, sa
 		// End cache writer and wait
 		cancelCtx()
 		wg.Wait()
-
 	})
 }
 

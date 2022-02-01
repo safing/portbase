@@ -8,6 +8,8 @@ import (
 )
 
 func testRegexMatch(t *testing.T, testRegex *regexp.Regexp, testString string, shouldMatch bool) {
+	t.Helper()
+
 	if testRegex.MatchString(testString) != shouldMatch {
 		if shouldMatch {
 			t.Errorf("regex %s should match %s", testRegex, testString)
@@ -18,6 +20,8 @@ func testRegexMatch(t *testing.T, testRegex *regexp.Regexp, testString string, s
 }
 
 func testRegexFind(t *testing.T, testRegex *regexp.Regexp, testString string, shouldMatch bool) {
+	t.Helper()
+
 	if (testRegex.FindString(testString) != "") != shouldMatch {
 		if shouldMatch {
 			t.Errorf("regex %s should find %s", testRegex, testString)
@@ -28,6 +32,8 @@ func testRegexFind(t *testing.T, testRegex *regexp.Regexp, testString string, sh
 }
 
 func testVersionTransformation(t *testing.T, testFilename, testIdentifier, testVersion string) {
+	t.Helper()
+
 	identifier, version, ok := GetIdentifierAndVersion(testFilename)
 	if !ok {
 		t.Errorf("failed to get identifier and version of %s", testFilename)
@@ -40,6 +46,8 @@ func testVersionTransformation(t *testing.T, testFilename, testIdentifier, testV
 }
 
 func TestRegexes(t *testing.T) {
+	t.Parallel()
+
 	testRegexMatch(t, rawVersionRegex, "0.1.2", true)
 	testRegexMatch(t, rawVersionRegex, "0.1.2-beta", true)
 	testRegexMatch(t, rawVersionRegex, "0.1.2-staging", true)

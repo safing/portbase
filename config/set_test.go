@@ -3,7 +3,7 @@ package config
 
 import "testing"
 
-func TestLayersGetters(t *testing.T) {
+func TestLayersGetters(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
@@ -77,10 +77,9 @@ func TestLayersGetters(t *testing.T) {
 	if notBool() {
 		t.Error("expected fallback value: false")
 	}
-
 }
 
-func TestLayersSetters(t *testing.T) {
+func TestLayersSetters(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
@@ -191,5 +190,4 @@ func TestLayersSetters(t *testing.T) {
 	if err := SetDefaultConfigOption("invalid_delete", nil); err == nil {
 		t.Error("should fail")
 	}
-
 }

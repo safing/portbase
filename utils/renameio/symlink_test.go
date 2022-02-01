@@ -1,4 +1,4 @@
-// +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
+// go:build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
 
 package renameio
 
@@ -11,14 +11,18 @@ import (
 )
 
 func TestSymlink(t *testing.T) {
-	d, err := ioutil.TempDir("", "tempdirtest")
+	t.Parallel()
+
+	d, err := ioutil.TempDir("", "test-renameio-testsymlink")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(d)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(d)
+	})
 
 	want := []byte("Hello World")
-	if err := ioutil.WriteFile(filepath.Join(d, "hello.txt"), want, 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(d, "hello.txt"), want, 0o0600); err != nil {
 		t.Fatal(err)
 	}
 

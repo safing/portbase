@@ -10,15 +10,13 @@ import (
 	"github.com/safing/portbase/database/record"
 )
 
-var (
-	// ErrNotImplemented is returned when a function is not implemented by a storage.
-	ErrNotImplemented = errors.New("not implemented")
-)
+// ErrNotImplemented is returned when a function is not implemented by a storage.
+var ErrNotImplemented = errors.New("not implemented")
 
 // InjectBase is a dummy base structure to reduce boilerplate code for injected storage interfaces.
 type InjectBase struct{}
 
-// Compile time interface check
+// Compile time interface check.
 var _ Interface = &InjectBase{}
 
 // Get returns a database record.

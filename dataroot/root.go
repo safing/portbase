@@ -7,11 +7,9 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
-var (
-	root *utils.DirStructure
-)
+var root *utils.DirStructure
 
-// Initialize initializes the data root directory
+// Initialize initializes the data root directory.
 func Initialize(rootDir string, perm os.FileMode) error {
 	if root != nil {
 		return errors.New("already initialized")

@@ -8,6 +8,7 @@ import (
 )
 
 func TestWrapper(t *testing.T) {
+	t.Parallel()
 
 	// check model interface compliance
 	var m Record

@@ -37,12 +37,12 @@ func (sa *StructAccessor) Set(key string, value interface{}) error {
 	}
 
 	// handle special cases
-	switch field.Kind() {
+	switch field.Kind() { // nolint:exhaustive
 
 	// ints
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		var newInt int64
-		switch newVal.Kind() {
+		switch newVal.Kind() { // nolint:exhaustive
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			newInt = newVal.Int()
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -58,7 +58,7 @@ func (sa *StructAccessor) Set(key string, value interface{}) error {
 		// uints
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		var newUint uint64
-		switch newVal.Kind() {
+		switch newVal.Kind() { // nolint:exhaustive
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			newUint = uint64(newVal.Int())
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -73,7 +73,7 @@ func (sa *StructAccessor) Set(key string, value interface{}) error {
 
 		// floats
 	case reflect.Float32, reflect.Float64:
-		switch newVal.Kind() {
+		switch newVal.Kind() { // nolint:exhaustive
 		case reflect.Float32, reflect.Float64:
 			field.SetFloat(newVal.Float())
 		default:
@@ -124,7 +124,7 @@ func (sa *StructAccessor) GetInt(key string) (value int64, ok bool) {
 	if !field.IsValid() {
 		return 0, false
 	}
-	switch field.Kind() {
+	switch field.Kind() { // nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return field.Int(), true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -140,7 +140,7 @@ func (sa *StructAccessor) GetFloat(key string) (value float64, ok bool) {
 	if !field.IsValid() {
 		return 0, false
 	}
-	switch field.Kind() {
+	switch field.Kind() { // nolint:exhaustive
 	case reflect.Float32, reflect.Float64:
 		return field.Float(), true
 	default:

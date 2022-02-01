@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/tevino/abool"
+
 	"github.com/safing/portbase/container"
 	"github.com/safing/portbase/formats/dsd"
-	"github.com/tevino/abool"
 )
 
-// Client errors.
-var (
-	ErrMalformedMessage = errors.New("malformed message")
-)
+// ErrMalformedMessage is returned when a malformed message was encountered.
+var ErrMalformedMessage = errors.New("malformed message")
 
 // Message is an API message.
 type Message struct {

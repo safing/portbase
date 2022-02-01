@@ -21,7 +21,7 @@ var (
 	rngReady = false
 
 	rngCipher = "aes"
-	// possible values: aes, serpent
+	// Possible values: "aes", "serpent".
 
 	module *modules.Module
 )
@@ -56,7 +56,7 @@ func start() error {
 		osEntropy := make([]byte, minFeedEntropy/8)
 		_, err := rand.Read(osEntropy)
 		if err != nil {
-			return fmt.Errorf("could not read entropy from os: %s", err)
+			return fmt.Errorf("could not read entropy from os: %w", err)
 		}
 		// feed
 		rngLock.Lock()

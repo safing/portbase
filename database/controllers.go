@@ -8,6 +8,7 @@ import (
 	"github.com/safing/portbase/database/storage"
 )
 
+// StorageTypeInjected is the type of injected databases.
 const StorageTypeInjected = "injected"
 
 var (
@@ -38,7 +39,7 @@ func getController(name string) (*Controller, error) {
 	// get db registration
 	registeredDB, err := getDatabase(name)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s: %s`, name, err)
+		return nil, fmt.Errorf("could not start database %s: %w", name, err)
 	}
 
 	// Check if database is injected.
@@ -49,13 +50,13 @@ func getController(name string) (*Controller, error) {
 	// get location
 	dbLocation, err := getLocation(name, registeredDB.StorageType)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+		return nil, fmt.Errorf("could not start database %s (type %s): %w", name, registeredDB.StorageType, err)
 	}
 
 	// start database
 	storageInt, err := storage.StartDatabase(name, registeredDB.StorageType, dbLocation)
 	if err != nil {
-		return nil, fmt.Errorf(`could not start database %s (type %s): %s`, name, registeredDB.StorageType, err)
+		return nil, fmt.Errorf("could not start database %s (type %s): %w", name, registeredDB.StorageType, err)
 	}
 
 	controller = newController(registeredDB, storageInt, registeredDB.ShadowDelete)

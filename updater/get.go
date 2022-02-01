@@ -9,7 +9,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-// Errors
+// Errors returned by the updater package.
 var (
 	ErrNotFound            = errors.New("the requested file could not be found")
 	ErrNotAvailableLocally = errors.New("the requested file is not available locally")
