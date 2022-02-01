@@ -45,7 +45,7 @@ func makeKey(dbName, key string) string {
 	return fmt.Sprintf("%s:%s", dbName, key)
 }
 
-func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolint:gocognit,gocyclo,thelper
+func testDatabase(t *testing.T, storageType string, shadowDelete bool) { //nolint:maintidx,thelper
 	t.Run(fmt.Sprintf("TestStorage_%s_%v", storageType, shadowDelete), func(t *testing.T) {
 		dbName := fmt.Sprintf("testing-%s-%v", storageType, shadowDelete)
 		fmt.Println(dbName)

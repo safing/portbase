@@ -4,6 +4,8 @@
 linters:
   enable-all: true
   disable:
+    - containedctx
+    - contextcheck
     - cyclop
     - exhaustivestruct
     - forbidigo
@@ -16,12 +18,16 @@ linters:
     - gomnd
     - ifshort
     - interfacer
+    - ireturn
     - lll
     - nestif
+    - nilnil
     - nlreturn
     - noctx
     - revive
+    - tagliatelle
     - testpackage
+    - varnamelen
     - whitespace
     - wrapcheck
     - wsl

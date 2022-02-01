@@ -259,7 +259,7 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 	return
 }
 
-func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
+func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) { //nolint:maintidx
 	size := d.Size()
 	{
 		if uint64(cap(buf)) >= size {
@@ -555,7 +555,7 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 	return buf[:i+35], nil
 }
 
-func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
+func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) { //nolint:maintidx
 	i := uint64(0)
 
 	{

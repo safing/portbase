@@ -117,7 +117,7 @@ var (
 	}
 )
 
-func TestConversion(t *testing.T) {
+func TestConversion(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	compressionFormats := []uint8{AUTO, GZIP}

@@ -427,7 +427,7 @@ func waitUntilNextScheduledTask() <-chan time.Time {
 	defer scheduleLock.Unlock()
 
 	if taskSchedule.Len() > 0 {
-		return time.After(time.Until(taskSchedule.Front().Value.(*Task).executeAt))
+		return time.After(time.Until(taskSchedule.Front().Value.(*Task).executeAt)) //nolint:forcetypeassert // Can only be *Task.
 	}
 	return waitForever
 }

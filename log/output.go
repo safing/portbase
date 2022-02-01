@@ -96,7 +96,7 @@ func TriggerWriterChannel() chan struct{} {
 }
 
 func defaultColorFormater(line Message, duplicates uint64) string {
-	return formatLine(line.(*logLine), duplicates, true)
+	return formatLine(line.(*logLine), duplicates, true) //nolint:forcetypeassert // TODO: improve
 }
 
 func startWriter() {

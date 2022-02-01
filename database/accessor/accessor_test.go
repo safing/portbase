@@ -44,7 +44,7 @@ var (
 		F64:  42.42,
 		B:    true,
 	}
-	testJSONBytes, _ = json.Marshal(testStruct)
+	testJSONBytes, _ = json.Marshal(testStruct) //nolint:errchkjson
 	testJSON         = string(testJSONBytes)
 )
 
