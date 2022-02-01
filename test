@@ -17,9 +17,9 @@ function help {
   echo "  install       install deps for running tests"
   echo ""
   echo "options:"
-  echo "  --scripted    dont jump console lines (still use colors)"
-  echo "  --test-only   skip linters and only run tests"
-  echo "  [package]     run tests only on this package"
+  echo "  --scripted    don't jump console lines (still use colors)"
+  echo "  --test-only   run tests only, no linters"
+  echo "  [package]     run only on this package"
 }
 
 function run {
@@ -60,22 +60,6 @@ function run {
   fi
 
   rm -f $tmpfile
-}
-
-function checkformat {
-  if [[ $scripted -eq 0 ]]; then
-    echo "[......] gofmt $1"
-  fi
-
-  output=$(gofmt -l $GOPATH/src/$1/*.go)
-  if [[ $output == "" ]]; then
-    echo -e "${goUp}[\e[01;32m  OK  \e[00m] gofmt $*"
-  else
-    echo -e "${goUp}[\e[01;31m FAIL \e[00m] gofmt $*"
-    echo "The following files do not conform to gofmt:"
-    gofmt -l $GOPATH/src/$1/*.go # keeps format
-    errors=$((errors+1))
-  fi
 }
 
 # get and switch to script dir
@@ -154,18 +138,14 @@ if [[ $testonly -eq 0 ]]; then
     exit 1
   fi
 fi
+
 # target selection
 if [[ "$1" == "" ]]; then
   # get all packages
-  packages=$(go list ./...)
+  packages=$(go list -e ./...)
 else
   # single package testing
-  packages=$(go list)/$1
-  if [[ ! -d "$GOPATH/src/$packages" ]]; then
-    echo "go package $packages does not exist"
-    help
-    exit 1
-  fi
+  packages=$(go list -e)/$1
   echo "note: only running tests for package $packages"
 fi
 
@@ -175,16 +155,14 @@ echo "running tests for ${platformInfo//$'\n'/ }:"
 
 # run vet/test on packages
 for package in $packages; do
-  package=${package#github.com/safing/portbase}
-  package=${package#/}
-  package=$PWD/$package
+  packagename=${package#github.com/safing/portbase} #TODO: could be queried with `go list .`
+  packagename=${packagename#/}
   echo ""
   echo $package
   if [[ $testonly -eq 0 ]]; then
-    checkformat $package
     run golint -set_exit_status -min_confidence 1.0 $package
     run go vet $package
-    run golangci-lint run $package
+    run golangci-lint run $packagename
   fi
   run go test -cover $fullTestFlags $package
 done
