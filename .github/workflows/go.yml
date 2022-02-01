@@ -54,8 +54,9 @@ jobs:
     - name: Run golint
       run: ./golint -set_exit_status -min_confidence 1.0 ./...
    
-    - name: Run gofmt
-      run: bash -c 'test -z "$(gofmt -s -l .)"'
+    # TODO: Enable gofmt again when all environments are up to date.
+    # - name: Run gofmt
+    #   run: bash -c 'test -z "$(gofmt -s -l .)"'
 
   test:
     name: Test
