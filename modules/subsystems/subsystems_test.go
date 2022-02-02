@@ -120,5 +120,5 @@ func TestSubsystems(t *testing.T) { //nolint:paralleltest // Too much interferen
 	}
 
 	// clean up and exit
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 }

@@ -92,7 +92,9 @@ func (file *File) Unpack(suffix string, unpacker Unpacker) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	r, err := unpacker(f)
 	if err != nil {

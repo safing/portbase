@@ -251,7 +251,7 @@ func (api *DatabaseAPI) shutdown(err error) error {
 
 	// Trigger shutdown.
 	close(api.shutdownSignal)
-	api.conn.Close()
+	_ = api.conn.Close()
 	return nil
 }
 

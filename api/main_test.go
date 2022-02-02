@@ -52,6 +52,6 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "failed to cleanly shutdown test: %s\n", err)
 	}
 	// clean up and exit
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 	os.Exit(exitCode)
 }

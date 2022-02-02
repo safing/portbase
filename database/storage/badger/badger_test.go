@@ -45,7 +45,9 @@ func TestBadger(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(testDir) // clean up
+	defer func() {
+		_ = os.RemoveAll(testDir) // clean up
+	}()
 
 	// start
 	db, err := NewBadger("test", testDir)

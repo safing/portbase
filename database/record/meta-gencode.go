@@ -2,15 +2,6 @@ package record
 
 import (
 	"fmt"
-	"io"
-	"time"
-	"unsafe"
-)
-
-var (
-	_ = unsafe.Sizeof(0)
-	_ = io.ReadFull
-	_ = time.Now()
 )
 
 // GenCodeSize returns the size of the gencode marshalled byte slice.

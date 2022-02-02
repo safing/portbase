@@ -38,17 +38,19 @@ func tempDir(dir, dest string) string {
 	cleanup := true
 	defer func() {
 		if cleanup {
-			os.Remove(testsrc.Name())
+			_ = os.Remove(testsrc.Name())
 		}
 	}()
-	testsrc.Close()
+	_ = testsrc.Close()
 
 	testdest, err := ioutil.TempFile(filepath.Dir(dest), "."+filepath.Base(dest))
 	if err != nil {
 		return fallback
 	}
-	defer os.Remove(testdest.Name())
-	testdest.Close()
+	defer func() {
+		_ = os.Remove(testdest.Name())
+	}()
+	_ = testdest.Close()
 
 	if err := os.Rename(testsrc.Name(), testdest.Name()); err != nil {
 		return fallback
@@ -149,7 +151,7 @@ func Symlink(oldname, newname string) error {
 	cleanup := true
 	defer func() {
 		if cleanup {
-			os.RemoveAll(d)
+			_ = os.RemoveAll(d)
 		}
 	}()
 

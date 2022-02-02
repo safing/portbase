@@ -58,7 +58,7 @@ func prep() error {
 	}
 
 	var err error
-	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0o0644)
+	outputFile, err = os.OpenFile(os.Args[2], os.O_CREATE|os.O_WRONLY, 0o0644) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to open output file: %w", err)
 	}
@@ -106,13 +106,13 @@ func fortuna(_ context.Context) error {
 
 		bytesWritten += 64
 		if bytesWritten%1024 == 0 {
-			os.Stderr.WriteString(".")
+			_, _ = os.Stderr.WriteString(".")
 		}
 		if bytesWritten%65536 == 0 {
 			fmt.Fprintf(os.Stderr, "\n%d bytes written\n", bytesWritten)
 		}
 		if bytesWritten >= outputSize {
-			os.Stderr.WriteString("\n")
+			_, _ = os.Stderr.WriteString("\n")
 			break
 		}
 	}
@@ -145,7 +145,7 @@ func tickfeeder(ctx context.Context) error {
 			}
 			bytesWritten += 8
 			if bytesWritten%1024 == 0 {
-				os.Stderr.WriteString(".")
+				_, _ = os.Stderr.WriteString(".")
 			}
 			if bytesWritten%65536 == 0 {
 				fmt.Fprintf(os.Stderr, "\n%d bytes written\n", bytesWritten)
@@ -154,7 +154,7 @@ func tickfeeder(ctx context.Context) error {
 		}
 
 		if bytesWritten >= outputSize {
-			os.Stderr.WriteString("\n")
+			_, _ = os.Stderr.WriteString("\n")
 			break
 		}
 	}

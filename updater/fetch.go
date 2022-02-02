@@ -45,7 +45,9 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// download and write file
 	n, err := io.Copy(atomicFile, resp.Body)
@@ -64,7 +66,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	// set permissions
 	if !onWindows {
 		// TODO: only set executable files to 0755, set other to 0644
-		err = os.Chmod(rv.storagePath(), 0o0755)
+		err = os.Chmod(rv.storagePath(), 0o0755) //nolint:gosec // See TODO above.
 		if err != nil {
 			log.Warningf("%s: failed to set permissions on downloaded file %s: %s", reg.Name, rv.storagePath(), err)
 		}
@@ -89,7 +91,9 @@ func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client,
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// download and write file
 	buf := bytes.NewBuffer(make([]byte, 0, resp.ContentLength))
@@ -135,7 +139,7 @@ func (reg *ResourceRegistry) makeRequest(ctx context.Context, client *http.Clien
 
 	// check return code
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, "", fmt.Errorf("failed to fetch %q: %d %s", downloadURL, resp.StatusCode, resp.Status)
 	}
 

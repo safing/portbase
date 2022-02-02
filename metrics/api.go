@@ -101,7 +101,9 @@ func writeMetricsTo(ctx context.Context, url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// Check return status.
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {

@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 
 	// Clean up the test directory.
 	// Do not defer, as we end this function with a os.Exit call.
-	os.RemoveAll(testDir)
+	_ = os.RemoveAll(testDir)
 
 	os.Exit(exitCode)
 }

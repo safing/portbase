@@ -31,6 +31,6 @@ func TestMain(m *testing.M) {
 	ret := m.Run()
 
 	// teardown
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 	os.Exit(ret)
 }

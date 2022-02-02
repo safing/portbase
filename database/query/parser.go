@@ -207,7 +207,7 @@ func parseAndOr(getSnippet func() (*snippet, error), remainingSnippets func() in
 	for {
 		if !expectingMore && rootCondition && remainingSnippets() == 0 {
 			// advance snippetsPos by one, as it will be set back by 1
-			getSnippet() //nolint:errcheck
+			_, _ = getSnippet()
 			if len(conditions) == 1 {
 				return conditions[0], nil
 			}

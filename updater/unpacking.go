@@ -117,7 +117,9 @@ func (res *Resource) unpackZipArchive() (err error) {
 	if err != nil {
 		return
 	}
-	defer archiveReader.Close()
+	defer func() {
+		_ = archiveReader.Close()
+	}()
 
 	// Save all files to the tmp dir.
 	for _, file := range archiveReader.File {
@@ -161,14 +163,18 @@ func copyFromZipArchive(archiveFile *zip.File, dstPath string) error {
 	if err != nil {
 		return err
 	}
-	defer fileReader.Close()
+	defer func() {
+		_ = fileReader.Close()
+	}()
 
 	// Open destination file for writing.
 	dstFile, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, archiveFile.Mode())
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() {
+		_ = dstFile.Close()
+	}()
 
 	// Copy full file from archive to dst.
 	if _, err := io.CopyN(dstFile, fileReader, MaxUnpackSize); err != nil {

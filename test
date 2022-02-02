@@ -104,8 +104,6 @@ fi
 # install
 if [[ $install -eq 1 ]]; then
   echo "installing dependencies..."
-  echo "$ go get -u golang.org/x/lint/golint"
-  go get -u golang.org/x/lint/golint
   # TODO: update golangci-lint version regularly
   echo "$ curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.44.0"
   curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.44.0
@@ -120,12 +118,6 @@ fi
 if [[ $testonly -eq 0 ]]; then
   if [[ $(which gofmt) == "" ]]; then
     echo "gofmt command not found"
-    exit 1
-  fi
-  if [[ $(which golint) == "" ]]; then
-    echo "golint command not found"
-    echo "install with: go get -u golang.org/x/lint/golint"
-    echo "or run: ./test install"
     exit 1
   fi
   if [[ $(which golangci-lint) == "" ]]; then
@@ -160,7 +152,6 @@ for package in $packages; do
   echo ""
   echo $package
   if [[ $testonly -eq 0 ]]; then
-    run golint -set_exit_status -min_confidence 1.0 $package
     run go vet $package
     run golangci-lint run $packagename
   fi

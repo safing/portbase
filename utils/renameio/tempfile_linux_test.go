@@ -15,11 +15,11 @@ func TestTempDir(t *testing.T) {
 
 	if tmpdir, ok := os.LookupEnv("TMPDIR"); ok {
 		t.Cleanup(func() {
-			os.Setenv("TMPDIR", tmpdir) // restore
+			_ = os.Setenv("TMPDIR", tmpdir) // restore
 		})
 	} else {
 		t.Cleanup(func() {
-			os.Unsetenv("TMPDIR") // restore
+			_ = os.Unsetenv("TMPDIR") // restore
 		})
 	}
 
@@ -28,7 +28,7 @@ func TestTempDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		os.RemoveAll(mount1)
+		_ = os.RemoveAll(mount1)
 	})
 
 	mount2, err := ioutil.TempDir("", "test-renameio-testtempdir2")
@@ -36,7 +36,7 @@ func TestTempDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		os.RemoveAll(mount2)
+		_ = os.RemoveAll(mount2)
 	})
 
 	if err := syscall.Mount("tmpfs", mount1, "tmpfs", 0, ""); err != nil {
@@ -103,9 +103,9 @@ func TestTempDir(t *testing.T) {
 			t.Parallel()
 
 			if testCase.TMPDIR == "" {
-				os.Unsetenv("TMPDIR")
+				_ = os.Unsetenv("TMPDIR")
 			} else {
-				os.Setenv("TMPDIR", testCase.TMPDIR)
+				_ = os.Setenv("TMPDIR", testCase.TMPDIR)
 			}
 
 			if got := tempDir(testCase.dir, testCase.path); got != testCase.want {

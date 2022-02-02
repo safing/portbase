@@ -1,18 +1,6 @@
 //nolint:nakedret,unconvert,gocognit,wastedassign,gofumpt
 package dsd
 
-import (
-	"io"
-	"time"
-	"unsafe"
-)
-
-var (
-	_ = unsafe.Sizeof(0)
-	_ = io.ReadFull
-	_ = time.Now()
-)
-
 func (d *SimpleTestStruct) Size() (s uint64) {
 
 	{

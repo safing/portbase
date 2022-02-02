@@ -33,6 +33,9 @@ linters:
     - wsl
 
 linters-settings:
+  revive:
+    # See https://github.com/mgechev/revive#available-rules for details.
+    enable-all-rules: true
   gci:
     # put imports beginning with prefix after 3rd-party packages;
     # only support one prefix
@@ -43,3 +46,20 @@ linters-settings:
     # might be left in the code accidentally and should be resolved before merging
     keywords:
       - FIXME
+  gosec:
+    # To specify a set of rules to explicitly exclude.
+    # Available rules: https://github.com/securego/gosec#available-rules
+    excludes:
+      - G204 # Variables in commands.
+      - G304 # Variables in file paths.
+      - G505 # We need crypto/sha1 for non-security stuff. Using `nolint:` triggers another linter.
+
+issues:
+  exclude-use-default: false
+  exclude-rules:
+    - text: "a blank import .*"
+      linters:
+        - golint
+    - text: "ST1000: at least one file in a package should have a package comment.*"
+      linters:
+        - stylecheck

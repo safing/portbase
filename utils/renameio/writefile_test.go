@@ -17,7 +17,9 @@ func TestWriteFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(d)
+	defer func() {
+		_ = os.RemoveAll(d)
+	}()
 
 	filename := filepath.Join(d, "hello.sh")
 

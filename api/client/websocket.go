@@ -41,7 +41,7 @@ func (c *Client) wsConnect() error {
 	case <-c.shutdownSignal:
 		state.Error("")
 	}
-	state.wsConn.Close()
+	_ = state.wsConn.Close()
 	state.wg.Wait()
 
 	return nil

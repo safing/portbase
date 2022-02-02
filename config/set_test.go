@@ -1,4 +1,4 @@
-//nolint:goconst,errcheck
+//nolint:goconst
 package config
 
 import "testing"
@@ -83,7 +83,7 @@ func TestLayersSetters(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "monkey",
 		Description:     "description",
@@ -93,7 +93,7 @@ func TestLayersSetters(t *testing.T) { //nolint:paralleltest
 		DefaultValue:    "banana",
 		ValidationRegex: "^(banana|water)$",
 	})
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "zebras/zebra",
 		Description:     "description",
@@ -103,7 +103,7 @@ func TestLayersSetters(t *testing.T) { //nolint:paralleltest
 		DefaultValue:    []string{"black", "white"},
 		ValidationRegex: "^[a-z]+$",
 	})
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "elephant",
 		Description:     "description",
@@ -113,7 +113,7 @@ func TestLayersSetters(t *testing.T) { //nolint:paralleltest
 		DefaultValue:    2,
 		ValidationRegex: "",
 	})
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "hot",
 		Description:     "description",
