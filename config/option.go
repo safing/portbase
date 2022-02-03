@@ -94,6 +94,10 @@ const (
 	// may be extended to hold references to other options in the
 	// future.
 	StackableAnnotation = "safing/portbase:options:stackable"
+	// RestartPendingAnnotation is automatically set on a configuration option
+	// that requires a restart and has been changed.
+	// The value must always be a boolean with value "true".
+	RestartPendingAnnotation = "safing/portbase:options:restart-pending"
 	// QuickSettingAnnotation can be used to add quick settings to
 	// a configuration option. A quick setting can support the user
 	// by switching between pre-configured values.
@@ -258,6 +262,12 @@ func (option *Option) SetAnnotation(key string, value interface{}) {
 	option.Lock()
 	defer option.Unlock()
 
+	option.setAnnotation(key, value)
+}
+
+// setAnnotation sets the value of the annotation key overwritting an
+// existing value if required. Does not lock the Option.
+func (option *Option) setAnnotation(key string, value interface{}) {
 	if option.Annotations == nil {
 		option.Annotations = make(Annotations)
 	}

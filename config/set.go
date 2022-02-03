@@ -147,6 +147,11 @@ func setConfigOption(key string, value interface{}, push bool) (err error) {
 		}
 	}
 
+	// Add the "restart pending" annotation if the settings requires a restart.
+	if option.RequiresRestart {
+		option.setAnnotation(RestartPendingAnnotation, true)
+	}
+
 	handleOptionUpdate(option, push)
 	option.Unlock()
 
@@ -180,6 +185,11 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 		if err == nil {
 			option.activeDefaultValue = valueCache
 		}
+	}
+
+	// Add the "restart pending" annotation if the settings requires a restart.
+	if option.RequiresRestart {
+		option.setAnnotation(RestartPendingAnnotation, true)
 	}
 
 	handleOptionUpdate(option, push)
