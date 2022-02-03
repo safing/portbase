@@ -102,8 +102,8 @@ func registerBasicOptions() error {
 	})
 }
 
-func loadLogLevel() {
-	setDefaultConfigOption(CfgLogLevel, log.GetLogLevel().Name(), false)
+func loadLogLevel() error {
+	return setDefaultConfigOption(CfgLogLevel, log.GetLogLevel().Name(), false)
 }
 
 func setLogLevel(ctx context.Context, data interface{}) error {

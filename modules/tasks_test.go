@@ -29,20 +29,24 @@ func init() {
 	}()
 }
 
-// test waiting
+// Test queued tasks.
 
-// globals
-var qtWg sync.WaitGroup
-var qtOutputChannel chan string
-var qtSleepDuration time.Duration
-var qtModule *Module
+// Queued task test globals.
+
+var (
+	qtWg            sync.WaitGroup
+	qtOutputChannel chan string
+	qtSleepDuration time.Duration
+	qtModule        *Module
+)
 
 func init() {
 	qtModule = initNewModule("task test module", nil, nil, nil)
 	qtModule.status = StatusOnline
 }
 
-// functions
+// Queued task test functions.
+
 func queuedTaskTester(s string) {
 	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(qtSleepDuration * 2)
@@ -61,8 +65,7 @@ func prioritizedTaskTester(s string) {
 	}).QueuePrioritized()
 }
 
-// test
-func TestQueuedTask(t *testing.T) {
+func TestQueuedTask(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -103,18 +106,21 @@ func TestQueuedTask(t *testing.T) {
 	if completeOutput != expectedOutput {
 		t.Errorf("QueuedTask test failed, expected sequence %s, got %s", expectedOutput, completeOutput)
 	}
-
 }
 
-// test scheduled tasks
+// Test scheduled tasks.
 
-// globals
-var stWg sync.WaitGroup
-var stOutputChannel chan string
-var stSleepDuration time.Duration
-var stWaitCh chan bool
+// Scheduled task test globals.
 
-// functions
+var (
+	stWg            sync.WaitGroup
+	stOutputChannel chan string
+	stSleepDuration time.Duration
+	stWaitCh        chan bool
+)
+
+// Scheduled task test functions.
+
 func scheduledTaskTester(s string, sched time.Time) {
 	qtModule.NewTask(s, func(ctx context.Context, t *Task) error {
 		time.Sleep(stSleepDuration)
@@ -124,8 +130,7 @@ func scheduledTaskTester(s string, sched time.Time) {
 	}).Schedule(sched)
 }
 
-// test
-func TestScheduledTaskWaiting(t *testing.T) {
+func TestScheduledTaskWaiting(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 
 	// skip
 	if testing.Short() {
@@ -166,10 +171,9 @@ func TestScheduledTaskWaiting(t *testing.T) {
 	if completeOutput != expectedOutput {
 		t.Errorf("ScheduledTask test failed, expected sequence %s, got %s", expectedOutput, completeOutput)
 	}
-
 }
 
-func TestRequeueingTask(t *testing.T) {
+func TestRequeueingTask(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 	blockWg := &sync.WaitGroup{}
 	wg := &sync.WaitGroup{}
 
@@ -222,7 +226,7 @@ func TestRequeueingTask(t *testing.T) {
 	wg.Wait()
 }
 
-func TestQueueSuccession(t *testing.T) {
+func TestQueueSuccession(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 	var cnt int
 	wg := &sync.WaitGroup{}
 	wg.Add(10)

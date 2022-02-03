@@ -67,6 +67,8 @@ func (fn SimpleValueGetterFunc) Get(keyOrPrefix string) ([]record.Record, error)
 	return fn(keyOrPrefix)
 }
 
-// compile time checks
-var _ ValueProvider = SimpleValueGetterFunc(nil)
-var _ ValueProvider = SimpleValueSetterFunc(nil)
+// Compile time checks.
+var (
+	_ ValueProvider = SimpleValueGetterFunc(nil)
+	_ ValueProvider = SimpleValueSetterFunc(nil)
+)

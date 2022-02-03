@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-// Errors
+// Errors.
 var (
 	ErrNotFound         = errors.New("database entry not found")
 	ErrPermissionDenied = errors.New("access to database record denied")

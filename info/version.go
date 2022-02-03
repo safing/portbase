@@ -76,7 +76,7 @@ func FullVersion() string {
 	}
 	s += fmt.Sprintf("\ncommit %s\n", commit)
 	s += fmt.Sprintf("built with %s (%s) %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
-	s += fmt.Sprintf("  using options %s\n", strings.Replace(buildOptions, "§", " ", -1))
+	s += fmt.Sprintf("  using options %s\n", strings.ReplaceAll(buildOptions, "§", " "))
 	s += fmt.Sprintf("  by %s@%s\n", buildUser, buildHost)
 	s += fmt.Sprintf("  on %s\n", buildDate)
 	s += fmt.Sprintf("\nLicensed under the %s license.\nThe source code is available here: %s", license, buildSource)

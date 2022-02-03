@@ -18,8 +18,7 @@ func init() {
 	go microTaskScheduler()
 }
 
-// test waiting
-func TestMicroTaskWaiting(t *testing.T) {
+func TestMicroTaskWaiting(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 
 	// skip
 	if testing.Short() {
@@ -108,17 +107,20 @@ func TestMicroTaskWaiting(t *testing.T) {
 	if completeOutput != mtwExpectedOutput {
 		t.Errorf("MicroTask waiting test failed, expected sequence %s, got %s", mtwExpectedOutput, completeOutput)
 	}
-
 }
 
-// test ordering
+// Test Microtask ordering.
 
-// globals
-var mtoWaitGroup sync.WaitGroup
-var mtoOutputChannel chan string
-var mtoWaitCh chan struct{}
+// Microtask test globals.
 
-// functions
+var (
+	mtoWaitGroup     sync.WaitGroup
+	mtoOutputChannel chan string
+	mtoWaitCh        chan struct{}
+)
+
+// Microtask test functions.
+
 func mediumPrioTaskTester() {
 	defer mtoWaitGroup.Done()
 	<-mtoWaitCh
@@ -139,8 +141,7 @@ func lowPrioTaskTester() {
 	})
 }
 
-// test
-func TestMicroTaskOrdering(t *testing.T) {
+func TestMicroTaskOrdering(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 
 	// skip
 	if testing.Short() {
@@ -204,5 +205,4 @@ func TestMicroTaskOrdering(t *testing.T) {
 	if !strings.Contains(completeOutput, "11111") || !strings.Contains(completeOutput, "22222") {
 		t.Errorf("MicroTask ordering test failed, output was %s. This happens occasionally, please run the test multiple times to verify", completeOutput)
 	}
-
 }

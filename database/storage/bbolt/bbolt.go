@@ -16,9 +16,7 @@ import (
 	"github.com/safing/portbase/database/storage"
 )
 
-var (
-	bucketName = []byte{0}
-)
+var bucketName = []byte{0}
 
 // BBolt database made pluggable for portbase.
 type BBolt struct {
@@ -39,10 +37,10 @@ func NewBBolt(name, location string) (storage.Interface, error) {
 	}
 
 	// Open/Create database, retry if there is a timeout.
-	db, err := bbolt.Open(dbFile, 0600, dbOptions)
+	db, err := bbolt.Open(dbFile, 0o0600, dbOptions)
 	for i := 0; i < 5 && err != nil; i++ {
 		// Try again if there is an error.
-		db, err = bbolt.Open(dbFile, 0600, dbOptions)
+		db, err = bbolt.Open(dbFile, 0o0600, dbOptions)
 	}
 	if err != nil {
 		return nil, err
@@ -89,7 +87,6 @@ func (b *BBolt) Get(key string) (record.Record, error) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +185,7 @@ func (b *BBolt) Delete(key string) error {
 func (b *BBolt) Query(q *query.Query, local, internal bool) (*iterator.Iterator, error) {
 	_, err := q.Check()
 	if err != nil {
-		return nil, fmt.Errorf("invalid query: %s", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
 	}
 
 	queryIter := iterator.New()
@@ -235,19 +232,19 @@ func (b *BBolt) queryExecutor(queryIter *iterator.Iterator, q *query.Query, loca
 				duplicate := make([]byte, len(value))
 				copy(duplicate, value)
 
-				new, err := record.NewRawWrapper(b.name, iterWrapper.DatabaseKey(), duplicate)
+				newWrapper, err := record.NewRawWrapper(b.name, iterWrapper.DatabaseKey(), duplicate)
 				if err != nil {
 					return err
 				}
 				select {
 				case <-queryIter.Done:
 					return nil
-				case queryIter.Next <- new:
+				case queryIter.Next <- newWrapper:
 				default:
 					select {
 					case <-queryIter.Done:
 						return nil
-					case queryIter.Next <- new:
+					case queryIter.Next <- newWrapper:
 					case <-time.After(1 * time.Second):
 						return errors.New("query timeout")
 					}

@@ -15,7 +15,6 @@ type boolCondition struct {
 }
 
 func newBoolCondition(key string, operator uint8, value interface{}) *boolCondition {
-
 	var parsedValue bool
 
 	switch v := value.(type) {

@@ -8,9 +8,7 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
-var (
-	registry *ResourceRegistry
-)
+var registry *ResourceRegistry
 
 func TestMain(m *testing.M) {
 	// setup
@@ -23,7 +21,7 @@ func TestMain(m *testing.M) {
 		DevMode:        true,
 		Online:         true,
 	}
-	err = registry.Initialize(utils.NewDirStructure(tmpDir, 0777))
+	err = registry.Initialize(utils.NewDirStructure(tmpDir, 0o0777))
 	if err != nil {
 		panic(err)
 	}
@@ -33,6 +31,6 @@ func TestMain(m *testing.M) {
 	ret := m.Run()
 
 	// teardown
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 	os.Exit(ret)
 }

@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/safing/portbase/log"
 	"github.com/tevino/abool"
+
+	"github.com/safing/portbase/log"
 )
 
 type eventHooks struct {
-	// hooks holds all registed hooks for the event.
+	// hooks holds all registered hooks for the event.
 	hooks []*eventHook
 
 	// internal signifies that the event and it's data may not be exposed and may
@@ -195,7 +196,8 @@ var (
 	eventSubscriptionFuncReady   = abool.NewBool(false)
 )
 
-// SetEventSubscriptionFunc
+// SetEventSubscriptionFunc sets a function that is called for every event.
+// This enabled the runtime package to expose events.
 func SetEventSubscriptionFunc(fn func(moduleName, eventName string, internal bool, data interface{})) bool {
 	if eventSubscriptionFuncEnabled.SetToIf(false, true) {
 		eventSubscriptionFunc = fn

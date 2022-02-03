@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/safing/portbase/config"
-	_ "github.com/safing/portbase/database/dbmodule" // database module is required
 	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/runtime"
 )

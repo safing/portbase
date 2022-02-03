@@ -54,9 +54,12 @@ func start() error {
 	configFilePath = filepath.Join(dataRoot.Path, "config.json")
 
 	// Load log level from log package after it started.
-	loadLogLevel()
+	err := loadLogLevel()
+	if err != nil {
+		return err
+	}
 
-	err := registerAsDatabase()
+	err = registerAsDatabase()
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/safing/portbase/log"
+	"github.com/gorilla/websocket"
 	"github.com/tevino/abool"
 
-	"github.com/gorilla/websocket"
+	"github.com/safing/portbase/log"
 )
 
 type wsState struct {
@@ -41,7 +41,7 @@ func (c *Client) wsConnect() error {
 	case <-c.shutdownSignal:
 		state.Error("")
 	}
-	state.wsConn.Close()
+	_ = state.wsConn.Close()
 	state.wg.Wait()
 
 	return nil

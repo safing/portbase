@@ -24,22 +24,16 @@ import (
 	"github.com/safing/portbase/container"
 	"github.com/safing/portbase/formats/dsd"
 	"github.com/safing/portbase/formats/varint"
-	// Colfer
-	// "github.com/safing/portbase/database/model/model"
-	// XDR
-	// xdr2 "github.com/davecgh/go-xdr/xdr2"
 )
 
-var (
-	testMeta = &Meta{
-		Created:   time.Now().Unix(),
-		Modified:  time.Now().Unix(),
-		Expires:   time.Now().Unix(),
-		Deleted:   time.Now().Unix(),
-		secret:    true,
-		cronjewel: true,
-	}
-)
+var testMeta = &Meta{
+	Created:   time.Now().Unix(),
+	Modified:  time.Now().Unix(),
+	Expires:   time.Now().Unix(),
+	Deleted:   time.Now().Unix(),
+	secret:    true,
+	cronjewel: true,
+}
 
 func BenchmarkAllocateBytes(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -49,8 +43,8 @@ func BenchmarkAllocateBytes(b *testing.B) {
 
 func BenchmarkAllocateStruct1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		var new Meta
-		_ = new
+		var newMeta Meta
+		_ = newMeta
 	}
 }
 
@@ -61,7 +55,6 @@ func BenchmarkAllocateStruct2(b *testing.B) {
 }
 
 func BenchmarkMetaSerializeContainer(b *testing.B) {
-
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
 		c := container.New()
@@ -80,11 +73,9 @@ func BenchmarkMetaSerializeContainer(b *testing.B) {
 			c.AppendNumber(0)
 		}
 	}
-
 }
 
 func BenchmarkMetaUnserializeContainer(b *testing.B) {
-
 	// Setup
 	c := container.New()
 	c.AppendNumber(uint64(testMeta.Created))
@@ -157,11 +148,9 @@ func BenchmarkMetaUnserializeContainer(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaSerializeVarInt(b *testing.B) {
-
 	// Start benchmark
 	for i := 0; i < b.N; i++ {
 		encoded := make([]byte, 33)
@@ -197,13 +186,10 @@ func BenchmarkMetaSerializeVarInt(b *testing.B) {
 		default:
 			encoded[offset] = 0
 		}
-		offset++
 	}
-
 }
 
 func BenchmarkMetaUnserializeVarInt(b *testing.B) {
-
 	// Setup
 	encoded := make([]byte, 33)
 	offset := 0
@@ -295,106 +281,9 @@ func BenchmarkMetaUnserializeVarInt(b *testing.B) {
 			return
 		}
 	}
-
 }
 
-// func BenchmarkMetaSerializeWithXDR2(b *testing.B) {
-//
-// 	// Setup
-// 	var w bytes.Buffer
-//
-// 	// Reset timer for precise results
-// 	b.ResetTimer()
-//
-// 	// Start benchmark
-// 	for i := 0; i < b.N; i++ {
-// 		w.Reset()
-// 		_, err := xdr2.Marshal(&w, testMeta)
-// 		if err != nil {
-// 			b.Errorf("failed to serialize with xdr2: %s", err)
-// 			return
-// 		}
-// 	}
-//
-// }
-
-// func BenchmarkMetaUnserializeWithXDR2(b *testing.B) {
-//
-// 	// Setup
-// 	var w bytes.Buffer
-// 	_, err := xdr2.Marshal(&w, testMeta)
-// 	if err != nil {
-// 		b.Errorf("failed to serialize with xdr2: %s", err)
-// 	}
-// 	encodedData := w.Bytes()
-//
-// 	// Reset timer for precise results
-// 	b.ResetTimer()
-//
-// 	// Start benchmark
-// 	for i := 0; i < b.N; i++ {
-// 		var newMeta Meta
-// 		_, err := xdr2.Unmarshal(bytes.NewReader(encodedData), &newMeta)
-// 		if err != nil {
-// 			b.Errorf("failed to unserialize with xdr2: %s", err)
-// 			return
-// 		}
-// 	}
-//
-// }
-
-// func BenchmarkMetaSerializeWithColfer(b *testing.B) {
-//
-// 	testColf := &model.Course{
-// 		Created:   time.Now().Unix(),
-// 		Modified:  time.Now().Unix(),
-// 		Expires:   time.Now().Unix(),
-// 		Deleted:   time.Now().Unix(),
-// 		Secret:    true,
-// 		Cronjewel: true,
-// 	}
-//
-// 	// Setup
-// 	for i := 0; i < b.N; i++ {
-// 		_, err := testColf.MarshalBinary()
-// 		if err != nil {
-// 			b.Errorf("failed to serialize with colfer: %s", err)
-// 			return
-// 		}
-// 	}
-//
-// }
-
-// func BenchmarkMetaUnserializeWithColfer(b *testing.B) {
-//
-// 	testColf := &model.Course{
-// 		Created:   time.Now().Unix(),
-// 		Modified:  time.Now().Unix(),
-// 		Expires:   time.Now().Unix(),
-// 		Deleted:   time.Now().Unix(),
-// 		Secret:    true,
-// 		Cronjewel: true,
-// 	}
-// 	encodedData, err := testColf.MarshalBinary()
-// 	if err != nil {
-// 		b.Errorf("failed to serialize with colfer: %s", err)
-// 		return
-// 	}
-//
-// 	// Setup
-// 	for i := 0; i < b.N; i++ {
-// 		var testUnColf model.Course
-// 		err := testUnColf.UnmarshalBinary(encodedData)
-// 		if err != nil {
-// 			b.Errorf("failed to unserialize with colfer: %s", err)
-// 			return
-// 		}
-// 	}
-//
-// }
-
 func BenchmarkMetaSerializeWithCodegen(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		_, err := testMeta.GenCodeMarshal(nil)
 		if err != nil {
@@ -402,11 +291,9 @@ func BenchmarkMetaSerializeWithCodegen(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaUnserializeWithCodegen(b *testing.B) {
-
 	// Setup
 	encodedData, err := testMeta.GenCodeMarshal(nil)
 	if err != nil {
@@ -426,11 +313,9 @@ func BenchmarkMetaUnserializeWithCodegen(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaSerializeWithDSDJSON(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		_, err := dsd.Dump(testMeta, dsd.JSON)
 		if err != nil {
@@ -438,11 +323,9 @@ func BenchmarkMetaSerializeWithDSDJSON(b *testing.B) {
 			return
 		}
 	}
-
 }
 
 func BenchmarkMetaUnserializeWithDSDJSON(b *testing.B) {
-
 	// Setup
 	encodedData, err := dsd.Dump(testMeta, dsd.JSON)
 	if err != nil {
@@ -462,5 +345,4 @@ func BenchmarkMetaUnserializeWithDSDJSON(b *testing.B) {
 			return
 		}
 	}
-
 }

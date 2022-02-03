@@ -7,10 +7,10 @@ func (reg *ResourceRegistry) Export() map[string]*Resource {
 	defer reg.RUnlock()
 
 	// copy the map
-	new := make(map[string]*Resource)
+	copiedResources := make(map[string]*Resource)
 	for key, val := range reg.resources {
-		new[key] = val
+		copiedResources[key] = val
 	}
 
-	return new
+	return copiedResources
 }

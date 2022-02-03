@@ -10,11 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/safing/portbase/log"
-
 	"github.com/hashicorp/go-multierror"
+
+	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
+
+// MaxUnpackSize specifies the maximum size that will be unpacked.
+const MaxUnpackSize = 1000000000 // 1GB
 
 // UnpackGZIP unpacks a GZIP compressed reader r
 // and returns a new reader. It's suitable to be
@@ -95,7 +98,7 @@ func (res *Resource) unpackZipArchive() (err error) {
 	// Create the tmp directory for unpacking.
 	err = res.registry.tmpDir.EnsureAbsPath(tmpDir)
 	if err != nil {
-		return fmt.Errorf("failed to create tmp dir for unpacking: %s", err)
+		return fmt.Errorf("failed to create tmp dir for unpacking: %w", err)
 	}
 
 	// Defer clean up of directories.
@@ -114,7 +117,9 @@ func (res *Resource) unpackZipArchive() (err error) {
 	if err != nil {
 		return
 	}
-	defer archiveReader.Close()
+	defer func() {
+		_ = archiveReader.Close()
+	}()
 
 	// Save all files to the tmp dir.
 	for _, file := range archiveReader.File {
@@ -158,17 +163,21 @@ func copyFromZipArchive(archiveFile *zip.File, dstPath string) error {
 	if err != nil {
 		return err
 	}
-	defer fileReader.Close()
+	defer func() {
+		_ = fileReader.Close()
+	}()
 
 	// Open destination file for writing.
 	dstFile, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, archiveFile.Mode())
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() {
+		_ = dstFile.Close()
+	}()
 
 	// Copy full file from archive to dst.
-	if _, err := io.Copy(dstFile, fileReader); err != nil {
+	if _, err := io.CopyN(dstFile, fileReader, MaxUnpackSize); err != nil {
 		return err
 	}
 

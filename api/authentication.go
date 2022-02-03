@@ -13,9 +13,8 @@ import (
 
 	"github.com/tevino/abool"
 
-	"github.com/safing/portbase/modules"
-
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/rng"
 )
 
@@ -147,7 +146,7 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 	}
 
 	// Check if we need to do any authentication at all.
-	switch requiredPermission {
+	switch requiredPermission { //nolint:exhaustive
 	case NotFound:
 		// Not found.
 		tracer.Trace("api: authenticated handler reported: not found")
@@ -543,6 +542,8 @@ func (p Permission) Role() string {
 		return "Admin"
 	case PermitSelf:
 		return "Self"
+	case Dynamic, NotFound, NotSupported:
+		return "Invalid"
 	default:
 		return "Invalid"
 	}

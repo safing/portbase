@@ -2,7 +2,5 @@ package fstree
 
 import "github.com/safing/portbase/database/storage"
 
-var (
-	// Compile time interface checks.
-	_ storage.Interface = &FSTree{}
-)
+// Compile time interface checks.
+var _ storage.Interface = &FSTree{}

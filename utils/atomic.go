@@ -74,7 +74,9 @@ func CopyFileAtomic(dest string, src string, opts *AtomicFileOptions) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	return CreateAtomic(dest, f, opts)
 }

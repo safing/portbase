@@ -8,6 +8,8 @@ import (
 )
 
 func TestUUID(t *testing.T) {
+	t.Parallel()
+
 	// check randomness
 	a := RandomUUID("")
 	a2 := RandomUUID("")

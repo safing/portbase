@@ -96,7 +96,7 @@ func TriggerWriterChannel() chan struct{} {
 }
 
 func defaultColorFormater(line Message, duplicates uint64) string {
-	return formatLine(line.(*logLine), duplicates, true)
+	return formatLine(line.(*logLine), duplicates, true) //nolint:forcetypeassert // TODO: improve
 }
 
 func startWriter() {
@@ -143,13 +143,11 @@ StackTrace:
 	}()
 
 	var currentLine *logLine
-	var nextLine *logLine
 	var duplicates uint64
 
 	for {
 		// reset
 		currentLine = nil
-		nextLine = nil
 		duplicates = 0
 
 		// wait until logs need to be processed
@@ -175,7 +173,7 @@ StackTrace:
 	writeLoop:
 		for {
 			select {
-			case nextLine = <-logBuffer:
+			case nextLine := <-logBuffer:
 				// first line we process, just assign to currentLine
 				if currentLine == nil {
 					currentLine = nextLine
@@ -209,10 +207,6 @@ StackTrace:
 			// add to unexpected logs
 			addUnexpectedLogs(currentLine)
 		}
-		// reset state
-		currentLine = nil //nolint:ineffassign
-		nextLine = nil
-		duplicates = 0 //nolint:ineffassign
 
 		// back down a little
 		select {
@@ -281,13 +275,13 @@ func GetLastUnexpectedLogs() []string {
 	defer lastUnexpectedLogsLock.Unlock()
 
 	// Make a copy and return.
-	len := len(lastUnexpectedLogs)
+	logsLen := len(lastUnexpectedLogs)
 	start := lastUnexpectedLogsIndex
-	logsCopy := make([]string, 0, len)
+	logsCopy := make([]string, 0, logsLen)
 	// Loop from mid-to-mid.
-	for i := start; i < start+len; i++ {
-		if lastUnexpectedLogs[i%len] != "" {
-			logsCopy = append(logsCopy, lastUnexpectedLogs[i%len])
+	for i := start; i < start+logsLen; i++ {
+		if lastUnexpectedLogs[i%logsLen] != "" {
+			logsCopy = append(logsCopy, lastUnexpectedLogs[i%logsLen])
 		}
 	}
 

@@ -8,6 +8,8 @@ import (
 )
 
 func TestExtractSnippets(t *testing.T) {
+	t.Parallel()
+
 	text1 := `query test: where ( "bananas" > 100 and monkeys.# <= "12")or(coconuts < 10 "and" area > 50) or name sameas Julian or name matches ^King\ `
 	result1 := []*snippet{
 		{text: "query", globalPosition: 1},
@@ -58,6 +60,8 @@ func TestExtractSnippets(t *testing.T) {
 }
 
 func testParsing(t *testing.T, queryText string, expectedResult *Query) {
+	t.Helper()
+
 	_, err := expectedResult.Check()
 	if err != nil {
 		t.Errorf("failed to create query: %s", err)
@@ -84,6 +88,8 @@ func testParsing(t *testing.T, queryText string, expectedResult *Query) {
 }
 
 func TestParseQuery(t *testing.T) {
+	t.Parallel()
+
 	text1 := `query test: where (bananas > 100 and monkeys.# <= 12) or not (coconuts < 10 and area not > 50) or name sameas Julian or name matches "^King " orderby name limit 10 offset 20`
 	result1 := New("test:").Where(Or(
 		And(
@@ -131,6 +137,8 @@ func TestParseQuery(t *testing.T) {
 }
 
 func testParseError(t *testing.T, queryText string, expectedErrorString string) {
+	t.Helper()
+
 	_, err := ParseQuery(queryText)
 	if err == nil {
 		t.Errorf("should fail to parse: %s", queryText)
@@ -142,6 +150,8 @@ func testParseError(t *testing.T, queryText string, expectedErrorString string) 
 }
 
 func TestParseErrors(t *testing.T) {
+	t.Parallel()
+
 	// syntax
 	testParseError(t, `query`, `unexpected end at position 5`)
 	testParseError(t, `query test: where`, `unexpected end at position 17`)

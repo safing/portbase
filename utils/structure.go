@@ -41,15 +41,15 @@ func (ds *DirStructure) ChildDir(dirName string, perm os.FileMode) (child *DirSt
 	}
 
 	// create new
-	new := &DirStructure{
+	newDir := &DirStructure{
 		Path:     filepath.Join(ds.Path, dirName),
 		Dir:      dirName,
 		Perm:     perm,
 		Parent:   ds,
 		Children: make(map[string]*DirStructure),
 	}
-	ds.Children[dirName] = new
-	return new
+	ds.Children[dirName] = newDir
+	return newDir
 }
 
 // Ensure ensures that the specified directory structure (from the first parent on) exists.
@@ -94,7 +94,7 @@ func (ds *DirStructure) EnsureAbsPath(dirPath string) error {
 	// get relative path
 	relPath, err := filepath.Rel(ds.Path, dirPath)
 	if err != nil {
-		return fmt.Errorf("failed to get relative path: %s", err)
+		return fmt.Errorf("failed to get relative path: %w", err)
 	}
 
 	// split to path elements

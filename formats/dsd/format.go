@@ -2,6 +2,7 @@ package dsd
 
 import "errors"
 
+// Errors.
 var (
 	ErrIncompatibleFormat = errors.New("dsd: format is incompatible with operation")
 	ErrIsRaw              = errors.New("dsd: given data is in raw format")
@@ -26,6 +27,7 @@ const (
 	LIST = 76 // L
 )
 
+// Default Formats.
 var (
 	DefaultSerializationFormat uint8 = JSON
 	DefaultCompressionFormat   uint8 = GZIP

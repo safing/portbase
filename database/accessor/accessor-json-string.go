@@ -29,11 +29,11 @@ func (ja *JSONAccessor) Set(key string, value interface{}) error {
 		}
 	}
 
-	new, err := sjson.Set(*ja.json, key, value)
+	newJSON, err := sjson.Set(*ja.json, key, value)
 	if err != nil {
 		return err
 	}
-	*ja.json = new
+	*ja.json = newJSON
 	return nil
 }
 
@@ -84,15 +84,15 @@ func (ja *JSONAccessor) GetStringArray(key string) (value []string, ok bool) {
 		return nil, false
 	}
 	slice := result.Array()
-	new := make([]string, len(slice))
+	sliceCopy := make([]string, len(slice))
 	for i, res := range slice {
 		if res.Type == gjson.String {
-			new[i] = res.String()
+			sliceCopy[i] = res.String()
 		} else {
 			return nil, false
 		}
 	}
-	return new, true
+	return sliceCopy, true
 }
 
 // GetInt returns the int found by the given json key and whether it could be successfully extracted.

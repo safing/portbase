@@ -88,13 +88,13 @@ func Register(option *Option) error {
 	if option.ValidationRegex != "" {
 		option.compiledRegex, err = regexp.Compile(option.ValidationRegex)
 		if err != nil {
-			return fmt.Errorf("config: could not compile option.ValidationRegex: %s", err)
+			return fmt.Errorf("config: could not compile option.ValidationRegex: %w", err)
 		}
 	}
 
 	option.activeFallbackValue, err = validateValue(option, option.DefaultValue)
 	if err != nil {
-		return fmt.Errorf("config: invalid default value: %s", err)
+		return fmt.Errorf("config: invalid default value: %w", err)
 	}
 
 	optionsLock.Lock()

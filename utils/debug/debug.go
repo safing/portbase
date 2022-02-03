@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/host"
+
 	"github.com/safing/portbase/info"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
-	"github.com/shirou/gopsutil/host"
 )
 
 // Info gathers debugging information and stores everything in a buffer in
@@ -50,37 +51,37 @@ func addContentLineBreaks(flags InfoFlag) bool {
 func (di *Info) AddSection(name string, flags InfoFlag, content ...string) {
 	// Check if we need a spacer.
 	if di.Len() > 0 {
-		di.WriteString("\n\n")
+		_, _ = di.WriteString("\n\n")
 	}
 
 	// Write section to buffer.
 
 	// Write section header.
 	if di.Style == "github" {
-		di.WriteString(fmt.Sprintf("<details>\n<summary>%s</summary>\n\n", name))
+		_, _ = di.WriteString(fmt.Sprintf("<details>\n<summary>%s</summary>\n\n", name))
 	} else {
-		di.WriteString(fmt.Sprintf("**%s**:\n\n", name))
+		_, _ = di.WriteString(fmt.Sprintf("**%s**:\n\n", name))
 	}
 
 	// Write section content.
 	if useCodeSection(flags) {
 		// Write code header: Needs one empty line between previous data.
-		di.WriteString("```\n")
+		_, _ = di.WriteString("```\n")
 	}
 	for i, part := range content {
-		di.WriteString(part)
+		_, _ = di.WriteString(part)
 		if addContentLineBreaks(flags) && i < len(content)-1 {
-			di.WriteString("\n")
+			_, _ = di.WriteString("\n")
 		}
 	}
 	if useCodeSection(flags) {
 		// Write code footer: Needs one empty line between next data.
-		di.WriteString("\n```\n")
+		_, _ = di.WriteString("\n```\n")
 	}
 
 	// Write section header.
 	if di.Style == "github" {
-		di.WriteString("\n</details>")
+		_, _ = di.WriteString("\n</details>")
 	}
 }
 

@@ -13,9 +13,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-var (
-	dbController *database.Controller
-)
+var dbController *database.Controller
 
 // StorageInterface provices a storage.Interface to the configuration manager.
 type StorageInterface struct {
@@ -67,6 +65,8 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 		value, ok = acc.GetInt("Value")
 	case OptTypeBool:
 		value, ok = acc.GetBool("Value")
+	case optTypeAny:
+		ok = false
 	}
 	if !ok {
 		return nil, errors.New("received invalid value in \"Value\"")

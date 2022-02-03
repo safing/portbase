@@ -1,18 +1,6 @@
 //nolint:nakedret,unconvert,gocognit,wastedassign,gofumpt
 package dsd
 
-import (
-	"io"
-	"time"
-	"unsafe"
-)
-
-var (
-	_ = unsafe.Sizeof(0)
-	_ = io.ReadFull
-	_ = time.Now()
-)
-
 func (d *SimpleTestStruct) Size() (s uint64) {
 
 	{
@@ -259,7 +247,7 @@ func (d *GenCodeTestStruct) Size() (s uint64) {
 	return
 }
 
-func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
+func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) { //nolint:maintidx
 	size := d.Size()
 	{
 		if uint64(cap(buf)) >= size {
@@ -555,7 +543,7 @@ func (d *GenCodeTestStruct) GenCodeMarshal(buf []byte) ([]byte, error) {
 	return buf[:i+35], nil
 }
 
-func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) {
+func (d *GenCodeTestStruct) GenCodeUnmarshal(buf []byte) (uint64, error) { //nolint:maintidx
 	i := uint64(0)
 
 	{

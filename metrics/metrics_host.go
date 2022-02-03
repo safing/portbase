@@ -111,6 +111,7 @@ func getLoadAvg() *load.AvgStat {
 	return loadAvg
 }
 
+// LoadAvg1 returns the 1-minute average system load.
 func LoadAvg1() (loadAvg float64, ok bool) {
 	if stat := getLoadAvg(); stat != nil {
 		return stat.Load1 / float64(runtime.NumCPU()), true
@@ -118,6 +119,7 @@ func LoadAvg1() (loadAvg float64, ok bool) {
 	return 0, false
 }
 
+// LoadAvg5 returns the 5-minute average system load.
 func LoadAvg5() (loadAvg float64, ok bool) {
 	if stat := getLoadAvg(); stat != nil {
 		return stat.Load5 / float64(runtime.NumCPU()), true
@@ -125,6 +127,7 @@ func LoadAvg5() (loadAvg float64, ok bool) {
 	return 0, false
 }
 
+// LoadAvg15 returns the  5-minute average system load.
 func LoadAvg15() (loadAvg float64, ok bool) {
 	if stat := getLoadAvg(); stat != nil {
 		return stat.Load15 / float64(runtime.NumCPU()), true
@@ -159,6 +162,7 @@ func getMemStat() *mem.VirtualMemoryStat {
 	return memStat
 }
 
+// MemTotal returns the total system memory.
 func MemTotal() (total uint64, ok bool) {
 	if stat := getMemStat(); stat != nil {
 		return stat.Total, true
@@ -166,6 +170,7 @@ func MemTotal() (total uint64, ok bool) {
 	return 0, false
 }
 
+// MemUsed returns the used system memory.
 func MemUsed() (used uint64, ok bool) {
 	if stat := getMemStat(); stat != nil {
 		return stat.Used, true
@@ -173,6 +178,7 @@ func MemUsed() (used uint64, ok bool) {
 	return 0, false
 }
 
+// MemAvailable returns the available system memory.
 func MemAvailable() (available uint64, ok bool) {
 	if stat := getMemStat(); stat != nil {
 		return stat.Available, true
@@ -180,6 +186,7 @@ func MemAvailable() (available uint64, ok bool) {
 	return 0, false
 }
 
+// MemUsedPercent returns the percent of used system memory.
 func MemUsedPercent() (usedPercent float64, ok bool) {
 	if stat := getMemStat(); stat != nil {
 		return stat.UsedPercent, true
@@ -223,6 +230,7 @@ func getDiskStat() *disk.UsageStat {
 	return diskStat
 }
 
+// DiskTotal returns the total disk space (from the program's data root).
 func DiskTotal() (total uint64, ok bool) {
 	if stat := getDiskStat(); stat != nil {
 		return stat.Total, true
@@ -230,6 +238,7 @@ func DiskTotal() (total uint64, ok bool) {
 	return 0, false
 }
 
+// DiskUsed returns the used disk space (from the program's data root).
 func DiskUsed() (used uint64, ok bool) {
 	if stat := getDiskStat(); stat != nil {
 		return stat.Used, true
@@ -237,6 +246,7 @@ func DiskUsed() (used uint64, ok bool) {
 	return 0, false
 }
 
+// DiskFree returns the available disk space (from the program's data root).
 func DiskFree() (free uint64, ok bool) {
 	if stat := getDiskStat(); stat != nil {
 		return stat.Free, true
@@ -244,6 +254,7 @@ func DiskFree() (free uint64, ok bool) {
 	return 0, false
 }
 
+// DiskUsedPercent returns the percent of used disk space (from the program's data root).
 func DiskUsedPercent() (usedPercent float64, ok bool) {
 	if stat := getDiskStat(); stat != nil {
 		return stat.UsedPercent, true

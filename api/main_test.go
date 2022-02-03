@@ -6,11 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/safing/portbase/dataroot"
-	"github.com/safing/portbase/modules"
-
 	// API depends on the database for the database api.
 	_ "github.com/safing/portbase/database/dbmodule"
+	"github.com/safing/portbase/dataroot"
+	"github.com/safing/portbase/modules"
 )
 
 func init() {
@@ -28,7 +27,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	// initialize data dir
-	err = dataroot.Initialize(tmpDir, 0755)
+	err = dataroot.Initialize(tmpDir, 0o0755)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize data root: %s\n", err)
 		os.Exit(1)
@@ -53,6 +52,6 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "failed to cleanly shutdown test: %s\n", err)
 	}
 	// clean up and exit
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 	os.Exit(exitCode)
 }

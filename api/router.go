@@ -10,18 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/safing/portbase/utils"
-
 	"github.com/gorilla/mux"
 
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils"
 )
 
 var (
-	// gorilla mux
+	// mainMux is the main mux router.
 	mainMux = mux.NewRouter()
 
-	// main server and lock
+	// server is the main server.
 	server      = &http.Server{}
 	handlerLock sync.RWMutex
 

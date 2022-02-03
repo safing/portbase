@@ -3,6 +3,8 @@ package query
 import "testing"
 
 func testSuccess(t *testing.T, c Condition) {
+	t.Helper()
+
 	err := c.check()
 	if err != nil {
 		t.Errorf("failed: %s", err)
@@ -10,6 +12,8 @@ func testSuccess(t *testing.T, c Condition) {
 }
 
 func TestInterfaces(t *testing.T) {
+	t.Parallel()
+
 	testSuccess(t, newIntCondition("banana", Equals, uint(1)))
 	testSuccess(t, newIntCondition("banana", Equals, uint8(1)))
 	testSuccess(t, newIntCondition("banana", Equals, uint16(1)))
@@ -41,6 +45,8 @@ func TestInterfaces(t *testing.T) {
 }
 
 func testCondError(t *testing.T, c Condition) {
+	t.Helper()
+
 	err := c.check()
 	if err == nil {
 		t.Error("should fail")
@@ -48,6 +54,8 @@ func testCondError(t *testing.T, c Condition) {
 }
 
 func TestConditionErrors(t *testing.T) {
+	t.Parallel()
+
 	// test invalid value types
 	testCondError(t, newBoolCondition("banana", Is, 1))
 	testCondError(t, newFloatCondition("banana", FloatEquals, true))
@@ -68,6 +76,8 @@ func TestConditionErrors(t *testing.T) {
 }
 
 func TestWhere(t *testing.T) {
+	t.Parallel()
+
 	c := Where("", 254, nil)
 	err := c.check()
 	if err == nil {

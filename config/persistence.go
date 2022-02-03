@@ -9,9 +9,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-var (
-	configFilePath string
-)
+var configFilePath string
 
 func loadConfig() error {
 	// check if persistence is configured
@@ -69,7 +67,7 @@ func saveConfig() error {
 	}
 
 	// write file
-	return ioutil.WriteFile(configFilePath, data, 0600)
+	return ioutil.WriteFile(configFilePath, data, 0o0600)
 }
 
 // JSONToMap parses and flattens a hierarchical json object.

@@ -7,7 +7,7 @@ import (
 	"github.com/safing/portbase/formats/varint"
 )
 
-// Container is []byte sclie on steroids, allowing for quick data appending, prepending and fetching as well as transparent error transportation. (Error transportation requires use of varints for data)
+// Container is []byte sclie on steroids, allowing for quick data appending, prepending and fetching.
 type Container struct {
 	compartments [][]byte
 	offset       int
@@ -145,12 +145,12 @@ func (c *Container) GetAll() []byte {
 
 // GetAsContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS consumed.
 func (c *Container) GetAsContainer(n int) (*Container, error) {
-	new := c.gatherAsContainer(n)
-	if new == nil {
+	newC := c.gatherAsContainer(n)
+	if newC == nil {
 		return nil, errors.New("container: not enough data to return")
 	}
 	c.skip(n)
-	return new, nil
+	return newC, nil
 }
 
 // GetMax returns as much as possible, but the given amount of bytes at maximum. Data MAY be copied and IS consumed.
@@ -211,17 +211,13 @@ func (c *Container) renewCompartments() {
 }
 
 func (c *Container) carbonCopy() *Container {
-	new := &Container{
+	newC := &Container{
 		compartments: make([][]byte, len(c.compartments)),
 		offset:       c.offset,
 		err:          c.err,
 	}
-	for i := 0; i < len(c.compartments); i++ {
-		new.compartments[i] = c.compartments[i]
-	}
-	// TODO: investigate why copy fails to correctly duplicate [][]byte
-	// copy(new.compartments, c.compartments)
-	return new
+	copy(newC.compartments, c.compartments)
+	return newC
 }
 
 func (c *Container) checkOffset() {
@@ -300,7 +296,7 @@ func (c *Container) gather(n int) []byte {
 	return slice[:n]
 }
 
-func (c *Container) gatherAsContainer(n int) (new *Container) {
+func (c *Container) gatherAsContainer(n int) (newC *Container) {
 	// Check requested length.
 	if n < 0 {
 		return nil
@@ -308,20 +304,20 @@ func (c *Container) gatherAsContainer(n int) (new *Container) {
 		return &Container{}
 	}
 
-	new = &Container{}
+	newC = &Container{}
 	for i := c.offset; i < len(c.compartments); i++ {
 		if n >= len(c.compartments[i]) {
-			new.compartments = append(new.compartments, c.compartments[i])
+			newC.compartments = append(newC.compartments, c.compartments[i])
 			n -= len(c.compartments[i])
 		} else {
-			new.compartments = append(new.compartments, c.compartments[i][:n])
+			newC.compartments = append(newC.compartments, c.compartments[i][:n])
 			n = 0
 		}
 	}
 	if n > 0 {
 		return nil
 	}
-	return new
+	return newC
 }
 
 func (c *Container) skip(n int) {

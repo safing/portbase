@@ -6,6 +6,7 @@ import (
 	"github.com/safing/portbase/modules"
 )
 
+// ModuleHandler specifies the interface for API endpoints that are bound to a module.
 type ModuleHandler interface {
 	BelongsTo() *modules.Module
 }

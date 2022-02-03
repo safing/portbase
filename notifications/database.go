@@ -21,7 +21,7 @@ var (
 	dbController *database.Controller
 )
 
-// Storage interface errors
+// Storage interface errors.
 var (
 	ErrInvalidData = errors.New("invalid data, must be a notification object")
 	ErrInvalidPath = errors.New("invalid path")
@@ -126,7 +126,6 @@ func (s *StorageInterface) Put(r record.Record) (record.Record, error) {
 	// record is already locked!
 	key := r.DatabaseKey()
 	n, err := EnsureNotification(r)
-
 	if err != nil {
 		return nil, ErrInvalidData
 	}
@@ -223,18 +222,18 @@ func EnsureNotification(r record.Record) (*Notification, error) {
 	// unwrap
 	if r.IsWrapped() {
 		// only allocate a new struct, if we need it
-		new := &Notification{}
-		err := record.Unwrap(r, new)
+		n := &Notification{}
+		err := record.Unwrap(r, n)
 		if err != nil {
 			return nil, err
 		}
-		return new, nil
+		return n, nil
 	}
 
 	// or adjust type
-	new, ok := r.(*Notification)
+	n, ok := r.(*Notification)
 	if !ok {
-		return nil, fmt.Errorf("record not of type *Example, but %T", r)
+		return nil, fmt.Errorf("record not of type *Notification, but %T", r)
 	}
-	return new, nil
+	return n, nil
 }

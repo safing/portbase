@@ -5,8 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/safing/portbase/database/record"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/safing/portbase/database/record"
 )
 
 const (
@@ -21,6 +22,8 @@ type actionTestRecord struct {
 }
 
 func TestEndpoints(t *testing.T) {
+	t.Parallel()
+
 	testHandler := &mainHandler{
 		mux: mainMux,
 	}
@@ -113,6 +116,8 @@ func TestEndpoints(t *testing.T) {
 }
 
 func TestActionRegistration(t *testing.T) {
+	t.Parallel()
+
 	assert.Error(t, RegisterEndpoint(Endpoint{}))
 
 	assert.Error(t, RegisterEndpoint(Endpoint{

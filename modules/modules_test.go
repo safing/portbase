@@ -13,6 +13,8 @@ var (
 )
 
 func registerTestModule(t *testing.T, name string, dependencies ...string) {
+	t.Helper()
+
 	Register(
 		name,
 		func() error {
@@ -45,16 +47,15 @@ func testCleanExit() error {
 	return ErrCleanExit
 }
 
-func TestModules(t *testing.T) {
+func TestModules(t *testing.T) { //nolint:tparallel // Too much interference expected.
 	t.Parallel() // Not really, just a workaround for running these tests last.
 
-	t.Run("TestModuleOrder", testModuleOrder)
-	t.Run("TestModuleMgmt", testModuleMgmt)
-	t.Run("TestModuleErrors", testModuleErrors)
+	t.Run("TestModuleOrder", testModuleOrder)   //nolint:paralleltest // Too much interference expected.
+	t.Run("TestModuleMgmt", testModuleMgmt)     //nolint:paralleltest // Too much interference expected.
+	t.Run("TestModuleErrors", testModuleErrors) //nolint:paralleltest // Too much interference expected.
 }
 
 func testModuleOrder(t *testing.T) {
-
 	registerTestModule(t, "database")
 	registerTestModule(t, "stats", "database")
 	registerTestModule(t, "service", "database")
@@ -88,7 +89,6 @@ func testModuleOrder(t *testing.T) {
 }
 
 func testModuleErrors(t *testing.T) {
-
 	// test prep error
 	Register("prepfail", testFail, nil, nil)
 	err := Start()
@@ -101,7 +101,7 @@ func testModuleErrors(t *testing.T) {
 	// test prep clean exit
 	Register("prepcleanexit", testCleanExit, nil, nil)
 	err = Start()
-	if err != ErrCleanExit {
+	if !errors.Is(err, ErrCleanExit) {
 		t.Error("should fail with clean exit")
 	}
 

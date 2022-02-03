@@ -21,7 +21,7 @@ import (
 // Endpoint describes an API Endpoint.
 // Path and at least one permission are required.
 // As is exactly one function.
-type Endpoint struct {
+type Endpoint struct { //nolint:maligned
 	// Path describes the URL path of the endpoint.
 	Path string
 

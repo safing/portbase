@@ -27,17 +27,17 @@ func EnsureDirectory(path string, perm os.FileMode) error {
 		}
 		err = os.Remove(path)
 		if err != nil {
-			return fmt.Errorf("could not remove file %s to place dir: %s", path, err)
+			return fmt.Errorf("could not remove file %s to place dir: %w", path, err)
 		}
 	}
 	// file does not exist (or has been deleted)
 	if err == nil || os.IsNotExist(err) {
 		err = os.Mkdir(path, perm)
 		if err != nil {
-			return fmt.Errorf("could not create dir %s: %s", path, err)
+			return fmt.Errorf("could not create dir %s: %w", path, err)
 		}
 		return os.Chmod(path, perm)
 	}
 	// other error opening path
-	return fmt.Errorf("failed to access %s: %s", path, err)
+	return fmt.Errorf("failed to access %s: %w", path, err)
 }

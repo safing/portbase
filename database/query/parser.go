@@ -121,7 +121,6 @@ func ParseQuery(query string) (*Query, error) {
 }
 
 func extractSnippets(text string) (snippets []*snippet, err error) {
-
 	skip := false
 	start := -1
 	inParenthesis := false
@@ -193,21 +192,22 @@ func extractSnippets(text string) (snippets []*snippet, err error) {
 	}
 
 	return snippets, nil
-
 }
 
 //nolint:gocognit
 func parseAndOr(getSnippet func() (*snippet, error), remainingSnippets func() int, rootCondition bool) (Condition, error) {
-	var isOr = false
-	var typeSet = false
-	var wrapInNot = false
-	var expectingMore = true
-	var conditions []Condition
+	var (
+		isOr          = false
+		typeSet       = false
+		wrapInNot     = false
+		expectingMore = true
+		conditions    []Condition
+	)
 
 	for {
 		if !expectingMore && rootCondition && remainingSnippets() == 0 {
 			// advance snippetsPos by one, as it will be set back by 1
-			getSnippet() //nolint:errcheck
+			_, _ = getSnippet()
 			if len(conditions) == 1 {
 				return conditions[0], nil
 			}
@@ -331,21 +331,19 @@ func parseCondition(firstSnippet *snippet, getSnippet func() (*snippet, error)) 
 	return Where(firstSnippet.text, operator, value.text), nil
 }
 
-var (
-	escapeReplacer = regexp.MustCompile(`\\([^\\])`)
-)
+var escapeReplacer = regexp.MustCompile(`\\([^\\])`)
 
 // prepToken removes surrounding parenthesis and escape characters.
 func prepToken(text string) string {
 	return escapeReplacer.ReplaceAllString(strings.Trim(text, "\""), "$1")
 }
 
-// escapeString correctly escapes a snippet for printing
+// escapeString correctly escapes a snippet for printing.
 func escapeString(token string) string {
 	// check if token contains characters that need to be escaped
 	if strings.ContainsAny(token, "()\"\\\t\r\n ") {
 		// put the token in parenthesis and only escape \ and "
-		return fmt.Sprintf("\"%s\"", strings.Replace(token, "\"", "\\\"", -1))
+		return fmt.Sprintf("\"%s\"", strings.ReplaceAll(token, "\"", "\\\""))
 	}
 	return token
 }

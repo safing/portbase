@@ -6,6 +6,8 @@ import (
 )
 
 func TestFeeder(t *testing.T) {
+	t.Parallel()
+
 	// wait for start / first round to complete
 	time.Sleep(1 * time.Millisecond)
 
@@ -68,5 +70,4 @@ func TestFeeder(t *testing.T) {
 	case <-time.After(10 * time.Millisecond):
 		t.Error("call blocks!")
 	}
-
 }

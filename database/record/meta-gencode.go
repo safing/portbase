@@ -2,18 +2,9 @@ package record
 
 import (
 	"fmt"
-	"io"
-	"time"
-	"unsafe"
 )
 
-var (
-	_ = unsafe.Sizeof(0)
-	_ = io.ReadFull
-	_ = time.Now()
-)
-
-// GenCodeSize returns the size of the gencode marshalled byte slice
+// GenCodeSize returns the size of the gencode marshalled byte slice.
 func (m *Meta) GenCodeSize() (s int) {
 	s += 34
 	return
@@ -133,24 +124,16 @@ func (m *Meta) GenCodeUnmarshal(buf []byte) (uint64, error) {
 	i := uint64(0)
 
 	{
-
 		m.Created = 0 | (int64(buf[0+0]) << 0) | (int64(buf[1+0]) << 8) | (int64(buf[2+0]) << 16) | (int64(buf[3+0]) << 24) | (int64(buf[4+0]) << 32) | (int64(buf[5+0]) << 40) | (int64(buf[6+0]) << 48) | (int64(buf[7+0]) << 56)
-
 	}
 	{
-
 		m.Modified = 0 | (int64(buf[0+8]) << 0) | (int64(buf[1+8]) << 8) | (int64(buf[2+8]) << 16) | (int64(buf[3+8]) << 24) | (int64(buf[4+8]) << 32) | (int64(buf[5+8]) << 40) | (int64(buf[6+8]) << 48) | (int64(buf[7+8]) << 56)
-
 	}
 	{
-
 		m.Expires = 0 | (int64(buf[0+16]) << 0) | (int64(buf[1+16]) << 8) | (int64(buf[2+16]) << 16) | (int64(buf[3+16]) << 24) | (int64(buf[4+16]) << 32) | (int64(buf[5+16]) << 40) | (int64(buf[6+16]) << 48) | (int64(buf[7+16]) << 56)
-
 	}
 	{
-
 		m.Deleted = 0 | (int64(buf[0+24]) << 0) | (int64(buf[1+24]) << 8) | (int64(buf[2+24]) << 16) | (int64(buf[3+24]) << 24) | (int64(buf[4+24]) << 32) | (int64(buf[5+24]) << 40) | (int64(buf[6+24]) << 48) | (int64(buf[7+24]) << 56)
-
 	}
 	{
 		m.secret = buf[32] == 1

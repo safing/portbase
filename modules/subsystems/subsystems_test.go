@@ -7,16 +7,17 @@ import (
 	"time"
 
 	"github.com/safing/portbase/config"
+	_ "github.com/safing/portbase/database/dbmodule"
 	"github.com/safing/portbase/dataroot"
 	"github.com/safing/portbase/modules"
 )
 
-func TestSubsystems(t *testing.T) {
+func TestSubsystems(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 	// tmp dir for data root (db & config)
 	tmpDir, err := ioutil.TempDir("", "portbase-testing-")
 	// initialize data dir
 	if err == nil {
-		err = dataroot.Initialize(tmpDir, 0755)
+		err = dataroot.Initialize(tmpDir, 0o0755)
 	}
 	// handle setup error
 	if err != nil {
@@ -119,5 +120,5 @@ func TestSubsystems(t *testing.T) {
 	}
 
 	// clean up and exit
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 }

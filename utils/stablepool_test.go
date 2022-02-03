@@ -10,6 +10,7 @@ import (
 )
 
 func TestStablePoolRealWorld(t *testing.T) {
+	t.Parallel()
 	// "real world" simulation
 
 	cnt := 0
@@ -73,6 +74,7 @@ func TestStablePoolRealWorld(t *testing.T) {
 }
 
 func TestStablePoolFuzzing(t *testing.T) {
+	t.Parallel()
 	// fuzzing test
 
 	fuzzPool := &StablePool{}
@@ -101,6 +103,7 @@ func TestStablePoolFuzzing(t *testing.T) {
 }
 
 func TestStablePoolBreaking(t *testing.T) {
+	t.Parallel()
 	// try to break it
 
 	breakPool := &StablePool{}
@@ -114,5 +117,4 @@ func TestStablePoolBreaking(t *testing.T) {
 			assert.Equal(t, k, breakPool.Get(), "should match")
 		}
 	}
-
 }

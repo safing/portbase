@@ -1,4 +1,3 @@
-//nolint:unparam,maligned
 package bbolt
 
 import (
@@ -22,7 +21,7 @@ var (
 	_ storage.Purger    = &BBolt{}
 )
 
-type TestRecord struct {
+type TestRecord struct { //nolint:maligned
 	record.Base
 	sync.Mutex
 	S    string
@@ -42,11 +41,15 @@ type TestRecord struct {
 }
 
 func TestBBolt(t *testing.T) {
+	t.Parallel()
+
 	testDir, err := ioutil.TempDir("", "testing-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(testDir) // clean up
+	defer func() {
+		_ = os.RemoveAll(testDir) // clean up
+	}()
 
 	// start
 	db, err := NewBBolt("test", testDir)

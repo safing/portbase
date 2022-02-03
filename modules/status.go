@@ -6,7 +6,7 @@ import (
 	"github.com/tevino/abool"
 )
 
-// Module Status Values
+// Module Status Values.
 const (
 	StatusDead      uint8 = 0 // not prepared, not started
 	StatusPreparing uint8 = 1
@@ -16,7 +16,7 @@ const (
 	StatusOnline    uint8 = 5 // online and running
 )
 
-// Module Failure Status Values
+// Module Failure Status Values.
 const (
 	FailureNone    uint8 = 0
 	FailureHint    uint8 = 1
@@ -24,7 +24,7 @@ const (
 	FailureError   uint8 = 3
 )
 
-// ready status
+// Ready Stati.
 const (
 	statusWaiting uint8 = iota
 	statusReady
@@ -138,7 +138,7 @@ func (m *Module) setFailure(status uint8, id, title, msg string, lockModule bool
 
 	// Propagate failure status.
 	if failureUpdateNotifyFuncReady.IsSet() {
-		m.RunWorker("failure status updater", func(context.Context) error {
+		_ = m.RunWorker("failure status updater", func(context.Context) error {
 			// Only use data in worker that won't change anymore.
 
 			// Resolve previous failure state if available.
@@ -180,7 +180,7 @@ func (m *Module) Resolve(failureID string) {
 
 	// Propagate failure status.
 	if failureUpdateNotifyFuncReady.IsSet() {
-		m.RunWorker("failure status updater", func(context.Context) error {
+		_ = m.RunWorker("failure status updater", func(context.Context) error {
 			// Only use data in worker that won't change anymore.
 			failureUpdateNotifyFunc(FailureNone, resolveFailureID, "", "")
 			return nil

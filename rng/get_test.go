@@ -5,6 +5,8 @@ import (
 )
 
 func TestNumberRandomness(t *testing.T) {
+	t.Parallel()
+
 	// skip in automated tests
 	t.Logf("Integer number bias test deactivated, as it sometimes triggers.")
 	t.SkipNow()

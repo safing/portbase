@@ -13,8 +13,6 @@ type Accessor interface {
 	GetFloat(key string) (value float64, ok bool)
 	GetBool(key string) (value bool, ok bool)
 	Exists(key string) bool
-
 	Set(key string, value interface{}) error
-
 	Type() string
 }

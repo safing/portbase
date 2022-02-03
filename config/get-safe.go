@@ -4,10 +4,8 @@ import "sync"
 
 type safe struct{}
 
-var (
-	// Concurrent makes concurrency safe get methods available.
-	Concurrent = &safe{}
-)
+// Concurrent makes concurrency safe get methods available.
+var Concurrent = &safe{}
 
 // GetAsString returns a function that returns the wanted string with high performance.
 func (cs *safe) GetAsString(name string, fallback string) StringOption {

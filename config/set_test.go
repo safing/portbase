@@ -1,9 +1,9 @@
-//nolint:goconst,errcheck
+//nolint:goconst
 package config
 
 import "testing"
 
-func TestLayersGetters(t *testing.T) {
+func TestLayersGetters(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
@@ -77,14 +77,13 @@ func TestLayersGetters(t *testing.T) {
 	if notBool() {
 		t.Error("expected fallback value: false")
 	}
-
 }
 
-func TestLayersSetters(t *testing.T) {
+func TestLayersSetters(t *testing.T) { //nolint:paralleltest
 	// reset
 	options = make(map[string]*Option)
 
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "monkey",
 		Description:     "description",
@@ -94,7 +93,7 @@ func TestLayersSetters(t *testing.T) {
 		DefaultValue:    "banana",
 		ValidationRegex: "^(banana|water)$",
 	})
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "zebras/zebra",
 		Description:     "description",
@@ -104,7 +103,7 @@ func TestLayersSetters(t *testing.T) {
 		DefaultValue:    []string{"black", "white"},
 		ValidationRegex: "^[a-z]+$",
 	})
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "elephant",
 		Description:     "description",
@@ -114,7 +113,7 @@ func TestLayersSetters(t *testing.T) {
 		DefaultValue:    2,
 		ValidationRegex: "",
 	})
-	Register(&Option{
+	_ = Register(&Option{
 		Name:            "name",
 		Key:             "hot",
 		Description:     "description",
@@ -191,5 +190,4 @@ func TestLayersSetters(t *testing.T) {
 	if err := SetDefaultConfigOption("invalid_delete", nil); err == nil {
 		t.Error("should fail")
 	}
-
 }

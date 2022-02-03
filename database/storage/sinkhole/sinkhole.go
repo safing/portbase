@@ -17,7 +17,7 @@ type Sinkhole struct {
 }
 
 var (
-	// Compile time interface check
+	// Compile time interface checks.
 	_ storage.Interface  = &Sinkhole{}
 	_ storage.Maintainer = &Sinkhole{}
 	_ storage.Batcher    = &Sinkhole{}

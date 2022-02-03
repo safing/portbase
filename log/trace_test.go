@@ -7,6 +7,8 @@ import (
 )
 
 func TestContextTracer(t *testing.T) {
+	t.Parallel()
+
 	// skip
 	if testing.Short() {
 		t.Skip()

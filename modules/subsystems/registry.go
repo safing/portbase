@@ -9,11 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tevino/abool"
+
 	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/runtime"
-	"github.com/tevino/abool"
 )
 
 var (
@@ -94,7 +95,7 @@ func (mng *Manager) Start() error {
 	return nil
 }
 
-// Get implements runtime.ValueProvider
+// Get implements runtime.ValueProvider.
 func (mng *Manager) Get(keyOrPrefix string) ([]record.Record, error) {
 	mng.l.RLock()
 	defer mng.l.RUnlock()
@@ -268,6 +269,6 @@ func (mng *Manager) findParentSubsystem(m *modules.Module) (*Subsystem, *ModuleS
 // Otherwise Less() will panic.
 type bySubsystemID []record.Record
 
-func (sl bySubsystemID) Less(i, j int) bool { return sl[i].(*Subsystem).ID < sl[j].(*Subsystem).ID }
+func (sl bySubsystemID) Less(i, j int) bool { return sl[i].(*Subsystem).ID < sl[j].(*Subsystem).ID } //nolint:forcetypeassert // Can only be *Subsystem.
 func (sl bySubsystemID) Swap(i, j int)      { sl[i], sl[j] = sl[j], sl[i] }
 func (sl bySubsystemID) Len() int           { return len(sl) }

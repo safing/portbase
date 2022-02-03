@@ -49,7 +49,7 @@ func Start() error {
 	// parse flags
 	err = parseFlags()
 	if err != nil {
-		if err != ErrCleanExit {
+		if !errors.Is(err, ErrCleanExit) {
 			fmt.Fprintf(os.Stderr, "CRITICAL ERROR: failed to parse flags: %s\n", err)
 		}
 		return err
@@ -59,7 +59,7 @@ func Start() error {
 	if globalPrepFn != nil {
 		err = globalPrepFn()
 		if err != nil {
-			if err != ErrCleanExit {
+			if !errors.Is(err, ErrCleanExit) {
 				fmt.Fprintf(os.Stderr, "CRITICAL ERROR: %s\n", err)
 			}
 			return err
@@ -69,7 +69,7 @@ func Start() error {
 	// prep modules
 	err = prepareModules()
 	if err != nil {
-		if err != ErrCleanExit {
+		if !errors.Is(err, ErrCleanExit) {
 			fmt.Fprintf(os.Stderr, "CRITICAL ERROR: %s\n", err)
 		}
 		return err
@@ -148,11 +148,11 @@ func prepareModules() error {
 			// wait for reports
 			rep = <-reports
 			if rep.err != nil {
-				if rep.err == ErrCleanExit {
+				if errors.Is(rep.err, ErrCleanExit) {
 					return rep.err
 				}
 				rep.module.NewErrorMessage("prep module", rep.err).Report()
-				return fmt.Errorf("failed to prep module %s: %s", rep.module.Name, rep.err)
+				return fmt.Errorf("failed to prep module %s: %w", rep.module.Name, rep.err)
 			}
 			reportCnt++
 		} else {
@@ -200,7 +200,7 @@ func startModules() error {
 			rep = <-reports
 			if rep.err != nil {
 				rep.module.NewErrorMessage("start module", rep.err).Report()
-				return fmt.Errorf("modules: could not start module %s: %s", rep.module.Name, rep.err)
+				return fmt.Errorf("modules: could not start module %s: %w", rep.module.Name, rep.err)
 			}
 			reportCnt++
 			log.Infof("modules: started %s", rep.module.Name)

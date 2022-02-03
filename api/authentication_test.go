@@ -9,9 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	testToken = new(AuthToken)
-)
+var testToken = new(AuthToken)
 
 func testAuthenticator(r *http.Request, s *http.Server) (*AuthToken, error) {
 	switch {
@@ -65,7 +63,9 @@ func init() {
 	}
 }
 
-func TestPermissions(t *testing.T) { //nolint:gocognit
+func TestPermissions(t *testing.T) {
+	t.Parallel()
+
 	testHandler := &mainHandler{
 		mux: mainMux,
 	}
@@ -99,10 +99,11 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 				http.MethodHead,
 				http.MethodPost,
 				http.MethodPut,
+				http.MethodDelete,
 			} {
 
 				// Set request permission for test requests.
-				reading := method == http.MethodGet
+				_, reading, _ := getEffectiveMethod(&http.Request{Method: method})
 				if reading {
 					testToken.Read = requestPerm
 					testToken.Write = NotSupported
@@ -147,7 +148,6 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 				}
 
 				if expectSuccess {
-
 					// Test for success.
 					if !assert.HTTPBodyContains(
 						t,
@@ -164,9 +164,7 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 							handlerPerm, handlerPerm,
 						)
 					}
-
 				} else {
-
 					// Test for error.
 					if !assert.HTTPError(t,
 						testHandler.ServeHTTP,
@@ -181,7 +179,6 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 							handlerPerm, handlerPerm,
 						)
 					}
-
 				}
 			}
 		}
@@ -189,6 +186,8 @@ func TestPermissions(t *testing.T) { //nolint:gocognit
 }
 
 func TestPermissionDefinitions(t *testing.T) {
+	t.Parallel()
+
 	if NotSupported != 0 {
 		t.Fatalf("NotSupported must be zero, was %v", NotSupported)
 	}

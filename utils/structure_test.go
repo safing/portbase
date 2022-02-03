@@ -1,4 +1,4 @@
-// +build !windows
+// go:build !windows
 
 package utils
 
@@ -29,12 +29,12 @@ func ExampleDirStructure() {
 		return
 	}
 
-	ds := NewDirStructure(basePath, 0755)
-	secret := ds.ChildDir("secret", 0700)
-	repo := ds.ChildDir("repo", 0777)
-	_ = repo.ChildDir("a", 0700)
-	b := repo.ChildDir("b", 0707)
-	c := b.ChildDir("c", 0750)
+	ds := NewDirStructure(basePath, 0o0755)
+	secret := ds.ChildDir("secret", 0o0700)
+	repo := ds.ChildDir("repo", 0o0777)
+	_ = repo.ChildDir("a", 0o0700)
+	b := repo.ChildDir("b", 0o0707)
+	c := b.ChildDir("c", 0o0750)
 
 	err = ds.Ensure()
 	if err != nil {

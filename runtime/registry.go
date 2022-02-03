@@ -7,13 +7,14 @@ import (
 	"sync"
 
 	"github.com/armon/go-radix"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/safing/portbase/database"
 	"github.com/safing/portbase/database/iterator"
 	"github.com/safing/portbase/database/query"
 	"github.com/safing/portbase/database/record"
 	"github.com/safing/portbase/database/storage"
 	"github.com/safing/portbase/log"
-	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -277,7 +278,7 @@ func (r *Registry) getMatchingProvider(key string) *keyedValueProvider {
 		return nil
 	}
 
-	return provider.(*keyedValueProvider)
+	return provider.(*keyedValueProvider) //nolint:forcetypeassert
 }
 
 func (r *Registry) collectProviderByPrefix(prefix string) []*keyedValueProvider {
@@ -287,12 +288,12 @@ func (r *Registry) collectProviderByPrefix(prefix string) []*keyedValueProvider 
 	// if there's a LongestPrefix provider that's the only one
 	// we need to ask
 	if _, p, ok := r.providers.LongestPrefix(prefix); ok {
-		return []*keyedValueProvider{p.(*keyedValueProvider)}
+		return []*keyedValueProvider{p.(*keyedValueProvider)} //nolint:forcetypeassert
 	}
 
 	var providers []*keyedValueProvider
 	r.providers.WalkPrefix(prefix, func(key string, p interface{}) bool {
-		providers = append(providers, p.(*keyedValueProvider))
+		providers = append(providers, p.(*keyedValueProvider)) //nolint:forcetypeassert
 		return false
 	})
 

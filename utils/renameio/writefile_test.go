@@ -1,4 +1,4 @@
-// +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
+// go:build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
 
 package renameio
 
@@ -11,16 +11,20 @@ import (
 )
 
 func TestWriteFile(t *testing.T) {
-	d, err := ioutil.TempDir("", "tempdirtest")
+	t.Parallel()
+
+	d, err := ioutil.TempDir("", "test-renameio-testwritefile")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(d)
+	defer func() {
+		_ = os.RemoveAll(d)
+	}()
 
 	filename := filepath.Join(d, "hello.sh")
 
 	wantData := []byte("#!/bin/sh\necho \"Hello World\"\n")
-	wantPerm := os.FileMode(0755)
+	wantPerm := os.FileMode(0o0600)
 	if err := WriteFile(filename, wantData, wantPerm); err != nil {
 		t.Fatal(err)
 	}

@@ -12,6 +12,8 @@ func init() {
 }
 
 func TestRNG(t *testing.T) {
+	t.Parallel()
+
 	key := make([]byte, 16)
 
 	rngCipher = "aes"

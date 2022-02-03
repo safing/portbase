@@ -26,7 +26,7 @@ type Interface interface {
 	MaintainRecordStates(ctx context.Context, purgeDeletedBefore time.Time, shadowDelete bool) error
 }
 
-// Maintainer defines the database storage API for backends that support optimized fetching of only the metadata.
+// MetaHandler defines the database storage API for backends that support optimized fetching of only the metadata.
 type MetaHandler interface {
 	GetMeta(key string) (*record.Meta, error)
 }

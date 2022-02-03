@@ -1,4 +1,4 @@
-// +build linux
+// go:build linux
 
 package renameio
 
@@ -11,33 +11,47 @@ import (
 )
 
 func TestTempDir(t *testing.T) {
+	t.Parallel()
+
 	if tmpdir, ok := os.LookupEnv("TMPDIR"); ok {
-		defer os.Setenv("TMPDIR", tmpdir) // restore
+		t.Cleanup(func() {
+			_ = os.Setenv("TMPDIR", tmpdir) // restore
+		})
 	} else {
-		defer os.Unsetenv("TMPDIR") // restore
+		t.Cleanup(func() {
+			_ = os.Unsetenv("TMPDIR") // restore
+		})
 	}
 
-	mount1, err := ioutil.TempDir("", "tempdirtest")
+	mount1, err := ioutil.TempDir("", "test-renameio-testtempdir1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(mount1)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(mount1)
+	})
 
-	mount2, err := ioutil.TempDir("", "tempdirtest")
+	mount2, err := ioutil.TempDir("", "test-renameio-testtempdir2")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(mount2)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(mount2)
+	})
 
 	if err := syscall.Mount("tmpfs", mount1, "tmpfs", 0, ""); err != nil {
 		t.Skipf("cannot mount tmpfs on %s: %v", mount1, err)
 	}
-	defer syscall.Unmount(mount1, 0)
+	t.Cleanup(func() {
+		_ = syscall.Unmount(mount1, 0)
+	})
 
 	if err := syscall.Mount("tmpfs", mount2, "tmpfs", 0, ""); err != nil {
 		t.Skipf("cannot mount tmpfs on %s: %v", mount2, err)
 	}
-	defer syscall.Unmount(mount2, 0)
+	t.Cleanup(func() {
+		_ = syscall.Unmount(mount2, 0)
+	})
 
 	tests := []struct {
 		name   string
@@ -83,14 +97,19 @@ func TestTempDir(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.TMPDIR == "" {
-				os.Unsetenv("TMPDIR")
+		testCase := tt
+
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if testCase.TMPDIR == "" {
+				_ = os.Unsetenv("TMPDIR")
 			} else {
-				os.Setenv("TMPDIR", tt.TMPDIR)
+				_ = os.Setenv("TMPDIR", testCase.TMPDIR)
 			}
-			if got := tempDir(tt.dir, tt.path); got != tt.want {
-				t.Fatalf("tempDir(%q, %q): got %q, want %q", tt.dir, tt.path, got, tt.want)
+
+			if got := tempDir(testCase.dir, testCase.path); got != testCase.want {
+				t.Fatalf("tempDir(%q, %q): got %q, want %q", testCase.dir, testCase.path, got, testCase.want)
 			}
 		})
 	}

@@ -10,6 +10,7 @@ import (
 )
 
 func TestOnceAgain(t *testing.T) {
+	t.Parallel()
 
 	oa := OnceAgain{}
 	executed := abool.New()

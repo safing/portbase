@@ -15,7 +15,6 @@ type intCondition struct {
 }
 
 func newIntCondition(key string, operator uint8, value interface{}) *intCondition {
-
 	var parsedValue int64
 
 	switch v := value.(type) {

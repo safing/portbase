@@ -15,7 +15,6 @@ var (
 )
 
 func log(level Severity, msg string, tracer *ContextTracer) {
-
 	if !started.IsSet() {
 		// a bit resource intense, but keeps logs before logging started.
 		// TODO: create option to disable logging
