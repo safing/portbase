@@ -1,4 +1,4 @@
-// go:build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
+//go:build darwin || dragonfly || freebsd || linux || nacl || netbsd || openbsd || solaris || windows
 
 package renameio
 
