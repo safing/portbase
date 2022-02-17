@@ -223,6 +223,10 @@ type Option struct {
 	// ValidationRegex is considered immutable after the option has
 	// been created.
 	ValidationRegex string
+	// ValidationFunc may contain a function to validate more complex values.
+	// The error is returned beyond the scope of this package and may be
+	// displayed to a user.
+	ValidationFunc func(value interface{}) error `json:"-"`
 	// PossibleValues may be set to a slice of values that are allowed
 	// for this configuration setting. Note that PossibleValues makes most
 	// sense when ExternalOptType is set to HintOneOf
