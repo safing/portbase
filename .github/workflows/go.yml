@@ -48,12 +48,6 @@ jobs:
     - name: Run go vet
       run: go vet ./...
 
-    - name: Install golint
-      run: bash -c "GOBIN=$(pwd) go get -u golang.org/x/lint/golint"
-
-    - name: Run golint
-      run: ./golint -set_exit_status -min_confidence 1.0 ./...
-   
     # golint is run (sufficiently; with excludes) as a part of golangci-lint.
     # - name: Install golint
     #   run: bash -c "GOBIN=$(pwd) go get -u golang.org/x/lint/golint"
