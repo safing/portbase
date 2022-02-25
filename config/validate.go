@@ -92,7 +92,7 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 		for pos, entry := range v {
 			s, ok := entry.(string)
 			if !ok {
-				return nil, fmt.Errorf("validation of option %s failed: element %+v at index %d is not a string", option.Key, entry, pos)
+				return nil, fmt.Errorf("validation of option %s failed: element %+v (#%d) is not a string", option.Key, entry, pos+1)
 			}
 			vConverted[pos] = s
 		}
@@ -109,11 +109,11 @@ func validateValue(option *Option, value interface{}) (*valueCache, error) { //n
 		if option.compiledRegex != nil {
 			for pos, entry := range v {
 				if !option.compiledRegex.MatchString(entry) {
-					return nil, fmt.Errorf("validation of option %s failed: string \"%s\" at index %d did not match validation regex", option.Key, entry, pos)
+					return nil, fmt.Errorf("validation of option %s failed: string \"%s\" (#%d) did not match validation regex", option.Key, entry, pos+1)
 				}
 
 				if err := isAllowedPossibleValue(option, entry); err != nil {
-					return nil, fmt.Errorf("validation of option %s failed: string %q at index %d is not allowed", option.Key, entry, pos)
+					return nil, fmt.Errorf("validation of option %s failed: string %q (#%d) is not allowed", option.Key, entry, pos+1)
 				}
 			}
 		}
