@@ -10,9 +10,11 @@ type ValidityFlag struct {
 }
 
 // NewValidityFlag returns a flag that signifies if the configuration has been changed.
+// It always starts out as invalid. Refresh to start with the current value.
 func NewValidityFlag() *ValidityFlag {
-	vf := &ValidityFlag{}
-	vf.Refresh()
+	vf := &ValidityFlag{
+		flag: abool.New(),
+	}
 	return vf
 }
 
