@@ -120,6 +120,8 @@ func setConfigOption(key string, value interface{}, push bool) (err error) {
 		valueCache, vErr := validateValue(option, value)
 		if vErr == nil {
 			option.activeValue = valueCache
+		} else {
+			err = vErr
 		}
 	}
 
@@ -159,6 +161,8 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 		valueCache, vErr := validateValue(option, value)
 		if vErr == nil {
 			option.activeDefaultValue = valueCache
+		} else {
+			err = vErr
 		}
 	}
 
