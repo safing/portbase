@@ -92,9 +92,10 @@ func Register(option *Option) error {
 		}
 	}
 
-	option.activeFallbackValue, err = validateValue(option, option.DefaultValue)
-	if err != nil {
-		return fmt.Errorf("config: invalid default value: %w", err)
+	var vErr *ValidationError
+	option.activeFallbackValue, vErr = validateValue(option, option.DefaultValue)
+	if vErr != nil {
+		return fmt.Errorf("config: invalid default value: %w", vErr)
 	}
 
 	optionsLock.Lock()

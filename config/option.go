@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/tidwall/sjson"
 
 	"github.com/safing/portbase/database/record"
@@ -288,6 +289,15 @@ func (option *Option) GetAnnotation(key string) (interface{}, bool) {
 	}
 	val, ok := option.Annotations[key]
 	return val, ok
+}
+
+// copyOrNil returns a copy of the option, or nil if copying failed.
+func (option *Option) copyOrNil() *Option {
+	copied, err := copystructure.Copy(option)
+	if err != nil {
+		return nil
+	}
+	return copied.(*Option) //nolint:forcetypeassert
 }
 
 // Export expors an option to a Record.

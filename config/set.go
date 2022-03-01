@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/tevino/abool"
@@ -39,9 +38,8 @@ func signalChanges() {
 }
 
 // replaceConfig sets the (prioritized) user defined config.
-func replaceConfig(newValues map[string]interface{}) error {
-	var firstErr error
-	var errCnt int
+func replaceConfig(newValues map[string]interface{}) []*ValidationError {
+	var validationErrors []*ValidationError
 
 	// RLock the options because we are not adding or removing
 	// options from the registration but rather only update the
@@ -59,10 +57,7 @@ func replaceConfig(newValues map[string]interface{}) error {
 			if err == nil {
 				option.activeValue = valueCache
 			} else {
-				errCnt++
-				if firstErr == nil {
-					firstErr = err
-				}
+				validationErrors = append(validationErrors, err)
 			}
 		}
 
@@ -72,20 +67,12 @@ func replaceConfig(newValues map[string]interface{}) error {
 
 	signalChanges()
 
-	if firstErr != nil {
-		if errCnt > 0 {
-			return fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
-		}
-		return firstErr
-	}
-
-	return nil
+	return validationErrors
 }
 
 // replaceDefaultConfig sets the (fallback) default config.
-func replaceDefaultConfig(newValues map[string]interface{}) error {
-	var firstErr error
-	var errCnt int
+func replaceDefaultConfig(newValues map[string]interface{}) []*ValidationError {
+	var validationErrors []*ValidationError
 
 	// RLock the options because we are not adding or removing
 	// options from the registration but rather only update the
@@ -103,10 +90,7 @@ func replaceDefaultConfig(newValues map[string]interface{}) error {
 			if err == nil {
 				option.activeDefaultValue = valueCache
 			} else {
-				errCnt++
-				if firstErr == nil {
-					firstErr = err
-				}
+				validationErrors = append(validationErrors, err)
 			}
 		}
 		handleOptionUpdate(option, true)
@@ -115,14 +99,7 @@ func replaceDefaultConfig(newValues map[string]interface{}) error {
 
 	signalChanges()
 
-	if firstErr != nil {
-		if errCnt > 0 {
-			return fmt.Errorf("encountered %d errors, first was: %w", errCnt, firstErr)
-		}
-		return firstErr
-	}
-
-	return nil
+	return validationErrors
 }
 
 // SetConfigOption sets a single value in the (prioritized) user defined config.
@@ -140,9 +117,8 @@ func setConfigOption(key string, value interface{}, push bool) (err error) {
 	if value == nil {
 		option.activeValue = nil
 	} else {
-		var valueCache *valueCache
-		valueCache, err = validateValue(option, value)
-		if err == nil {
+		valueCache, vErr := validateValue(option, value)
+		if vErr == nil {
 			option.activeValue = valueCache
 		}
 	}
@@ -180,9 +156,8 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 	if value == nil {
 		option.activeDefaultValue = nil
 	} else {
-		var valueCache *valueCache
-		valueCache, err = validateValue(option, value)
-		if err == nil {
+		valueCache, vErr := validateValue(option, value)
+		if vErr == nil {
 			option.activeDefaultValue = valueCache
 		}
 	}

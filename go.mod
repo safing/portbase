@@ -20,6 +20,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.4.0
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/seehuhn/fortuna v1.0.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/stretchr/testify v1.6.1
