@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/safing/portbase/log"
@@ -13,7 +14,11 @@ func parseAndReplaceConfig(jsonData string) error {
 		return err
 	}
 
-	return replaceConfig(m)
+	validationErrors := replaceConfig(m)
+	if len(validationErrors) > 0 {
+		return fmt.Errorf("%d errors, first: %w", len(validationErrors), validationErrors[0])
+	}
+	return nil
 }
 
 func parseAndReplaceDefaultConfig(jsonData string) error {
@@ -22,7 +27,11 @@ func parseAndReplaceDefaultConfig(jsonData string) error {
 		return err
 	}
 
-	return replaceDefaultConfig(m)
+	validationErrors := replaceDefaultConfig(m)
+	if len(validationErrors) > 0 {
+		return fmt.Errorf("%d errors, first: %w", len(validationErrors), validationErrors[0])
+	}
+	return nil
 }
 
 func quickRegister(t *testing.T, key string, optType OptionType, defaultValue interface{}) {

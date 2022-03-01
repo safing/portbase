@@ -61,109 +61,167 @@ func isAllowedPossibleValue(opt *Option, value interface{}) error {
 		}
 	}
 
-	return fmt.Errorf("value is not allowed")
+	return errors.New("value is not allowed")
 }
 
 // validateValue ensures that value matches the expected type of option.
 // It does not create a copy of the value!
-func validateValue(option *Option, value interface{}) (*valueCache, error) { //nolint:gocyclo
+func validateValue(option *Option, value interface{}) (*valueCache, *ValidationError) { //nolint:gocyclo
 	if option.OptType != OptTypeStringArray {
 		if err := isAllowedPossibleValue(option, value); err != nil {
-			return nil, fmt.Errorf("validation of option %s failed for %v: %w", option.Key, value, err)
+			return nil, &ValidationError{
+				Option: option.copyOrNil(),
+				Err:    err,
+			}
 		}
 	}
 
 	reflect.TypeOf(value).ConvertibleTo(reflect.TypeOf(""))
 
+	var validated *valueCache
 	switch v := value.(type) {
 	case string:
 		if option.OptType != OptTypeString {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, invalid(option, "expected type %s, got type %T", getTypeName(option.OptType), v)
 		}
 		if option.compiledRegex != nil {
 			if !option.compiledRegex.MatchString(v) {
-				return nil, fmt.Errorf("validation of option %s failed: string \"%s\" did not match validation regex for option", option.Key, v)
+				return nil, invalid(option, "did not match validation regex")
 			}
 		}
-		return &valueCache{stringVal: v}, nil
+		validated = &valueCache{stringVal: v}
 	case []interface{}:
 		vConverted := make([]string, len(v))
 		for pos, entry := range v {
 			s, ok := entry.(string)
 			if !ok {
-				return nil, fmt.Errorf("validation of option %s failed: element %+v at index %d is not a string", option.Key, entry, pos)
+				return nil, invalid(option, "entry #%d is not a string", pos+1)
 			}
 			vConverted[pos] = s
 		}
-		// continue to next case
-		return validateValue(option, vConverted)
+		// Call validation function again with converted value.
+		var vErr *ValidationError
+		validated, vErr = validateValue(option, vConverted)
+		if vErr != nil {
+			return nil, vErr
+		}
 	case []string:
 		if option.OptType != OptTypeStringArray {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, invalid(option, "expected type %s, got type %T", getTypeName(option.OptType), v)
 		}
 		if option.compiledRegex != nil {
 			for pos, entry := range v {
 				if !option.compiledRegex.MatchString(entry) {
-					return nil, fmt.Errorf("validation of option %s failed: string \"%s\" at index %d did not match validation regex", option.Key, entry, pos)
+					return nil, invalid(option, "entry #%d did not match validation regex", pos+1)
 				}
 
 				if err := isAllowedPossibleValue(option, entry); err != nil {
-					return nil, fmt.Errorf("validation of option %s failed: string %q at index %d is not allowed", option.Key, entry, pos)
+					return nil, invalid(option, "entry #%d is not allowed", pos+1)
 				}
 			}
 		}
-		return &valueCache{stringArrayVal: v}, nil
+		validated = &valueCache{stringArrayVal: v}
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, float32, float64:
 		// uint64 is omitted, as it does not fit in a int64
 		if option.OptType != OptTypeInt {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, invalid(option, "expected type %s, got type %T", getTypeName(option.OptType), v)
 		}
 		if option.compiledRegex != nil {
 			// we need to use %v here so we handle float and int correctly.
 			if !option.compiledRegex.MatchString(fmt.Sprintf("%v", v)) {
-				return nil, fmt.Errorf("validation of option %s failed: number \"%d\" did not match validation regex", option.Key, v)
+				return nil, invalid(option, "did not match validation regex")
 			}
 		}
 		switch v := value.(type) {
 		case int:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case int8:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case int16:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case int32:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case int64:
-			return &valueCache{intVal: v}, nil
+			validated = &valueCache{intVal: v}
 		case uint:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case uint8:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case uint16:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case uint32:
-			return &valueCache{intVal: int64(v)}, nil
+			validated = &valueCache{intVal: int64(v)}
 		case float32:
 			// convert if float has no decimals
 			if math.Remainder(float64(v), 1) == 0 {
-				return &valueCache{intVal: int64(v)}, nil
+				validated = &valueCache{intVal: int64(v)}
+			} else {
+				return nil, invalid(option, "failed to convert float32 to int64")
 			}
-			return nil, fmt.Errorf("failed to convert float32 to int64 for option %s, got value %+v", option.Key, v)
 		case float64:
 			// convert if float has no decimals
 			if math.Remainder(v, 1) == 0 {
-				return &valueCache{intVal: int64(v)}, nil
+				validated = &valueCache{intVal: int64(v)}
+			} else {
+				return nil, invalid(option, "failed to convert float64 to int64")
 			}
-			return nil, fmt.Errorf("failed to convert float64 to int64 for option %s, got value %+v", option.Key, v)
 		default:
-			return nil, errors.New("internal error")
+			return nil, invalid(option, "internal error")
 		}
 	case bool:
 		if option.OptType != OptTypeBool {
-			return nil, fmt.Errorf("expected type %s for option %s, got type %T", getTypeName(option.OptType), option.Key, v)
+			return nil, invalid(option, "expected type %s, got type %T", getTypeName(option.OptType), v)
 		}
-		return &valueCache{boolVal: v}, nil
+		validated = &valueCache{boolVal: v}
 	default:
-		return nil, fmt.Errorf("invalid option value type for option %s: %T", option.Key, value)
+		return nil, invalid(option, "invalid option value type: %T", value)
+	}
+
+	// Check if there is an additional function to validate the value.
+	if option.ValidationFunc != nil {
+		var err error
+		switch option.OptType {
+		case optTypeAny:
+			err = errors.New("internal error")
+		case OptTypeString:
+			err = option.ValidationFunc(validated.stringVal)
+		case OptTypeStringArray:
+			err = option.ValidationFunc(validated.stringArrayVal)
+		case OptTypeInt:
+			err = option.ValidationFunc(validated.intVal)
+		case OptTypeBool:
+			err = option.ValidationFunc(validated.boolVal)
+		}
+		if err != nil {
+			return nil, &ValidationError{
+				Option: option.copyOrNil(),
+				Err:    err,
+			}
+		}
+	}
+
+	return validated, nil
+}
+
+// ValidationError error holds details about a config option value validation error.
+type ValidationError struct {
+	Option *Option
+	Err    error
+}
+
+// Error returns the formatted error.
+func (ve *ValidationError) Error() string {
+	return fmt.Sprintf("validation of %s failed: %s", ve.Option.Key, ve.Err)
+}
+
+// Unwrap returns the wrapped error.
+func (ve *ValidationError) Unwrap() error {
+	return ve.Err
+}
+
+func invalid(option *Option, format string, a ...interface{}) *ValidationError {
+	return &ValidationError{
+		Option: option.copyOrNil(),
+		Err:    fmt.Errorf(format, a...),
 	}
 }

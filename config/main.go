@@ -64,7 +64,7 @@ func start() error {
 		return err
 	}
 
-	err = loadConfig()
+	err = loadConfig(false)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

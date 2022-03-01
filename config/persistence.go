@@ -2,16 +2,32 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/safing/portbase/log"
 )
 
-var configFilePath string
+var (
+	configFilePath string
 
-func loadConfig() error {
+	loadedConfigValidationErrors     []*ValidationError
+	loadedConfigValidationErrorsLock sync.Mutex
+)
+
+// GetLoadedConfigValidationErrors returns the encountered validation errors
+// from the last time loading config from disk.
+func GetLoadedConfigValidationErrors() []*ValidationError {
+	loadedConfigValidationErrorsLock.Lock()
+	defer loadedConfigValidationErrorsLock.Unlock()
+
+	return loadedConfigValidationErrors
+}
+
+func loadConfig(requireValidConfig bool) error {
 	// check if persistence is configured
 	if configFilePath == "" {
 		return nil
@@ -29,7 +45,17 @@ func loadConfig() error {
 		return err
 	}
 
-	return replaceConfig(newValues)
+	validationErrors := replaceConfig(newValues)
+	if requireValidConfig && len(validationErrors) > 0 {
+		return fmt.Errorf("encountered %d validation errors during config loading", len(validationErrors))
+	}
+
+	// Save validation errors.
+	loadedConfigValidationErrorsLock.Lock()
+	defer loadedConfigValidationErrorsLock.Unlock()
+	loadedConfigValidationErrors = validationErrors
+
+	return nil
 }
 
 // saveConfig saves the current configuration to file.

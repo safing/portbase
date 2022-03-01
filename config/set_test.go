@@ -24,9 +24,9 @@ func TestLayersGetters(t *testing.T) { //nolint:paralleltest
 		t.Fatal(err)
 	}
 
-	err = replaceConfig(mapData)
-	if err != nil {
-		t.Fatal(err)
+	validationErrors := replaceConfig(mapData)
+	if len(validationErrors) > 0 {
+		t.Fatalf("%d errors, first: %s", len(validationErrors), validationErrors[0].Error())
 	}
 
 	// Test missing values
