@@ -136,8 +136,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	}
 
 	// check download dir
-	err := reg.tmpDir.Ensure()
-	if err != nil {
+	if err := reg.tmpDir.Ensure(); err != nil {
 		return fmt.Errorf("could not prepare tmp directory for download: %w", err)
 	}
 
@@ -150,15 +149,17 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 
 	for idx := range toUpdate {
 		go func(rv *ResourceVersion) {
+			var err error
+
 			defer wg.Done()
 			defer func() {
 				if x := recover(); x != nil {
-					log.Errorf("%s: captured panic: %s", err)
+					log.Errorf("%s: captured panic: %s", x)
 				}
 			}()
 
 			for tries := 0; tries < 3; tries++ {
-				err = reg.fetchFile(ctx, client, rv, tries)
+				err := reg.fetchFile(ctx, client, rv, tries)
 				if err == nil {
 					rv.Available = true
 					return
