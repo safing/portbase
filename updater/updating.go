@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
@@ -141,20 +142,31 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	}
 
 	// download updates
-	log.Infof("%s: starting to download %d updates", reg.Name, len(toUpdate))
+	log.Infof("%s: starting to download %d updates parallel", reg.Name, len(toUpdate))
+	var wg sync.WaitGroup
+
+	wg.Add(len(toUpdate))
 	client := &http.Client{}
-	for _, rv := range toUpdate {
-		for tries := 0; tries < 3; tries++ {
-			err = reg.fetchFile(ctx, client, rv, tries)
-			if err == nil {
-				rv.Available = true
-				break
+
+	for idx := range toUpdate {
+		go func(rv *ResourceVersion) {
+			defer wg.Done()
+
+			for tries := 0; tries < 3; tries++ {
+				err = reg.fetchFile(ctx, client, rv, tries)
+				if err == nil {
+					rv.Available = true
+					return
+				}
 			}
-		}
-		if err != nil {
-			log.Warningf("%s: failed to download %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
-		}
+			if err != nil {
+				log.Warningf("%s: failed to download %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			}
+		}(toUpdate[idx])
 	}
+
+	wg.Wait()
+
 	log.Infof("%s: finished downloading updates", reg.Name)
 
 	return nil
