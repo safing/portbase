@@ -154,7 +154,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 			defer wg.Done()
 			defer func() {
 				if x := recover(); x != nil {
-					log.Errorf("%s: captured panic: %s", rv.resource.Identifier, x)
+					log.Errorf("%s: %s: captured panic: %s", reg.Name, rv.resource.Identifier, x)
 				}
 			}()
 
