@@ -3,6 +3,7 @@ package updater
 import (
 	"archive/zip"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -36,7 +37,10 @@ func (reg *ResourceRegistry) UnpackResources() error {
 		if utils.StringInSlice(reg.AutoUnpack, res.Identifier) {
 			err := res.UnpackArchive()
 			if err != nil {
-				multierr = multierror.Append(multierr, err)
+				multierr = multierror.Append(
+					multierr,
+					fmt.Errorf("%s: %w", res.Identifier, err),
+				)
 			}
 		}
 	}
@@ -69,7 +73,7 @@ func (res *Resource) UnpackArchive() error {
 	}
 }
 
-func (res *Resource) unpackZipArchive() (err error) {
+func (res *Resource) unpackZipArchive() error {
 	// Get file and directory paths.
 	archiveFile := res.SelectedVersion.storagePath()
 	destDir := strings.TrimSuffix(archiveFile, zipSuffix)
@@ -115,7 +119,7 @@ func (res *Resource) unpackZipArchive() (err error) {
 	var archiveReader *zip.ReadCloser
 	archiveReader, err = zip.OpenReader(archiveFile)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to open zip reader: %w", err)
 	}
 	defer func() {
 		_ = archiveReader.Close()
@@ -128,20 +132,20 @@ func (res *Resource) unpackZipArchive() (err error) {
 			filepath.Join(tmpDir, filepath.FromSlash(file.Name)),
 		)
 		if err != nil {
-			return
+			return fmt.Errorf("failed to extract archive file %s: %w", file.Name, err)
 		}
 	}
 
 	// Make the final move.
 	err = os.Rename(tmpDir, destDir)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to move the extracted archive from %s to %s: %w", tmpDir, destDir, err)
 	}
 
 	// Fix permissions on the destination dir.
 	err = res.registry.storageDir.EnsureAbsPath(destDir)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to apply directory permissions on %s: %w", destDir, err)
 	}
 
 	log.Infof("%s: unpacked %s", res.registry.Name, res.SelectedVersion.versionedPath())
@@ -153,7 +157,7 @@ func copyFromZipArchive(archiveFile *zip.File, dstPath string) error {
 	if archiveFile.FileInfo().IsDir() {
 		err := os.Mkdir(dstPath, archiveFile.Mode())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create directory %s: %w", dstPath, err)
 		}
 		return nil
 	}
@@ -161,7 +165,7 @@ func copyFromZipArchive(archiveFile *zip.File, dstPath string) error {
 	// Open archived file for reading.
 	fileReader, err := archiveFile.Open()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open file in archive: %w", err)
 	}
 	defer func() {
 		_ = fileReader.Close()
@@ -170,7 +174,7 @@ func copyFromZipArchive(archiveFile *zip.File, dstPath string) error {
 	// Open destination file for writing.
 	dstFile, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, archiveFile.Mode())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open destination file %s: %w", dstPath, err)
 	}
 	defer func() {
 		_ = dstFile.Close()
@@ -178,6 +182,11 @@ func copyFromZipArchive(archiveFile *zip.File, dstPath string) error {
 
 	// Copy full file from archive to dst.
 	if _, err := io.CopyN(dstFile, fileReader, MaxUnpackSize); err != nil {
+		// EOF is expected here as the archive is likely smaller
+		// thane MaxUnpackSize
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
 		return err
 	}
 
