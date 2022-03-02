@@ -151,6 +151,11 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	for idx := range toUpdate {
 		go func(rv *ResourceVersion) {
 			defer wg.Done()
+			defer func() {
+				if x := recover(); x != nil {
+					log.Errorf("%s: captured panic: %s", err)
+				}
+			}()
 
 			for tries := 0; tries < 3; tries++ {
 				err = reg.fetchFile(ctx, client, rv, tries)
