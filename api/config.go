@@ -65,6 +65,7 @@ func registerConfig() error {
 		Name:           "API Keys",
 		Key:            CfgAPIKeys,
 		Description:    "Define API keys for priviledged access to the API. Every entry is a separate API key with respective permissions. Format is `<key>?read=<perm>&write=<perm>`. Permissions are `anyone`, `user` and `admin`, and may be omitted.",
+		Sensitive:      true,
 		OptType:        config.OptTypeStringArray,
 		ExpertiseLevel: config.ExpertiseLevelDeveloper,
 		ReleaseLevel:   config.ReleaseLevelStable,
