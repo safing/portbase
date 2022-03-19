@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/safing/portbase/dataroot"
 	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/utils"
+	"github.com/safing/portbase/utils/debug"
 )
 
 const (
@@ -79,4 +82,33 @@ func exportConfigCmd() error {
 
 	_, err = os.Stdout.Write(data)
 	return err
+}
+
+// AddToDebugInfo adds all changed global config options to the given debug.Info.
+func AddToDebugInfo(di *debug.Info) {
+	var lines []string
+
+	// Collect all changed settings.
+	ForEachOption(func(opt *Option) error {
+		opt.Lock()
+		defer opt.Unlock()
+
+		if opt.ReleaseLevel <= getReleaseLevel() && opt.activeValue != nil {
+			if opt.Sensitive {
+				lines = append(lines, fmt.Sprintf("%s: [redacted]", opt.Key))
+			} else {
+				lines = append(lines, fmt.Sprintf("%s: %v", opt.Key, opt.activeValue.getData(opt)))
+			}
+		}
+
+		return nil
+	})
+	sort.Strings(lines)
+
+	// Add data as section.
+	di.AddSection(
+		fmt.Sprintf("Config: %d", len(lines)),
+		debug.UseCodeSection|debug.AddContentLineBreaks,
+		lines...,
+	)
 }
