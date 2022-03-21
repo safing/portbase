@@ -157,7 +157,7 @@ func (di *Info) AddLastReportedModuleError() {
 	}
 
 	di.AddSection(
-		fmt.Sprintf("%s Module Error", strings.Title(me.ModuleName)),
+		fmt.Sprintf("%s Module Error", strings.Title(me.ModuleName)), //nolint:staticcheck
 		UseCodeSection,
 		me.Format(),
 	)

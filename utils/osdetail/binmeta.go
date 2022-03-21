@@ -76,7 +76,7 @@ func GenerateBinaryNameFromPath(path string) string {
 
 		// Title-case name-only parts.
 		if nameOnly.MatchString(nameParts[i]) {
-			nameParts[i] = strings.Title(nameParts[i])
+			nameParts[i] = strings.Title(nameParts[i]) //nolint:staticcheck
 		}
 	}
 

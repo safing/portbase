@@ -89,7 +89,7 @@ func AddToDebugInfo(di *debug.Info) {
 	var lines []string
 
 	// Collect all changed settings.
-	ForEachOption(func(opt *Option) error {
+	_ = ForEachOption(func(opt *Option) error {
 		opt.Lock()
 		defer opt.Unlock()
 
