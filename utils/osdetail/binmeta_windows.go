@@ -16,7 +16,7 @@ func GetBinaryNameFromSystem(path string) (string, error) {
 	}
 
 	// Clean name.
-	binName := cleanFileDescription(output)
+	binName := cleanFileDescription(string(output))
 	if binName != "" {
 		return binName, nil
 	}
@@ -74,5 +74,5 @@ func GetBinaryIconFromSystem(path string) (string, error) {
 		return "", fmt.Errorf("failed to get file properties of %s: %s", path, err)
 	}
 
-	return "data:image/png;base64," + output, nil
+	return "data:image/png;base64," + string(output), nil
 }

@@ -190,6 +190,9 @@ type Option struct {
 	// Help is considered immutable after the option has
 	// been created.
 	Help string
+	// Sensitive signifies that the configuration values may contain sensitive
+	// content, such as authentication keys.
+	Sensitive bool
 	// OptType defines the type of the option.
 	// OptType is considered immutable after the option has
 	// been created.
