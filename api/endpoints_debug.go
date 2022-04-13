@@ -2,10 +2,12 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"runtime/pprof"
+	"time"
 
 	"github.com/safing/portbase/utils/debug"
 )
@@ -37,6 +39,42 @@ func registerDebugEndpoints() error {
 		ActionFunc:  printStack,
 		Name:        "Print Goroutine Stack",
 		Description: "Prints the current goroutine stack to stdout.",
+	}); err != nil {
+		return err
+	}
+
+	if err := RegisterEndpoint(Endpoint{
+		Path:        "debug/cpu",
+		Read:        PermitAnyone,
+		DataFunc:    handleCPUProfile,
+		Name:        "Get CPU Profile",
+		Description: "",
+		Parameters: []Parameter{{
+			Method:      http.MethodGet,
+			Field:       "duration",
+			Value:       "10s",
+			Description: "Specify the formatting style. The default is simple markdown formatting.",
+		}},
+	}); err != nil {
+		return err
+	}
+
+	if err := RegisterEndpoint(Endpoint{
+		Path:        "debug/heap",
+		Read:        PermitAnyone,
+		DataFunc:    handleHeapProfile,
+		Name:        "Get Heap Profile",
+		Description: "",
+	}); err != nil {
+		return err
+	}
+
+	if err := RegisterEndpoint(Endpoint{
+		Path:        "debug/allocs",
+		Read:        PermitAnyone,
+		DataFunc:    handleAllocsProfile,
+		Name:        "Get Allocs Profile",
+		Description: "",
 	}); err != nil {
 		return err
 	}
@@ -88,6 +126,55 @@ func printStack(_ *Request) (msg string, err error) {
 		return "", err
 	}
 	return "stack printed to stdout", nil
+}
+
+// handleCPUProfile returns the CPU profile.
+func handleCPUProfile(ar *Request) (data []byte, err error) {
+	// Parse duration.
+	duration := 10 * time.Second
+	if durationOption := ar.Request.URL.Query().Get("duration"); durationOption != "" {
+		parsedDuration, err := time.ParseDuration(durationOption)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse duration: %w", err)
+		}
+		duration = parsedDuration
+	}
+
+	// Start CPU profiling.
+	buf := new(bytes.Buffer)
+	if err := pprof.StartCPUProfile(buf); err != nil {
+		return nil, fmt.Errorf("failed to start cpu profile: %w", err)
+	}
+
+	// Wait for the specified duration.
+	select {
+	case <-time.After(duration):
+	case <-ar.Context().Done():
+		pprof.StopCPUProfile()
+		return nil, context.Canceled
+	}
+
+	// Stop CPU profiling and return data.
+	pprof.StopCPUProfile()
+	return buf.Bytes(), nil
+}
+
+// handleHeapProfile returns the Heap profile.
+func handleHeapProfile(ar *Request) (data []byte, err error) {
+	buf := new(bytes.Buffer)
+	if err := pprof.Lookup("heap").WriteTo(buf, 0); err != nil {
+		return nil, fmt.Errorf("failed to write heap profile: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// handleAllocsProfile returns the Allocs profile.
+func handleAllocsProfile(ar *Request) (data []byte, err error) {
+	buf := new(bytes.Buffer)
+	if err := pprof.Lookup("allocs").WriteTo(buf, 0); err != nil {
+		return nil, fmt.Errorf("failed to write allocs profile: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 // debugInfo returns the debugging information for support requests.

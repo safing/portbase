@@ -14,13 +14,18 @@ var (
 	instanceOption         config.StringOption
 	cfgOptionInstanceOrder = 0
 
+	CfgOptionCommentKey   = "core/metrics/comment"
+	commentOption         config.StringOption
+	cfgOptionCommentOrder = 0
+
 	CfgOptionPushKey   = "core/metrics/push"
 	pushOption         config.StringOption
 	cfgOptionPushOrder = 0
 
-	pushFlag        string
 	instanceFlag    string
 	defaultInstance string
+	commentFlag     string
+	pushFlag        string
 )
 
 func init() {
@@ -32,15 +37,16 @@ func init() {
 		}
 	}
 
+	flag.StringVar(&instanceFlag, "metrics-instance", defaultInstance, "set the default metrics instance label for all metrics")
+	flag.StringVar(&commentFlag, "metrics-comment", "", "set the default metrics comment label")
 	flag.StringVar(&pushFlag, "push-metrics", "", "set default URL to push prometheus metrics to")
-	flag.StringVar(&instanceFlag, "metrics-instance", defaultInstance, "set the default global instance label")
 }
 
 func prepConfig() error {
 	err := config.Register(&config.Option{
 		Name:            "Metrics Instance Name",
 		Key:             CfgOptionInstanceKey,
-		Description:     "Define the prometheus instance label for exported metrics. Please note that changing the instance name will reset persisted metrics.",
+		Description:     "Define the prometheus instance label for all exported metrics. Please note that changing the metrics instance name will reset persisted metrics.",
 		Sensitive:       true,
 		OptType:         config.OptTypeString,
 		ExpertiseLevel:  config.ExpertiseLevelExpert,
@@ -57,6 +63,26 @@ func prepConfig() error {
 		return err
 	}
 	instanceOption = config.Concurrent.GetAsString(CfgOptionInstanceKey, instanceFlag)
+
+	err = config.Register(&config.Option{
+		Name:            "Metrics Comment Label",
+		Key:             CfgOptionCommentKey,
+		Description:     "Define a metrics comment label, which is added to the info metric.",
+		Sensitive:       true,
+		OptType:         config.OptTypeString,
+		ExpertiseLevel:  config.ExpertiseLevelExpert,
+		ReleaseLevel:    config.ReleaseLevelStable,
+		DefaultValue:    commentFlag,
+		RequiresRestart: true,
+		Annotations: config.Annotations{
+			config.DisplayOrderAnnotation: cfgOptionCommentOrder,
+			config.CategoryAnnotation:     "Metrics",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	commentOption = config.Concurrent.GetAsString(CfgOptionCommentKey, commentFlag)
 
 	err = config.Register(&config.Option{
 		Name:            "Push Prometheus Metrics",
