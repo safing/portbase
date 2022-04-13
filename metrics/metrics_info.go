@@ -23,6 +23,7 @@ func registerInfoMetric() error {
 			"go_arch":       runtime.GOARCH,
 			"go_version":    runtime.Version(),
 			"go_compiler":   runtime.Compiler,
+			"comment":       commentOption(),
 		},
 		func() float64 {
 			return 1
