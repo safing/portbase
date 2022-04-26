@@ -351,7 +351,7 @@ func (t *Task) executeWithLocking() {
 		t.executing = false
 
 		// repeat?
-		if t.isActive() && t.repeat != 0 {
+		if t.isActive() && t.repeat != 0 && t.executeAt.IsZero() {
 			t.executeAt = time.Now().Add(t.repeat)
 			t.addToSchedule(false)
 		}
@@ -365,6 +365,9 @@ func (t *Task) executeWithLocking() {
 
 		t.lock.Unlock()
 	}()
+
+	// reset executeAt to detect if task set next execution itself
+	t.executeAt = time.Time{}
 
 	// run
 	err := t.taskFn(t.ctx, t)
