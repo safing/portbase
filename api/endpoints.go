@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"sort"
@@ -413,6 +415,9 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		apiRequest.InputData = inputData
+
+		// restore request body for any http.HandlerFunc below
+		r.Body = io.NopCloser(bytes.NewReader(inputData))
 	default:
 		// Defensive.
 		http.Error(w, "unsupported method for the actions API", http.StatusMethodNotAllowed)
