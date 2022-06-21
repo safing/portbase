@@ -180,7 +180,7 @@ func (m *Module) Resolve(failureID string) {
 
 	// Propagate failure status.
 	if failureUpdateNotifyFuncReady.IsSet() {
-		_ = m.RunWorker("failure status updater", func(context.Context) error {
+		m.StartWorker("failure status updater", func(context.Context) error {
 			// Only use data in worker that won't change anymore.
 			failureUpdateNotifyFunc(FailureNone, resolveFailureID, "", "")
 			return nil
