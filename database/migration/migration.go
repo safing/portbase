@@ -76,12 +76,12 @@ func (reg *Registry) Migrate(ctx context.Context) (err error) {
 	defer reg.lock.Unlock()
 
 	start := time.Now()
-	log.Infof("[migration] migration of %s started", reg.key)
+	log.Infof("migration: migration of %s started", reg.key)
 	defer func() {
 		if err != nil {
-			log.Errorf("[migration] migration of %s failed after %s: %s", reg.key, time.Since(start), err)
+			log.Errorf("migration: migration of %s failed after %s: %s", reg.key, time.Since(start), err)
 		} else {
-			log.Infof("[migration] migration of %s finished after %s", reg.key, time.Since(start))
+			log.Infof("migration: migration of %s finished after %s", reg.key, time.Since(start))
 		}
 	}()
 
@@ -114,7 +114,7 @@ func (reg *Registry) Migrate(ctx context.Context) (err error) {
 		if err := m.MigrateFunc(migrationCtx, lastAppliedMigration, target, db); err != nil {
 			diag.Wrapped = err
 			diag.FailedMigration = m.Description
-			tracer.Infof("[migration] applied migration for %s: %s - %s", reg.key, target.String(), m.Description)
+			tracer.Infof("migration: applied migration for %s: %s - %s", reg.key, target.String(), m.Description)
 			tracer.Submit()
 			return diag
 		}
@@ -127,7 +127,7 @@ func (reg *Registry) Migrate(ctx context.Context) (err error) {
 			diag.Wrapped = err
 			diag.FailedMigration = m.Description
 		}
-		tracer.Infof("[migration] applied migration for %s: %s - %s", reg.key, target.String(), m.Description)
+		tracer.Infof("migration: applied migration for %s: %s - %s", reg.key, target.String(), m.Description)
 		tracer.Submit()
 	}
 
