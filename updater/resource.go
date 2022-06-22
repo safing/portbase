@@ -118,6 +118,8 @@ func (rv *ResourceVersion) isBetaVersionNumber() bool { //nolint:unused
 }
 
 // Export makes a copy of the resource with only the exposed information.
+// Attributes are copied and safe to access.
+// Any ResourceVersion must not be modified.
 func (res *Resource) Export() *Resource {
 	res.Lock()
 	defer res.Unlock()
