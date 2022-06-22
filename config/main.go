@@ -112,3 +112,22 @@ func AddToDebugInfo(di *debug.Info) {
 		lines...,
 	)
 }
+
+// GetActiveConfigValues returns a map with the active config values.
+func GetActiveConfigValues() map[string]interface{} {
+	values := make(map[string]interface{})
+
+	// Collect active values from options.
+	_ = ForEachOption(func(opt *Option) error {
+		opt.Lock()
+		defer opt.Unlock()
+
+		if opt.ReleaseLevel <= getReleaseLevel() && opt.activeValue != nil {
+			values[opt.Key] = opt.activeValue.getData(opt)
+		}
+
+		return nil
+	})
+
+	return values
+}

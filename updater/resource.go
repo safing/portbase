@@ -117,6 +117,28 @@ func (rv *ResourceVersion) isBetaVersionNumber() bool { //nolint:unused
 	}
 }
 
+// Export makes a copy of the resource with only the exposed information.
+// Attributes are copied and safe to access.
+// Any ResourceVersion must not be modified.
+func (res *Resource) Export() *Resource {
+	res.Lock()
+	defer res.Unlock()
+
+	// Copy attibutes.
+	export := &Resource{
+		Identifier:      res.Identifier,
+		Versions:        make([]*ResourceVersion, len(res.Versions)),
+		ActiveVersion:   res.ActiveVersion,
+		SelectedVersion: res.SelectedVersion,
+	}
+	// Copy Versions slice.
+	for i := 0; i < len(res.Versions); i++ {
+		export.Versions[i] = res.Versions[i]
+	}
+
+	return export
+}
+
 // Len is the number of elements in the collection.
 // It implements sort.Interface for ResourceVersion.
 func (res *Resource) Len() int {

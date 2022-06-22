@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -226,12 +228,33 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Add("Vary", "Origin")
 	}
 
-	// Handle request.
-	if handler != nil {
-		handler.ServeHTTP(lrw, r)
-	} else {
+	// Check if we have a handler.
+	if handler == nil {
 		http.Error(lrw, "Not found.", http.StatusNotFound)
+		return nil
 	}
+
+	// Format panics in handler.
+	defer func() {
+		if panicValue := recover(); panicValue != nil {
+			if devMode() {
+				http.Error(
+					lrw,
+					fmt.Sprintf(
+						"Internal Server Error: %s\n\n%s",
+						panicValue,
+						debug.Stack(),
+					),
+					http.StatusInternalServerError,
+				)
+			} else {
+				http.Error(lrw, "Internal Server Error.", http.StatusInternalServerError)
+			}
+		}
+	}()
+
+	// Handle with registered handler.
+	handler.ServeHTTP(lrw, r)
 
 	return nil
 }
