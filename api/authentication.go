@@ -83,8 +83,9 @@ type AuthenticatorFunc func(r *http.Request, s *http.Server) (*AuthToken, error)
 // later. Functions may be called at any time.
 // The Write permission implicitly also includes reading.
 type AuthToken struct {
-	Read  Permission
-	Write Permission
+	Read       Permission
+	Write      Permission
+	ValidUntil *time.Time
 }
 
 type session struct {
@@ -340,6 +341,12 @@ func checkAPIKey(r *http.Request) *AuthToken {
 		return nil
 	}
 
+	// Abort if the token is expired.
+	if token.ValidUntil != nil && time.Now().After(*token.ValidUntil) {
+		log.Tracer(r.Context()).Warningf("api: denying api access from %s using expired token", r.RemoteAddr)
+		return nil
+	}
+
 	return token
 }
 
@@ -388,6 +395,16 @@ func updateAPIKeys(_ context.Context, _ interface{}) error {
 			continue
 		}
 		token.Write = writePermission
+
+		expireStr := q.Get("expires")
+		if expireStr != "" {
+			validUntil, err := time.Parse(time.RFC3339, expireStr)
+			if err != nil {
+				log.Errorf("api: invalid API key %s: %s", key, err)
+				continue
+			}
+			token.ValidUntil = &validUntil
+		}
 
 		// Save token.
 		apiKeys[u.Path] = token
