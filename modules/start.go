@@ -37,7 +37,7 @@ func Start() error {
 
 	// start microtask scheduler
 	go microTaskScheduler()
-	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0) * 2)
+	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0))
 
 	// inter-link modules
 	err := initDependencies()
