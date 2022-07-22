@@ -226,42 +226,6 @@ func (c *Container) checkOffset() {
 	}
 }
 
-// Error Handling
-
-/*
-DEPRECATING... like.... NOW.
-
-// SetError sets an error.
-func (c *Container) SetError(err error) {
-	c.err = err
-	c.Replace(append([]byte{0x00}, []byte(err.Error())...))
-}
-
-// CheckError checks if there is an error in the data. If so, it will parse the error and delete the data.
-func (c *Container) CheckError() {
-	if len(c.compartments[c.offset]) > 0 && c.compartments[c.offset][0] == 0x00 {
-		c.compartments[c.offset] = c.compartments[c.offset][1:]
-		c.err = errors.New(string(c.CompileData()))
-		c.compartments = nil
-	}
-}
-
-// HasError returns wether or not the container is holding an error.
-func (c *Container) HasError() bool {
-	return c.err != nil
-}
-
-// Error returns the error.
-func (c *Container) Error() error {
-	return c.err
-}
-
-// ErrString returns the error as a string.
-func (c *Container) ErrString() string {
-	return c.err.Error()
-}
-*/
-
 // Block Handling
 
 // PrependLength prepends the current full length of all bytes in the container.
