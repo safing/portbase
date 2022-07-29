@@ -201,25 +201,36 @@ func (t *Task) MaxDelay(maxDelay time.Duration) *Task {
 	return t
 }
 
-// Schedule schedules the task for execution at the given time.
+// Schedule schedules the task for execution at the given time. A zero time will remove cancel the scheduled execution.
 func (t *Task) Schedule(executeAt time.Time) *Task {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.executeAt = executeAt
-	t.addToSchedule(false)
+
+	if executeAt.IsZero() {
+		t.removeFromQueues()
+	} else {
+		t.addToSchedule(false)
+	}
 	return t
 }
 
-// Repeat sets the task to be executed in endless repeat at the specified interval. First execution will be after interval. Minimum repeat interval is one minute.
+// Repeat sets the task to be executed in endless repeat at the specified interval. First execution will be after interval. Minimum repeat interval is one minute. An interval of zero will disable repeating, but won't change the current schedule.
 func (t *Task) Repeat(interval time.Duration) *Task {
 	// check minimum interval duration
-	if interval < minRepeatDuration {
+	if interval != 0 && interval < minRepeatDuration {
 		interval = minRepeatDuration
 	}
 
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
+	// Check if repeating should be disabled.
+	if interval == 0 {
+		t.repeat = 0
+		return t
+	}
 
 	t.repeat = interval
 	t.executeAt = time.Now().Add(t.repeat)
