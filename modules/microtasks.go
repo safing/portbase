@@ -260,6 +260,14 @@ func microTaskScheduler() {
 		return
 	}
 
+	// Debugging: Print current amount of microtasks.
+	// go func() {
+	// 	for {
+	// 		time.Sleep(1 * time.Second)
+	// 		log.Debugf("modules: microtasks: %d", atomic.LoadInt32(microTasks))
+	// 	}
+	// }()
+
 	for {
 		if shutdownFlag.IsSet() {
 			go microTaskShutdownScheduler()
@@ -338,6 +346,7 @@ func getMediumPriorityClearance(maxDelay time.Duration) {
 		case <-time.After(maxDelay):
 			// Start without clearance and increase microtask counter.
 			atomic.AddInt32(microTasks, 1)
+			return
 		}
 	}
 	// Wait for signal to start.
@@ -347,9 +356,9 @@ func getMediumPriorityClearance(maxDelay time.Duration) {
 		select {
 		case <-signal:
 		case <-time.After(maxDelay):
-			// TODO: Creating the timer two times could lead to 2x max delay.
-			// Start without clearance and increase microtask counter.
-			atomic.AddInt32(microTasks, 1)
+			// Don't keep waiting for signal forever.
+			// Don't increase microtask counter, as the signal was already submitted
+			// and the counter will be increased by the scheduler.
 		}
 	}
 }
@@ -365,6 +374,7 @@ func getLowPriorityClearance(maxDelay time.Duration) {
 		case <-time.After(maxDelay):
 			// Start without clearance and increase microtask counter.
 			atomic.AddInt32(microTasks, 1)
+			return
 		}
 	}
 	// Wait for signal to start.
@@ -374,9 +384,9 @@ func getLowPriorityClearance(maxDelay time.Duration) {
 		select {
 		case <-signal:
 		case <-time.After(maxDelay):
-			// TODO: Creating the timer two times could lead to 2x max delay.
-			// Start without clearance and increase microtask counter.
-			atomic.AddInt32(microTasks, 1)
+			// Don't keep waiting for signal forever.
+			// Don't increase microtask counter, as the signal was already submitted
+			// and the counter will be increased by the scheduler.
 		}
 	}
 }

@@ -21,6 +21,11 @@ func init() {
 
 func TestMicroTaskWaiting(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 
+	// Check if the state is clean.
+	if atomic.LoadInt32(microTasks) != 0 {
+		t.Fatalf("cannot start test with dirty state: %d microtasks", atomic.LoadInt32(microTasks))
+	}
+
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -108,6 +113,12 @@ func TestMicroTaskWaiting(t *testing.T) { //nolint:paralleltest // Too much inte
 	if completeOutput != mtwExpectedOutput {
 		t.Errorf("MicroTask waiting test failed, expected sequence %s, got %s", mtwExpectedOutput, completeOutput)
 	}
+
+	// Check if the state is clean.
+	time.Sleep(10 * time.Millisecond)
+	if atomic.LoadInt32(microTasks) != 0 {
+		t.Fatalf("test ends with dirty state: %d microtasks", atomic.LoadInt32(microTasks))
+	}
 }
 
 // Test Microtask ordering.
@@ -189,6 +200,12 @@ func lowPrioSignalledTaskTester() {
 }
 
 func TestMicroTaskOrdering(t *testing.T) { //nolint:paralleltest // Too much interference expected.
+
+	// Check if the state is clean.
+	if atomic.LoadInt32(microTasks) != 0 {
+		t.Fatalf("cannot start test with dirty state: %d microtasks", atomic.LoadInt32(microTasks))
+	}
+
 	// skip
 	if testing.Short() {
 		t.Skip("skipping test in short mode, as it is not fully deterministic")
@@ -242,5 +259,11 @@ func TestMicroTaskOrdering(t *testing.T) { //nolint:paralleltest // Too much int
 		!strings.Contains(completeOutput, "1111") ||
 		!strings.Contains(completeOutput, "22222") {
 		t.Errorf("MicroTask ordering test failed, output was %s. This happens occasionally, please run the test multiple times to verify", completeOutput)
+	}
+
+	// Check if the state is clean.
+	time.Sleep(10 * time.Millisecond)
+	if atomic.LoadInt32(microTasks) != 0 {
+		t.Fatalf("test ends with dirty state: %d microtasks", atomic.LoadInt32(microTasks))
 	}
 }
