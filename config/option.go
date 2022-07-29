@@ -158,11 +158,14 @@ const (
 	// only sense together with the PossibleValues property
 	// of Option.
 	DisplayHintOneOf = "one-of"
-	// DisplayHintOrdered Used to mark a list option as ordered.
+	// DisplayHintOrdered is used to mark a list option as ordered.
 	// That is, the order of items is important and a user interface
 	// is encouraged to provide the user with re-ordering support
 	// (like drag'n'drop).
 	DisplayHintOrdered = "ordered"
+	// DisplayHintFilePicker is used to mark the option as being a file, which
+	// should give the option to use a file picker to select a local file from disk.
+	DisplayHintFilePicker = "file-picker"
 )
 
 // Option describes a configuration option.
