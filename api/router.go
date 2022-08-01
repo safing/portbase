@@ -105,11 +105,28 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		tracer.Submit()
 	}()
 
+	// Add security headers.
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "deny")
+	w.Header().Set("X-XSS-Protection", "1; mode=block")
+	w.Header().Set("X-DNS-Prefetch-Control", "off")
+
+	// Add CSP Header in production mode.
+	if !devMode() {
+		w.Header().Set(
+			"Content-Security-Policy",
+			"default-src 'self'; "+
+				"connect-src https://*.safing.io 'self'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data:",
+		)
+	}
+
 	// Check Cross-Origin Requests.
-	isCrossSite := false
 	origin := r.Header.Get("Origin")
+	isPreflighCheck := false
 	if origin != "" {
-		isCrossSite = true
 
 		// Parse origin URL.
 		originURL, err := url.Parse(origin)
@@ -125,6 +142,12 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 			// Origin (with port) matches Host.
 		case originURL.Hostname() == r.Host:
 			// Origin (without port) matches Host.
+		case originURL.Scheme == "chrome-extension":
+			// Allow access for the browser extension
+			// TODO(ppacher):
+			// This currently allows access from any browser extension.
+			// Can we reduce that to only our browser extension?
+			// Also, what do we need to support Firefox?
 		case devMode() &&
 			utils.StringInSlice(allowedDevCORSOrigins, originURL.Hostname()):
 			// We are in dev mode and the request is coming from the allowed
@@ -137,6 +160,22 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 
 			// If the Host header has a port, and the Origin does not, requests will
 			// also end up here, as we cannot properly check for equality.
+		}
+
+		// Add Cross-Site Headers now as we need them in any case now.
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Expose-Headers", "*")
+		w.Header().Set("Access-Control-Max-Age", "60")
+		w.Header().Add("Vary", "Origin")
+
+		// if there's a Access-Control-Request-Method header this is a Preflight check.
+		// In that case, we will just check if the preflighMethod is allowed and then return
+		// success here
+		if preflighMethod := r.Header.Get("Access-Control-Request-Method"); r.Method == http.MethodOptions && preflighMethod != "" {
+			isPreflighCheck = true
 		}
 	}
 
@@ -184,6 +223,15 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
+	// At this point we know the method is allowed and there's a handler for the request.
+	// If this is just a CORS-Preflight, we'll accept the request with StatusOK now.
+	// There's no point in trying to authenticate the request because the Browser will
+	// not send authentication along a preflight check.
+	if isPreflighCheck && handler != nil {
+		lrw.WriteHeader(http.StatusOK)
+		return nil
+	}
+
 	// Check authentication.
 	apiRequest.AuthToken = authenticateRequest(lrw, r, handler, readMethod)
 	if apiRequest.AuthToken == nil {
@@ -197,35 +245,6 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 			http.Error(lrw, "The API endpoint is not ready yet. Please try again later.", http.StatusServiceUnavailable)
 			return nil
 		}
-	}
-
-	// Add security headers.
-	w.Header().Set("Referrer-Policy", "no-referrer")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Frame-Options", "deny")
-	w.Header().Set("X-XSS-Protection", "1; mode=block")
-	w.Header().Set("X-DNS-Prefetch-Control", "off")
-
-	// Add CSP Header in production mode.
-	if !devMode() {
-		w.Header().Set(
-			"Content-Security-Policy",
-			"default-src 'self'; "+
-				"connect-src https://*.safing.io 'self'; "+
-				"style-src 'self' 'unsafe-inline'; "+
-				"img-src 'self' data:",
-		)
-	}
-
-	// Add Cross-Site Headers when handling Cross-Site Requests.
-	if isCrossSite {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Expose-Headers", "*")
-		w.Header().Set("Access-Control-Max-Age", "60")
-		w.Header().Add("Vary", "Origin")
 	}
 
 	// Check if we have a handler.
