@@ -105,6 +105,24 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 		tracer.Submit()
 	}()
 
+	// Add security headers.
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "deny")
+	w.Header().Set("X-XSS-Protection", "1; mode=block")
+	w.Header().Set("X-DNS-Prefetch-Control", "off")
+
+	// Add CSP Header in production mode.
+	if !devMode() {
+		w.Header().Set(
+			"Content-Security-Policy",
+			"default-src 'self'; "+
+				"connect-src https://*.safing.io 'self'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data:",
+		)
+	}
+
 	// Check Cross-Origin Requests.
 	origin := r.Header.Get("Origin")
 	isPreflighCheck := false
@@ -200,24 +218,6 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		http.Error(lrw, "Method not allowed.", http.StatusMethodNotAllowed)
 		return nil
-	}
-
-	// Add security headers.
-	w.Header().Set("Referrer-Policy", "no-referrer")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Frame-Options", "deny")
-	w.Header().Set("X-XSS-Protection", "1; mode=block")
-	w.Header().Set("X-DNS-Prefetch-Control", "off")
-
-	// Add CSP Header in production mode.
-	if !devMode() {
-		w.Header().Set(
-			"Content-Security-Policy",
-			"default-src 'self'; "+
-				"connect-src https://*.safing.io 'self'; "+
-				"style-src 'self' 'unsafe-inline'; "+
-				"img-src 'self' data:",
-		)
 	}
 
 	// At this point we know the method is allowed and there's a handler for the request.
