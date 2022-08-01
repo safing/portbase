@@ -144,7 +144,10 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 			// Origin (without port) matches Host.
 		case originURL.Scheme == "chrome-extension":
 			// Allow access for the browser extension
-			// TODO(ppacher): can we improve that check here?
+			// TODO(ppacher):
+			// This currently allows access from any browser extension.
+			// Can we reduce that to only our browser extension?
+			// Also, what do we need to support Firefox?
 		case devMode() &&
 			utils.StringInSlice(allowedDevCORSOrigins, originURL.Hostname()):
 			// We are in dev mode and the request is coming from the allowed
