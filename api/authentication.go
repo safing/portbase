@@ -13,6 +13,7 @@ import (
 
 	"github.com/tevino/abool"
 
+	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 	"github.com/safing/portbase/rng"
@@ -83,8 +84,9 @@ type AuthenticatorFunc func(r *http.Request, s *http.Server) (*AuthToken, error)
 // later. Functions may be called at any time.
 // The Write permission implicitly also includes reading.
 type AuthToken struct {
-	Read  Permission
-	Write Permission
+	Read       Permission
+	Write      Permission
+	ValidUntil *time.Time
 }
 
 type session struct {
@@ -340,6 +342,12 @@ func checkAPIKey(r *http.Request) *AuthToken {
 		return nil
 	}
 
+	// Abort if the token is expired.
+	if token.ValidUntil != nil && time.Now().After(*token.ValidUntil) {
+		log.Tracer(r.Context()).Warningf("api: denying api access from %s using expired token", r.RemoteAddr)
+		return nil
+	}
+
 	return token
 }
 
@@ -354,15 +362,26 @@ func updateAPIKeys(_ context.Context, _ interface{}) error {
 		delete(apiKeys, k)
 	}
 
+	// whether or not we found expired API keys that should be removed
+	// from the setting
+	hasExpiredKeys := false
+
+	// a list of valid API keys. Used when hasExpiredKeys is set to true.
+	// in that case we'll update the setting to only contain validAPIKeys
+	validAPIKeys := []string{}
+
 	// Parse new keys.
 	for _, key := range configuredAPIKeys() {
 		u, err := url.Parse(key)
 		if err != nil {
 			log.Errorf("api: failed to parse configured API key %s: %s", key, err)
+
 			continue
 		}
+
 		if u.Path == "" {
 			log.Errorf("api: malformed API key %s: missing path section", key)
+
 			continue
 		}
 
@@ -389,8 +408,41 @@ func updateAPIKeys(_ context.Context, _ interface{}) error {
 		}
 		token.Write = writePermission
 
+		expireStr := q.Get("expires")
+		if expireStr != "" {
+			validUntil, err := time.Parse(time.RFC3339, expireStr)
+			if err != nil {
+				log.Errorf("api: invalid API key %s: %s", key, err)
+				continue
+			}
+
+			// continue to the next token if this one is already invalid
+			if time.Now().After(validUntil) {
+				// mark the key as expired so we'll remove it from the setting afterwards
+				hasExpiredKeys = true
+
+				continue
+			}
+
+			token.ValidUntil = &validUntil
+		}
+
 		// Save token.
 		apiKeys[u.Path] = token
+		validAPIKeys = append(validAPIKeys, key)
+	}
+
+	if hasExpiredKeys {
+		name := "api-key-cleanup"
+		module.StartLowPriorityMicroTask(&name, func(ctx context.Context) error {
+			if err := config.SetConfigOption(CfgAPIKeys, validAPIKeys); err != nil {
+				log.Errorf("api: failed to remove expired API keys: %s", err)
+			} else {
+				log.Infof("api: removed expired API keys from %s", CfgAPIKeys)
+			}
+
+			return nil
+		})
 	}
 
 	return nil
