@@ -433,8 +433,7 @@ func updateAPIKeys(_ context.Context, _ interface{}) error {
 	}
 
 	if hasExpiredKeys {
-		name := "api-key-cleanup"
-		module.StartLowPriorityMicroTask(&name, func(ctx context.Context) error {
+		module.StartLowPriorityMicroTask("api key cleanup", 0, func(ctx context.Context) error {
 			if err := config.SetConfigOption(CfgAPIKeys, validAPIKeys); err != nil {
 				log.Errorf("api: failed to remove expired API keys: %s", err)
 			} else {
