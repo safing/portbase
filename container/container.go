@@ -127,7 +127,7 @@ func (c *Container) CompileData() []byte {
 
 // Get returns the given amount of bytes. Data MAY be copied and IS consumed.
 func (c *Container) Get(n int) ([]byte, error) {
-	buf := c.Gather(n)
+	buf := c.Peek(n)
 	if len(buf) < n {
 		return nil, errors.New("container: not enough data to return")
 	}
@@ -138,14 +138,14 @@ func (c *Container) Get(n int) ([]byte, error) {
 // GetAll returns all data. Data MAY be copied and IS consumed.
 func (c *Container) GetAll() []byte {
 	// TODO: Improve.
-	buf := c.Gather(c.Length())
+	buf := c.Peek(c.Length())
 	c.skip(len(buf))
 	return buf
 }
 
 // GetAsContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS consumed.
 func (c *Container) GetAsContainer(n int) (*Container, error) {
-	newC := c.GatherAsContainer(n)
+	newC := c.PeekContainer(n)
 	if newC == nil {
 		return nil, errors.New("container: not enough data to return")
 	}
@@ -155,7 +155,7 @@ func (c *Container) GetAsContainer(n int) (*Container, error) {
 
 // GetMax returns as much as possible, but the given amount of bytes at maximum. Data MAY be copied and IS consumed.
 func (c *Container) GetMax(n int) []byte {
-	buf := c.Gather(n)
+	buf := c.Peek(n)
 	c.skip(len(buf))
 	return buf
 }
@@ -233,8 +233,8 @@ func (c *Container) PrependLength() {
 	c.Prepend(varint.Pack64(uint64(c.Length())))
 }
 
-// Gather returns the given amount of bytes. Data MAY be copied and IS NOT consumed.
-func (c *Container) Gather(n int) []byte {
+// Peek returns the given amount of bytes. Data MAY be copied and IS NOT consumed.
+func (c *Container) Peek(n int) []byte {
 	// Check requested length.
 	if n <= 0 {
 		return nil
@@ -261,8 +261,8 @@ func (c *Container) Gather(n int) []byte {
 	return slice[:n]
 }
 
-// GatherAsContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS NOT consumed.
-func (c *Container) GatherAsContainer(n int) (newC *Container) {
+// PeekContainer returns the given amount of bytes in a new container. Data will NOT be copied and IS NOT consumed.
+func (c *Container) PeekContainer(n int) (newC *Container) {
 	// Check requested length.
 	if n < 0 {
 		return nil
@@ -325,7 +325,7 @@ func (c *Container) GetNextBlockAsContainer() (*Container, error) {
 
 // GetNextN8 parses and returns a varint of type uint8.
 func (c *Container) GetNextN8() (uint8, error) {
-	buf := c.Gather(2)
+	buf := c.Peek(2)
 	num, n, err := varint.Unpack8(buf)
 	if err != nil {
 		return 0, err
@@ -336,7 +336,7 @@ func (c *Container) GetNextN8() (uint8, error) {
 
 // GetNextN16 parses and returns a varint of type uint16.
 func (c *Container) GetNextN16() (uint16, error) {
-	buf := c.Gather(3)
+	buf := c.Peek(3)
 	num, n, err := varint.Unpack16(buf)
 	if err != nil {
 		return 0, err
@@ -347,7 +347,7 @@ func (c *Container) GetNextN16() (uint16, error) {
 
 // GetNextN32 parses and returns a varint of type uint32.
 func (c *Container) GetNextN32() (uint32, error) {
-	buf := c.Gather(5)
+	buf := c.Peek(5)
 	num, n, err := varint.Unpack32(buf)
 	if err != nil {
 		return 0, err
@@ -358,7 +358,7 @@ func (c *Container) GetNextN32() (uint32, error) {
 
 // GetNextN64 parses and returns a varint of type uint64.
 func (c *Container) GetNextN64() (uint64, error) {
-	buf := c.Gather(10)
+	buf := c.Peek(10)
 	num, n, err := varint.Unpack64(buf)
 	if err != nil {
 		return 0, err
