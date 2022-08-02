@@ -66,9 +66,9 @@ func TestContainerDataHandling(t *testing.T) {
 	}
 	c8.clean()
 
-	c9 := c8.gatherAsContainer(len(testData))
+	c9 := c8.PeekContainer(len(testData))
 
-	c10 := c9.gatherAsContainer(len(testData) - 1)
+	c10 := c9.PeekContainer(len(testData) - 1)
 	c10.Append(testData[len(testData)-1:])
 
 	compareMany(t, testData, c1.CompileData(), c2.CompileData(), c3.CompileData(), d4, d5, c6.CompileData(), c7.CompileData(), c8.CompileData(), c9.CompileData(), c10.CompileData())

@@ -36,8 +36,8 @@ func Start() error {
 	defer mgmtLock.Unlock()
 
 	// start microtask scheduler
+	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0))
 	go microTaskScheduler()
-	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0) * 2)
 
 	// inter-link modules
 	err := initDependencies()
