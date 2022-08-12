@@ -11,8 +11,9 @@ import (
 
 // Errors returned by the updater package.
 var (
-	ErrNotFound            = errors.New("the requested file could not be found")
-	ErrNotAvailableLocally = errors.New("the requested file is not available locally")
+	ErrNotFound                  = errors.New("the requested file could not be found")
+	ErrNotAvailableLocally       = errors.New("the requested file is not available locally")
+	ErrVerificationNotConfigured = errors.New("verification not configured for this resource")
 )
 
 // GetFile returns the selected (mostly newest) file with the given
@@ -29,6 +30,14 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 	// check if file is available locally
 	if file.version.Available {
 		file.markActiveWithLocking()
+
+		// Verify file, if configured.
+		_, err := file.Verify()
+		if err != nil && !errors.Is(err, ErrVerificationNotConfigured) {
+			// FIXME: If verification is required, try deleting the resource and downloading it again.
+			return nil, fmt.Errorf("failed to verify file: %w", err)
+		}
+
 		return file, nil
 	}
 
@@ -52,6 +61,8 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 			log.Tracef("%s: failed to download %s: %s, retrying (%d)", reg.Name, file.versionedPath, err, tries+1)
 		} else {
 			file.markActiveWithLocking()
+
+			// TODO: We just download the file - should we verify it again?
 			return file, nil
 		}
 	}

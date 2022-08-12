@@ -3,8 +3,11 @@ package updater
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"hash"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +15,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/safing/jess/filesig"
+	"github.com/safing/jess/lhash"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils/renameio"
 )
@@ -33,6 +38,26 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 		return fmt.Errorf("could not create updates folder: %s", dirPath)
 	}
 
+	// If verification is enabled, download signature first.
+	var (
+		verifiedHash *lhash.LabeledHash
+		sigFileData  []byte
+		verifOpts    = reg.GetVerificationOptions(rv.resource.Identifier)
+	)
+	if verifOpts != nil {
+		verifiedHash, sigFileData, err = reg.fetchAndVerifySigFile(ctx, client, rv, verifOpts, tries)
+		if err != nil {
+			switch verifOpts.DownloadPolicy {
+			case SignaturePolicyRequire:
+				return fmt.Errorf("signature verification failed: %w", err)
+			case SignaturePolicyWarn:
+				log.Warningf("%s: failed to verify downloaded signature of %s: %s", reg.Name, rv.versionedPath(), err)
+			case SignaturePolicyDisable:
+				log.Debugf("%s: failed to verify downloaded signature of %s: %s", reg.Name, rv.versionedPath(), err)
+			}
+		}
+	}
+
 	// open file for writing
 	atomicFile, err := renameio.TempFile(reg.tmpDir.Path, rv.storagePath())
 	if err != nil {
@@ -49,13 +74,54 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 		_ = resp.Body.Close()
 	}()
 
-	// download and write file
-	n, err := io.Copy(atomicFile, resp.Body)
+	// Write to the hasher at the same time, if needed.
+	var hasher hash.Hash
+	var writeDst io.Writer = atomicFile
+	if verifiedHash != nil && verifOpts.DownloadPolicy != SignaturePolicyDisable {
+		hasher = verifiedHash.Algorithm().RawHasher()
+		writeDst = io.MultiWriter(hasher, atomicFile)
+	}
+
+	// Download and write file.
+	n, err := io.Copy(writeDst, resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to download %q: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
 		return fmt.Errorf("failed to finish download of %q: written %d out of %d bytes", downloadURL, n, resp.ContentLength)
+	}
+
+	// Before file is finalized, check if hash, if available.
+	if hasher != nil {
+		downloadDigest := hasher.Sum(nil)
+		if verifiedHash.EqualRaw(downloadDigest) {
+			log.Infof("%s: verified signature of %s", reg.Name, downloadURL)
+		} else {
+			switch verifOpts.DownloadPolicy {
+			case SignaturePolicyRequire:
+				return errors.New("file does not match signed checksum")
+			case SignaturePolicyWarn:
+				log.Warningf("%s: checksum does not match file from %s", reg.Name, downloadURL)
+			case SignaturePolicyDisable:
+				log.Debugf("%s: checksum does not match file from %s", reg.Name, downloadURL)
+			}
+		}
+	}
+
+	// Write signature file, if we have one.
+	if len(sigFileData) > 0 {
+		sigFilePath := rv.storagePath() + filesig.Extension
+		err := ioutil.WriteFile(sigFilePath, sigFileData, 0o0644) //nolint:gosec
+		if err != nil {
+			switch verifOpts.DownloadPolicy {
+			case SignaturePolicyRequire:
+				return fmt.Errorf("failed to write signature file %s: %w", sigFilePath, err)
+			case SignaturePolicyWarn:
+				log.Warningf("%s: failed to write signature file %s: %s", reg.Name, sigFilePath, err)
+			case SignaturePolicyDisable:
+				log.Debugf("%s: failed to write signature file %s: %s", reg.Name, sigFilePath, err)
+			}
+		}
 	}
 
 	// finalize file
@@ -74,6 +140,56 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 
 	log.Infof("%s: fetched %s (stored to %s)", reg.Name, downloadURL, rv.storagePath())
 	return nil
+}
+
+func (reg *ResourceRegistry) fetchAndVerifySigFile(ctx context.Context, client *http.Client, rv *ResourceVersion, verifOpts *VerificationOptions, tries int) (*lhash.LabeledHash, []byte, error) {
+	// Download signature file.
+	resp, _, err := reg.makeRequest(ctx, client, rv.versionedPath()+filesig.Extension, tries)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	sigFileData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Extract all signatures.
+	sigs, err := filesig.ParseSigFile(sigFileData)
+	switch {
+	case len(sigs) == 0 && err != nil:
+		return nil, nil, fmt.Errorf("failed to parse signature file: %w", err)
+	case len(sigs) == 0:
+		return nil, nil, errors.New("no signatures found in signature file")
+	case err != nil:
+		return nil, nil, fmt.Errorf("failed to parse signature file: %w", err)
+	}
+
+	// Verify all signatures.
+	var verifiedHash *lhash.LabeledHash
+	for _, sig := range sigs {
+		fd, err := filesig.VerifyFileData(
+			sig,
+			rv.SigningMetadata(),
+			verifOpts.TrustStore,
+		)
+		if err != nil {
+			return nil, sigFileData, err
+		}
+
+		// Save or check verified hash.
+		if verifiedHash == nil {
+			verifiedHash = fd.FileHash()
+		} else if !fd.FileHash().Equal(verifiedHash) {
+			// Return an error if two valid hashes mismatch.
+			// For simplicity, all hash algorithms must be the same for now.
+			return nil, sigFileData, errors.New("file hashes from different signatures do not match")
+		}
+	}
+
+	return verifiedHash, sigFileData, nil
 }
 
 func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client, downloadPath string, tries int) ([]byte, error) {

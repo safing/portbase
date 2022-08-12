@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -27,6 +28,12 @@ type ResourceRegistry struct {
 	UserAgent        string
 	MandatoryUpdates []string
 	AutoUnpack       []string
+
+	// Verification holds a map of VerificationOptions assigned to their
+	// applicable identifier path prefix.
+	// Use an empty string to denote the default.
+	// Use empty options to disable verification for a path prefix.
+	Verification map[string]*VerificationOptions
 
 	// UsePreReleases signifies that pre-releases should be used when selecting a
 	// version. Even if false, a pre-release version will still be used if it is
@@ -74,6 +81,27 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	err = reg.tmpDir.Ensure()
 	if err != nil {
 		log.Warningf("%s: failed to create tmp dir: %s", reg.Name, err)
+	}
+
+	// Check verification options.
+	if reg.Verification != nil {
+		for prefix, opts := range reg.Verification {
+			// Check if verification is disable for this prefix.
+			if opts == nil {
+				continue
+			}
+
+			// If enabled, a trust store is required.
+			if opts.TrustStore == nil {
+				return fmt.Errorf("verification enabled for prefix %q, but no trust store configured", prefix)
+			}
+
+			// Warn if all policies are disabled.
+			if opts.DownloadPolicy == SignaturePolicyDisable &&
+				opts.DiskLoadPolicy == SignaturePolicyDisable {
+				log.Warningf("%s: verification enabled for prefix %q, but all policies set to disable", reg.Name, prefix)
+			}
+		}
 	}
 
 	return nil

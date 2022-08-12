@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/safing/jess/filesig"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
@@ -48,6 +49,11 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 		if err != nil {
 			lastError = fmt.Errorf("%s: could not read %s: %w", reg.Name, path, err)
 			log.Warning(lastError.Error())
+			return nil
+		}
+
+		// Ignore file signatures.
+		if strings.HasSuffix(path, filesig.Extension) {
 			return nil
 		}
 

@@ -472,10 +472,42 @@ boundarySearch:
 	res.Versions = res.Versions[purgeBoundary:]
 }
 
+// SigningMetadata returns the metadata to be included in signatures.
+func (rv *ResourceVersion) SigningMetadata() map[string]string {
+	return map[string]string{
+		"id":      rv.resource.Identifier,
+		"version": rv.VersionNumber,
+	}
+}
+
+// GetFile returns the version as a *File.
+// It locks the resource for doing so.
+func (rv *ResourceVersion) GetFile() *File {
+	rv.resource.Lock()
+	defer rv.resource.Unlock()
+
+	// check for notifier
+	if rv.resource.notifier == nil {
+		// create new notifier
+		rv.resource.notifier = newNotifier()
+	}
+
+	// create file
+	return &File{
+		resource:      rv.resource,
+		version:       rv,
+		notifier:      rv.resource.notifier,
+		versionedPath: rv.versionedPath(),
+		storagePath:   rv.storagePath(),
+	}
+}
+
+// versionedPath returns the versioned identifier.
 func (rv *ResourceVersion) versionedPath() string {
 	return GetVersionedPath(rv.resource.Identifier, rv.VersionNumber)
 }
 
+// storagePath returns the absolute storage path.
 func (rv *ResourceVersion) storagePath() string {
 	return filepath.Join(rv.resource.registry.storageDir.Path, filepath.FromSlash(rv.versionedPath()))
 }
