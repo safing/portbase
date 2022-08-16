@@ -2,7 +2,6 @@ package updater
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -131,18 +130,26 @@ func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
 		return err
 	}
 
-	releases := make(map[string]string)
-	err = json.Unmarshal(data, &releases)
+	// Parse the index file.
+	indexFile, err := ParseIndexFile(data, idx.Channel, idx.LastRelease)
 	if err != nil {
 		return err
 	}
 
-	if len(releases) == 0 {
-		log.Debugf("%s: index %s is empty", reg.Name, idx.Path)
+	// Update last seen release.
+	// TODO: We are working with a copy here, so this has no effect.
+	// This does not break to current implementation, but make the
+	// protection ineffective.
+	idx.LastRelease = indexFile.Published
+
+	// Warn if there aren't any releases in the index.
+	if len(indexFile.Releases) == 0 {
+		log.Debugf("%s: index %s has no releases", reg.Name, idx.Path)
 		return nil
 	}
 
-	err = reg.AddResources(releases, false, true, idx.PreRelease)
+	// Add index releases to available resources.
+	err = reg.AddResources(indexFile.Releases, false, true, idx.PreRelease)
 	if err != nil {
 		log.Warningf("%s: failed to add resource: %s", reg.Name, err)
 	}
