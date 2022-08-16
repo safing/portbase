@@ -2,7 +2,6 @@ package updater
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -52,23 +51,22 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		return fmt.Errorf("failed to download index %s: %w", idx.Path, err)
 	}
 
-	// parse
-	newIndexData := make(map[string]string)
-	err = json.Unmarshal(data, &newIndexData)
+	// Parse the index file.
+	indexFile, err := ParseIndexFile(data, idx.Channel, idx.LastRelease)
 	if err != nil {
 		return fmt.Errorf("failed to parse index %s: %w", idx.Path, err)
 	}
 
 	// Add index data to registry.
-	if len(newIndexData) > 0 {
+	if len(indexFile.Releases) > 0 {
 		// Check if all resources are within the indexes' authority.
 		authoritativePath := path.Dir(idx.Path) + "/"
 		if authoritativePath == "./" {
 			// Fix path for indexes at the storage root.
 			authoritativePath = ""
 		}
-		cleanedData := make(map[string]string, len(newIndexData))
-		for key, version := range newIndexData {
+		cleanedData := make(map[string]string, len(indexFile.Releases))
+		for key, version := range indexFile.Releases {
 			if strings.HasPrefix(key, authoritativePath) {
 				cleanedData[key] = version
 			} else {
@@ -100,7 +98,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}
 
-	log.Infof("%s: updated index %s with %d entries", reg.Name, idx.Path, len(newIndexData))
+	log.Infof("%s: updated index %s with %d entries", reg.Name, idx.Path, len(indexFile.Releases))
 	return nil
 }
 

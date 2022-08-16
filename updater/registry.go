@@ -2,7 +2,9 @@ package updater
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/safing/portbase/log"
@@ -42,6 +44,11 @@ type ResourceRegistry struct {
 func (reg *ResourceRegistry) AddIndex(idx Index) {
 	reg.Lock()
 	defer reg.Unlock()
+
+	// Get channel name from path.
+	idx.Channel = strings.TrimSuffix(
+		filepath.Base(idx.Path), filepath.Ext(idx.Path),
+	)
 
 	reg.indexes = append(reg.indexes, idx)
 }
