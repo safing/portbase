@@ -45,7 +45,12 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 		verifOpts    = reg.GetVerificationOptions(rv.resource.Identifier)
 	)
 	if verifOpts != nil {
-		verifiedHash, sigFileData, err = reg.fetchAndVerifySigFile(ctx, client, rv, verifOpts, tries)
+		verifiedHash, sigFileData, err = reg.fetchAndVerifySigFile(
+			ctx, client,
+			verifOpts, rv.versionedPath()+filesig.Extension, rv.SigningMetadata(),
+			tries,
+		)
+
 		if err != nil {
 			switch verifOpts.DownloadPolicy {
 			case SignaturePolicyRequire:
@@ -142,9 +147,9 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	return nil
 }
 
-func (reg *ResourceRegistry) fetchAndVerifySigFile(ctx context.Context, client *http.Client, rv *ResourceVersion, verifOpts *VerificationOptions, tries int) (*lhash.LabeledHash, []byte, error) {
+func (reg *ResourceRegistry) fetchAndVerifySigFile(ctx context.Context, client *http.Client, verifOpts *VerificationOptions, sigFilePath string, requiredMetadata map[string]string, tries int) (*lhash.LabeledHash, []byte, error) {
 	// Download signature file.
-	resp, _, err := reg.makeRequest(ctx, client, rv.versionedPath()+filesig.Extension, tries)
+	resp, _, err := reg.makeRequest(ctx, client, sigFilePath, tries)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -172,7 +177,7 @@ func (reg *ResourceRegistry) fetchAndVerifySigFile(ctx context.Context, client *
 	for _, sig := range sigs {
 		fd, err := filesig.VerifyFileData(
 			sig,
-			rv.SigningMetadata(),
+			requiredMetadata,
 			verifOpts.TrustStore,
 		)
 		if err != nil {
@@ -192,12 +197,12 @@ func (reg *ResourceRegistry) fetchAndVerifySigFile(ctx context.Context, client *
 	return verifiedHash, sigFileData, nil
 }
 
-func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client, downloadPath string, tries int) ([]byte, error) {
+func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client, downloadPath string, tries int) (fileData []byte, downloadedFrom string, err error) {
 	// backoff when retrying
 	if tries > 0 {
 		select {
 		case <-ctx.Done():
-			return nil, nil // module is shutting down
+			return nil, "", nil // module is shutting down
 		case <-time.After(time.Duration(tries*tries) * time.Second):
 		}
 	}
@@ -205,7 +210,7 @@ func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client,
 	// start file download
 	resp, downloadURL, err := reg.makeRequest(ctx, client, downloadPath, tries)
 	if err != nil {
-		return nil, err
+		return nil, downloadURL, err
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -215,13 +220,13 @@ func (reg *ResourceRegistry) fetchData(ctx context.Context, client *http.Client,
 	buf := bytes.NewBuffer(make([]byte, 0, resp.ContentLength))
 	n, err := io.Copy(buf, resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to download %q: %w", downloadURL, err)
+		return nil, downloadURL, fmt.Errorf("failed to download %q: %w", downloadURL, err)
 	}
 	if resp.ContentLength != n {
-		return nil, fmt.Errorf("failed to finish download of %q: written %d out of %d bytes", downloadURL, n, resp.ContentLength)
+		return nil, downloadURL, fmt.Errorf("failed to finish download of %q: written %d out of %d bytes", downloadURL, n, resp.ContentLength)
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes(), downloadURL, nil
 }
 
 func (reg *ResourceRegistry) makeRequest(ctx context.Context, client *http.Client, downloadPath string, tries int) (resp *http.Response, downloadURL string, err error) {

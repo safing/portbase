@@ -33,6 +33,8 @@ var (
 )
 
 func TestIndexParsing(t *testing.T) {
+	t.Parallel()
+
 	lastRelease, err := time.Parse(time.RFC3339, "2022-01-01T00:00:00Z")
 	if err != nil {
 		t.Fatal(err)

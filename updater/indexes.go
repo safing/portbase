@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	baseIndexExtension = ".json"
+	v2IndexExtension   = ".v2.json"
+)
+
 // Index describes an index file pulled by the updater.
 type Index struct {
 	// Path is the path to the index file
@@ -35,21 +40,25 @@ type IndexFile struct {
 }
 
 var (
-	// ErrIndexFromFuture is returned when a signed index is parsed with a
+	// ErrIndexChecksumMismatch is returned when an index does not match its
+	// signed checksum.
+	ErrIndexChecksumMismatch = errors.New("index checksum does mot match signature")
+
+	// ErrIndexFromFuture is returned when an index is parsed with a
 	// Published timestamp that lies in the future.
 	ErrIndexFromFuture = errors.New("index is from the future")
 
-	// ErrIndexIsOlder is returned when a signed index is parsed with an older
+	// ErrIndexIsOlder is returned when an index is parsed with an older
 	// Published timestamp than the current Published timestamp.
 	ErrIndexIsOlder = errors.New("index is older than the current one")
 
-	// ErrIndexChannelMismatch is returned when a signed index is parsed with a
+	// ErrIndexChannelMismatch is returned when an index is parsed with a
 	// different channel that the expected one.
 	ErrIndexChannelMismatch = errors.New("index does not match the expected channel")
 )
 
 // ParseIndexFile parses an index file and checks if it is valid.
-func ParseIndexFile(indexData []byte, channel string, currentPublished time.Time) (*IndexFile, error) {
+func ParseIndexFile(indexData []byte, channel string, lastIndexRelease time.Time) (*IndexFile, error) {
 	// Load into struct.
 	indexFile := &IndexFile{}
 	err := json.Unmarshal(indexData, indexFile)
@@ -69,8 +78,8 @@ func ParseIndexFile(indexData []byte, channel string, currentPublished time.Time
 		return indexFile, ErrIndexFromFuture
 
 	case !indexFile.Published.IsZero() &&
-		!currentPublished.IsZero() &&
-		currentPublished.After(indexFile.Published):
+		!lastIndexRelease.IsZero() &&
+		lastIndexRelease.After(indexFile.Published):
 		return indexFile, ErrIndexIsOlder
 
 	case channel != "" &&

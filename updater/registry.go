@@ -23,7 +23,7 @@ type ResourceRegistry struct {
 	Name       string
 	storageDir *utils.DirStructure
 	tmpDir     *utils.DirStructure
-	indexes    []Index
+	indexes    []*Index
 
 	resources        map[string]*Resource
 	UpdateURLs       []string
@@ -57,7 +57,7 @@ func (reg *ResourceRegistry) AddIndex(idx Index) {
 		filepath.Base(idx.Path), filepath.Ext(idx.Path),
 	)
 
-	reg.indexes = append(reg.indexes, idx)
+	reg.indexes = append(reg.indexes, &idx)
 }
 
 // Initialize initializes a raw registry struct and makes it ready for usage.
@@ -225,7 +225,7 @@ func (reg *ResourceRegistry) ResetIndexes() {
 	reg.Lock()
 	defer reg.Unlock()
 
-	reg.indexes = make([]Index, 0, 5)
+	reg.indexes = make([]*Index, 0, len(reg.indexes))
 }
 
 // Cleanup removes temporary files.

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/safing/jess/filesig"
+	"github.com/safing/jess/lhash"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
@@ -36,23 +38,73 @@ func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 	return nil
 }
 
-func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Client, idx Index) error {
-	var err error
-	var data []byte
+func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Client, idx *Index) error {
+	var (
+		// Index.
+		indexErr    error
+		indexData   []byte
+		downloadURL string
 
-	// download new index
-	for tries := 0; tries < 3; tries++ {
-		data, err = reg.fetchData(ctx, client, idx.Path, tries)
-		if err == nil {
-			break
-		}
+		// Signature.
+		sigErr       error
+		verifiedHash *lhash.LabeledHash
+		sigFileData  []byte
+		verifOpts    = reg.GetVerificationOptions(idx.Path)
+	)
+
+	// Upgrade to v2 index if verification is enabled.
+	downloadIndexPath := idx.Path
+	if verifOpts != nil {
+		downloadIndexPath = strings.TrimSuffix(downloadIndexPath, baseIndexExtension) + v2IndexExtension
 	}
-	if err != nil {
-		return fmt.Errorf("failed to download index %s: %w", idx.Path, err)
+
+	// Download new index and signature.
+	for tries := 0; tries < 3; tries++ {
+		// Index and signature need to be fetched together, so that they are
+		// fetched from the same source. One source should always have a matching
+		// index and signature. Backup sources may be behind a little.
+		// If the signature verification fails, another source should be tried.
+
+		// Get index data.
+		indexData, downloadURL, indexErr = reg.fetchData(ctx, client, downloadIndexPath, tries)
+		if indexErr != nil {
+			log.Debugf("%s: failed to fetch index %s: %s", reg.Name, downloadURL, indexErr)
+			continue
+		}
+
+		// Get signature and verify it.
+		if verifOpts != nil {
+			verifiedHash, sigFileData, sigErr = reg.fetchAndVerifySigFile(
+				ctx, client,
+				verifOpts, downloadIndexPath+filesig.Extension, nil,
+				tries,
+			)
+			if sigErr != nil {
+				log.Debugf("%s: failed to verify signature of %s: %s", reg.Name, downloadURL, sigErr)
+				continue
+			}
+
+			// Check if the index matches the verified hash.
+			if verifiedHash.MatchesData(indexData) {
+				log.Infof("%s: verified signature of %s", reg.Name, downloadURL)
+			} else {
+				sigErr = ErrIndexChecksumMismatch
+				log.Debugf("%s: checksum does not match file from %s", reg.Name, downloadURL)
+				continue
+			}
+		}
+
+		break
+	}
+	if indexErr != nil {
+		return fmt.Errorf("failed to fetch index %s: %w", downloadIndexPath, indexErr)
+	}
+	if sigErr != nil {
+		return fmt.Errorf("failed to fetch or verify index %s signature: %w", downloadIndexPath, sigErr)
 	}
 
 	// Parse the index file.
-	indexFile, err := ParseIndexFile(data, idx.Channel, idx.LastRelease)
+	indexFile, err := ParseIndexFile(indexData, idx.Channel, idx.LastRelease)
 	if err != nil {
 		return fmt.Errorf("failed to parse index %s: %w", idx.Path, err)
 	}
@@ -83,19 +135,31 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		log.Debugf("%s: index %s is empty", reg.Name, idx.Path)
 	}
 
-	// check if dest dir exists
+	// Check if dest dir exists.
 	indexDir := filepath.FromSlash(path.Dir(idx.Path))
 	err = reg.storageDir.EnsureRelPath(indexDir)
 	if err != nil {
 		log.Warningf("%s: failed to ensure directory for updated index %s: %s", reg.Name, idx.Path, err)
 	}
 
-	// save index
-	indexPath := filepath.FromSlash(idx.Path)
 	// Index files must be readable by portmaster-staert with user permissions in order to load the index.
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, indexPath), data, 0o0644) //nolint:gosec
+	err = ioutil.WriteFile( //nolint:gosec
+		filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path)),
+		indexData, 0o0644,
+	)
 	if err != nil {
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
+	}
+
+	// Write signature file, if we have one.
+	if len(sigFileData) > 0 {
+		err = ioutil.WriteFile( //nolint:gosec
+			filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path)+filesig.Extension),
+			sigFileData, 0o0644,
+		)
+		if err != nil {
+			log.Warningf("%s: failed to save updated index signature %s: %s", reg.Name, idx.Path+filesig.Extension, err)
+		}
 	}
 
 	log.Infof("%s: updated index %s with %d entries", reg.Name, idx.Path, len(indexFile.Releases))

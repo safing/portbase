@@ -115,15 +115,18 @@ func (reg *ResourceRegistry) LoadIndexes(ctx context.Context) error {
 	return firstErr
 }
 
-func (reg *ResourceRegistry) getIndexes() []Index {
+// getIndexes returns a copy of the index.
+// The indexes itself are references.
+func (reg *ResourceRegistry) getIndexes() []*Index {
 	reg.RLock()
 	defer reg.RUnlock()
-	indexes := make([]Index, len(reg.indexes))
+
+	indexes := make([]*Index, len(reg.indexes))
 	copy(indexes, reg.indexes)
 	return indexes
 }
 
-func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
+func (reg *ResourceRegistry) loadIndexFile(idx *Index) error {
 	path := filepath.FromSlash(idx.Path)
 	data, err := ioutil.ReadFile(filepath.Join(reg.storageDir.Path, path))
 	if err != nil {
@@ -137,9 +140,6 @@ func (reg *ResourceRegistry) loadIndexFile(idx Index) error {
 	}
 
 	// Update last seen release.
-	// TODO: We are working with a copy here, so this has no effect.
-	// This does not break to current implementation, but make the
-	// protection ineffective.
 	idx.LastRelease = indexFile.Published
 
 	// Warn if there aren't any releases in the index.

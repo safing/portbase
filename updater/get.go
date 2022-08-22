@@ -34,7 +34,7 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 		// Verify file, if configured.
 		_, err := file.Verify()
 		if err != nil && !errors.Is(err, ErrVerificationNotConfigured) {
-			// FIXME: If verification is required, try deleting the resource and downloading it again.
+			// TODO: If verification is required, try deleting the resource and downloading it again.
 			return nil, fmt.Errorf("failed to verify file: %w", err)
 		}
 
