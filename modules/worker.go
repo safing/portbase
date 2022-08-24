@@ -25,8 +25,13 @@ var (
 func (m *Module) StartWorker(name string, fn func(context.Context) error) {
 	go func() {
 		err := m.RunWorker(name, fn)
-		if err != nil {
-			log.Warningf("%s: worker %s failed: %s", m.Name, name, err)
+		switch {
+		case err == nil:
+			return
+		case errors.Is(err, context.Canceled):
+			log.Debugf("%s: worker %s was canceled: %s", m.Name, name, err)
+		default:
+			log.Errorf("%s: worker %s failed: %s", m.Name, name, err)
 		}
 	}()
 }
@@ -87,7 +92,11 @@ func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn
 				lastFail = time.Now()
 				// log error
 				sleepFor := time.Duration(failCnt) * backoffDuration
-				log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
+				if errors.Is(err, context.Canceled) {
+					log.Debugf("%s: service-worker %s was canceled (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
+				} else {
+					log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
+				}
 				select {
 				case <-time.After(sleepFor):
 				case <-m.Ctx.Done():

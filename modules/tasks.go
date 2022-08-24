@@ -3,6 +3,7 @@ package modules
 import (
 	"container/list"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -382,7 +383,12 @@ func (t *Task) executeWithLocking() {
 
 	// run
 	err := t.taskFn(t.ctx, t)
-	if err != nil {
+	switch {
+	case err == nil:
+		return
+	case errors.Is(err, context.Canceled):
+		log.Debugf("%s: task %s was canceled: %s", t.module.Name, t.name, err)
+	default:
 		log.Errorf("%s: task %s failed: %s", t.module.Name, t.name, err)
 	}
 }
