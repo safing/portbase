@@ -75,6 +75,14 @@ func start() error {
 }
 
 func exportConfigCmd() error {
+	// Reset the metrics instance name option, as the default
+	// is set to the current hostname.
+	// Config key copied from metrics.CfgOptionInstanceKey.
+	option, err := GetOption("core/metrics/instance")
+	if err == nil {
+		option.DefaultValue = ""
+	}
+
 	data, err := json.MarshalIndent(ExportOptions(), "", "  ")
 	if err != nil {
 		return err
