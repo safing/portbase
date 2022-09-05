@@ -11,6 +11,12 @@ import (
 var (
 	optionsLock sync.RWMutex
 	options     = make(map[string]*Option)
+
+	// unmappedValues holds a list of configuration values that have been
+	// read from the persistence layer but no option has been defined yet.
+	// This is mainly to support the plugin system of the Portmaster.
+	unmappedValuesLock sync.Mutex
+	unmappedValues     map[string]interface{}
 )
 
 // ForEachOption calls fn for each defined option. If fn returns
@@ -98,9 +104,29 @@ func Register(option *Option) error {
 		return fmt.Errorf("config: invalid default value: %w", vErr)
 	}
 
+	if err := loadUnmappedValue(option); err != nil {
+		return err
+	}
+
 	optionsLock.Lock()
 	defer optionsLock.Unlock()
 	options[option.Key] = option
 
 	return nil
+}
+
+func loadUnmappedValue(option *Option) error {
+	unmappedValuesLock.Lock()
+	defer unmappedValuesLock.Unlock()
+	if value, ok := unmappedValues[option.Key]; ok {
+		delete(unmappedValues, option.Key)
+
+		var vErr *ValidationError
+		option.activeValue, vErr = validateValue(option, value)
+		if vErr != nil {
+			return fmt.Errorf("config: invalid value: %w", vErr)
+		}
+	}
+
+    return nil
 }

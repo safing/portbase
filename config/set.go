@@ -41,6 +41,11 @@ func signalChanges() {
 func replaceConfig(newValues map[string]interface{}) []*ValidationError {
 	var validationErrors []*ValidationError
 
+	valuesCopy := make(map[string]interface{}, len(newValues))
+	for key, value := range newValues {
+		valuesCopy[key] = value
+	}
+
 	// RLock the options because we are not adding or removing
 	// options from the registration but rather only update the
 	// options value which is guarded by the option's lock itself
@@ -48,7 +53,9 @@ func replaceConfig(newValues map[string]interface{}) []*ValidationError {
 	defer optionsLock.RUnlock()
 
 	for key, option := range options {
-		newValue, ok := newValues[key]
+		newValue, ok := valuesCopy[key]
+
+		delete(valuesCopy, key)
 
 		option.Lock()
 		option.activeValue = nil
@@ -65,6 +72,11 @@ func replaceConfig(newValues map[string]interface{}) []*ValidationError {
 		handleOptionUpdate(option, true)
 		option.Unlock()
 	}
+
+	unmappedValuesLock.Lock()
+	defer unmappedValuesLock.Unlock()
+
+	unmappedValues = valuesCopy
 
 	signalChanges()
 
