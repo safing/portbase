@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/safing/portbase/utils/debug"
@@ -44,11 +45,16 @@ func registerDebugEndpoints() error {
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:        "debug/cpu",
-		Read:        PermitAnyone,
-		DataFunc:    handleCPUProfile,
-		Name:        "Get CPU Profile",
-		Description: "",
+		Path:     "debug/cpu",
+		Read:     PermitAnyone,
+		DataFunc: handleCPUProfile,
+		Name:     "Get CPU Profile",
+		Description: strings.ReplaceAll(`Gather and return the CPU profile.
+This data needs to gathered over a period of time, which is specified using the duration parameter.
+
+You can easily view this data in your browser with this command (with Go installed):
+"go tool pprof -http :8888 http://127.0.0.1:817/api/v1/debug/cpu"
+`, `"`, "`"),
 		Parameters: []Parameter{{
 			Method:      http.MethodGet,
 			Field:       "duration",
@@ -60,21 +66,29 @@ func registerDebugEndpoints() error {
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:        "debug/heap",
-		Read:        PermitAnyone,
-		DataFunc:    handleHeapProfile,
-		Name:        "Get Heap Profile",
-		Description: "",
+		Path:     "debug/heap",
+		Read:     PermitAnyone,
+		DataFunc: handleHeapProfile,
+		Name:     "Get Heap Profile",
+		Description: strings.ReplaceAll(`Gather and return the heap memory profile.
+		
+		You can easily view this data in your browser with this command (with Go installed):
+		"go tool pprof -http :8888 http://127.0.0.1:817/api/v1/debug/heap"
+		`, `"`, "`"),
 	}); err != nil {
 		return err
 	}
 
 	if err := RegisterEndpoint(Endpoint{
-		Path:        "debug/allocs",
-		Read:        PermitAnyone,
-		DataFunc:    handleAllocsProfile,
-		Name:        "Get Allocs Profile",
-		Description: "",
+		Path:     "debug/allocs",
+		Read:     PermitAnyone,
+		DataFunc: handleAllocsProfile,
+		Name:     "Get Allocs Profile",
+		Description: strings.ReplaceAll(`Gather and return the memory allocation profile.
+		
+		You can easily view this data in your browser with this command (with Go installed):
+		"go tool pprof -http :8888 http://127.0.0.1:817/api/v1/debug/allocs"
+		`, `"`, "`"),
 	}); err != nil {
 		return err
 	}
