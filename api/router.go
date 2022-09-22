@@ -23,7 +23,9 @@ var (
 	mainMux = mux.NewRouter()
 
 	// server is the main server.
-	server      = &http.Server{}
+	server = &http.Server{
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 	handlerLock sync.RWMutex
 
 	allowedDevCORSOrigins = []string{

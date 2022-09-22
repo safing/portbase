@@ -33,6 +33,7 @@ func Run() int {
 	// Start
 	err := modules.Start()
 	if err != nil {
+		// Immediately return for a clean exit.
 		if errors.Is(err, modules.ErrCleanExit) {
 			return 0
 		}
@@ -41,8 +42,17 @@ func Run() int {
 			printStackTo(os.Stdout, "PRINTING STACK ON EXIT (STARTUP ERROR)")
 		}
 
+		// Trigger shutdown and wait for it to complete.
 		_ = modules.Shutdown()
-		return modules.GetExitStatusCode()
+		exitCode := modules.GetExitStatusCode()
+
+		// Return the exit code, if it was set.
+		if exitCode > 0 {
+			return exitCode
+		}
+
+		// Otherwise, return a default 1.
+		return 1
 	}
 
 	// Shutdown

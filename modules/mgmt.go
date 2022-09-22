@@ -71,6 +71,12 @@ func EnableModuleManagement(changeNotifyFn func(*Module)) bool {
 	return false
 }
 
+// DisableModuleManagement disables module management and returns the module
+// system to the default start/stop behavior.
+func DisableModuleManagement() {
+	moduleMgmtEnabled.UnSet()
+}
+
 func (m *Module) notifyOfChange() {
 	if moduleMgmtEnabled.IsSet() && modulesChangeNotifyFn != nil {
 		m.StartWorker("notify of change", func(ctx context.Context) error {

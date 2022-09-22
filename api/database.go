@@ -82,7 +82,7 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errMsg := fmt.Sprintf("could not upgrade: %s", err)
 		log.Error(errMsg)
-		http.Error(w, errMsg, 400)
+		http.Error(w, errMsg, http.StatusBadRequest)
 		return
 	}
 
