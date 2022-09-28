@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -101,6 +102,11 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 			// If enabled, a trust store is required.
 			if opts.TrustStore == nil {
 				return fmt.Errorf("verification enabled for prefix %q, but no trust store configured", prefix)
+			}
+
+			// DownloadPolicy must be equal or stricter than DiskLoadPolicy.
+			if opts.DiskLoadPolicy < opts.DownloadPolicy {
+				return errors.New("verification download policy must be equal or stricter than the disk load policy")
 			}
 
 			// Warn if all policies are disabled.

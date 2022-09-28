@@ -67,7 +67,7 @@ func ParseIndexFile(indexData []byte, channel string, lastIndexRelease time.Time
 	}
 
 	// Fallback to old format if there are no releases and no channel is defined.
-	// TODO: Remove in v0.10
+	// TODO: Remove in v1
 	if len(indexFile.Releases) == 0 && indexFile.Channel == "" {
 		return loadOldIndexFormat(indexData, channel)
 	}
@@ -99,8 +99,8 @@ func loadOldIndexFormat(indexData []byte, channel string) (*IndexFile, error) {
 	}
 
 	return &IndexFile{
-		Channel:   channel,
-		Published: time.Now(),
-		Releases:  releases,
+		Channel: channel,
+		// Do NOT define `Published`, as this would break the "is newer" check.
+		Releases: releases,
 	}, nil
 }
