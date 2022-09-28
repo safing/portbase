@@ -9,7 +9,6 @@ import "sync"
 // A StablePool is a set of temporary objects that may be individually saved and
 // retrieved.
 //
-//
 // In contrast to sync.Pool, items are not removed automatically. Every item
 // will be returned at some point. Items are returned in a FIFO manner in order
 // to evenly distribute usage of a set of items.

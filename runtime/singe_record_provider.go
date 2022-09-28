@@ -15,17 +15,16 @@ type singleRecordReader struct {
 //
 // Example:
 //
-//		type MyValue struct {
-//			record.Base
-//			Value string
-//		}
-//		r := new(MyValue)
-//		pushUpdate, _ := runtime.Register("my/key", ProvideRecord(r))
-//		r.Lock()
-//		r.Value = "foobar"
-//		pushUpdate(r)
-//		r.Unlock()
-//
+//	type MyValue struct {
+//		record.Base
+//		Value string
+//	}
+//	r := new(MyValue)
+//	pushUpdate, _ := runtime.Register("my/key", ProvideRecord(r))
+//	r.Lock()
+//	r.Value = "foobar"
+//	pushUpdate(r)
+//	r.Unlock()
 func ProvideRecord(r record.Record) ValueProvider {
 	return &singleRecordReader{r}
 }
