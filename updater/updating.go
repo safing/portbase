@@ -85,7 +85,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 			}
 
 			// Check if the index matches the verified hash.
-			if verifiedHash.MatchesData(indexData) {
+			if verifiedHash.Matches(indexData) {
 				log.Infof("%s: verified signature of %s", reg.Name, downloadURL)
 			} else {
 				sigErr = ErrIndexChecksumMismatch
@@ -170,6 +170,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	// create list of downloads
 	var toUpdate []*ResourceVersion
+	var missingSigs []*ResourceVersion
 	reg.RLock()
 	for _, res := range reg.resources {
 		res.Lock()
@@ -181,8 +182,15 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 
 			// add all non-available and eligible versions to update queue
 			for _, rv := range res.Versions {
-				if !rv.Available && rv.CurrentRelease {
+				switch {
+				case !rv.CurrentRelease:
+					// We are not interested in older releases.
+				case !rv.Available:
+					// File is not available.
 					toUpdate = append(toUpdate, rv)
+				case !rv.SigAvailable && res.VerificationOptions != nil:
+					// File signature is not available and verification is enabled.
+					missingSigs = append(missingSigs, rv)
 				}
 			}
 		}
@@ -192,7 +200,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	reg.RUnlock()
 
 	// nothing to update
-	if len(toUpdate) == 0 {
+	if len(toUpdate) == 0 && len(missingSigs) == 0 {
 		log.Infof("%s: everything up to date", reg.Name)
 		return nil
 	}
@@ -203,10 +211,10 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	}
 
 	// download updates
-	log.Infof("%s: starting to download %d updates parallel", reg.Name, len(toUpdate))
+	log.Infof("%s: starting to download %d updates in parallel", reg.Name, len(toUpdate)+len(missingSigs))
 	var wg sync.WaitGroup
 
-	wg.Add(len(toUpdate))
+	wg.Add(len(toUpdate) + len(missingSigs))
 	client := &http.Client{}
 
 	for idx := range toUpdate {
@@ -231,6 +239,30 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 				log.Warningf("%s: failed to download %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
 			}
 		}(toUpdate[idx])
+	}
+
+	for idx := range missingSigs {
+		go func(rv *ResourceVersion) {
+			var err error
+
+			defer wg.Done()
+			defer func() {
+				if x := recover(); x != nil {
+					log.Errorf("%s: %s: captured panic: %s", reg.Name, rv.resource.Identifier, x)
+				}
+			}()
+
+			for tries := 0; tries < 3; tries++ {
+				err = reg.fetchMissingSig(ctx, client, rv, tries)
+				if err == nil {
+					rv.SigAvailable = true
+					return
+				}
+			}
+			if err != nil {
+				log.Warningf("%s: failed to download missing sig of %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			}
+		}(missingSigs[idx])
 	}
 
 	wg.Wait()

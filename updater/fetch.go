@@ -42,17 +42,17 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	var (
 		verifiedHash *lhash.LabeledHash
 		sigFileData  []byte
-		verifOpts    = reg.GetVerificationOptions(rv.resource.Identifier)
 	)
-	if verifOpts != nil {
+	if rv.resource.VerificationOptions != nil {
 		verifiedHash, sigFileData, err = reg.fetchAndVerifySigFile(
 			ctx, client,
-			verifOpts, rv.versionedPath()+filesig.Extension, rv.SigningMetadata(),
+			rv.resource.VerificationOptions,
+			rv.versionedSigPath(), rv.SigningMetadata(),
 			tries,
 		)
 
 		if err != nil {
-			switch verifOpts.DownloadPolicy {
+			switch rv.resource.VerificationOptions.DownloadPolicy {
 			case SignaturePolicyRequire:
 				return fmt.Errorf("signature verification failed: %w", err)
 			case SignaturePolicyWarn:
@@ -82,7 +82,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	// Write to the hasher at the same time, if needed.
 	var hasher hash.Hash
 	var writeDst io.Writer = atomicFile
-	if verifiedHash != nil && verifOpts.DownloadPolicy != SignaturePolicyDisable {
+	if verifiedHash != nil {
 		hasher = verifiedHash.Algorithm().RawHasher()
 		writeDst = io.MultiWriter(hasher, atomicFile)
 	}
@@ -102,7 +102,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 		if verifiedHash.EqualRaw(downloadDigest) {
 			log.Infof("%s: verified signature of %s", reg.Name, downloadURL)
 		} else {
-			switch verifOpts.DownloadPolicy {
+			switch rv.resource.VerificationOptions.DownloadPolicy {
 			case SignaturePolicyRequire:
 				return errors.New("file does not match signed checksum")
 			case SignaturePolicyWarn:
@@ -110,15 +110,18 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 			case SignaturePolicyDisable:
 				log.Debugf("%s: checksum does not match file from %s", reg.Name, downloadURL)
 			}
+
+			// Reset hasher to signal that the sig should not be written.
+			hasher = nil
 		}
 	}
 
-	// Write signature file, if we have one.
-	if len(sigFileData) > 0 {
+	// Write signature file, if we have one and if verification succeeded.
+	if len(sigFileData) > 0 && hasher != nil {
 		sigFilePath := rv.storagePath() + filesig.Extension
 		err := ioutil.WriteFile(sigFilePath, sigFileData, 0o0644) //nolint:gosec
 		if err != nil {
-			switch verifOpts.DownloadPolicy {
+			switch rv.resource.VerificationOptions.DownloadPolicy {
 			case SignaturePolicyRequire:
 				return fmt.Errorf("failed to write signature file %s: %w", sigFilePath, err)
 			case SignaturePolicyWarn:
@@ -144,6 +147,84 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	}
 
 	log.Infof("%s: fetched %s (stored to %s)", reg.Name, downloadURL, rv.storagePath())
+	return nil
+}
+
+func (reg *ResourceRegistry) fetchMissingSig(ctx context.Context, client *http.Client, rv *ResourceVersion, tries int) error {
+	// backoff when retrying
+	if tries > 0 {
+		select {
+		case <-ctx.Done():
+			return nil // module is shutting down
+		case <-time.After(time.Duration(tries*tries) * time.Second):
+		}
+	}
+
+	// Check destination dir.
+	dirPath := filepath.Dir(rv.storagePath())
+	err := reg.storageDir.EnsureAbsPath(dirPath)
+	if err != nil {
+		return fmt.Errorf("could not create updates folder: %s", dirPath)
+	}
+
+	// Download and verify the missing signature.
+	verifiedHash, sigFileData, err := reg.fetchAndVerifySigFile(
+		ctx, client,
+		rv.resource.VerificationOptions,
+		rv.versionedSigPath(), rv.SigningMetadata(),
+		tries,
+	)
+	if err != nil {
+		switch rv.resource.VerificationOptions.DownloadPolicy {
+		case SignaturePolicyRequire:
+			return fmt.Errorf("signature verification failed: %w", err)
+		case SignaturePolicyWarn:
+			log.Warningf("%s: failed to verify downloaded signature of %s: %s", reg.Name, rv.versionedPath(), err)
+		case SignaturePolicyDisable:
+			log.Debugf("%s: failed to verify downloaded signature of %s: %s", reg.Name, rv.versionedPath(), err)
+		}
+		return nil
+	}
+
+	// Check if the signature matches the resource file.
+	ok, err := verifiedHash.MatchesFile(rv.storagePath())
+	if err != nil {
+		switch rv.resource.VerificationOptions.DownloadPolicy {
+		case SignaturePolicyRequire:
+			return fmt.Errorf("error while verifying resource file: %w", err)
+		case SignaturePolicyWarn:
+			log.Warningf("%s: error while verifying resource file %s", reg.Name, rv.storagePath())
+		case SignaturePolicyDisable:
+			log.Debugf("%s: error while verifying resource file %s", reg.Name, rv.storagePath())
+		}
+		return nil
+	}
+	if !ok {
+		switch rv.resource.VerificationOptions.DownloadPolicy {
+		case SignaturePolicyRequire:
+			return errors.New("resource file does not match signed checksum")
+		case SignaturePolicyWarn:
+			log.Warningf("%s: checksum does not match resource file from %s", reg.Name, rv.storagePath())
+		case SignaturePolicyDisable:
+			log.Debugf("%s: checksum does not match resource file from %s", reg.Name, rv.storagePath())
+		}
+		return nil
+	}
+
+	// Write signature file.
+	err = ioutil.WriteFile(rv.storageSigPath(), sigFileData, 0o0644) //nolint:gosec
+	if err != nil {
+		switch rv.resource.VerificationOptions.DownloadPolicy {
+		case SignaturePolicyRequire:
+			return fmt.Errorf("failed to write signature file %s: %w", rv.storageSigPath(), err)
+		case SignaturePolicyWarn:
+			log.Warningf("%s: failed to write signature file %s: %s", reg.Name, rv.storageSigPath(), err)
+		case SignaturePolicyDisable:
+			log.Debugf("%s: failed to write signature file %s: %s", reg.Name, rv.storageSigPath(), err)
+		}
+	}
+
+	log.Infof("%s: fetched %s (stored to %s)", reg.Name, rv.versionedSigPath(), rv.storageSigPath())
 	return nil
 }
 
@@ -242,7 +323,7 @@ func (reg *ResourceRegistry) makeRequest(ctx context.Context, client *http.Clien
 	downloadURL = u.String()
 
 	// create request
-	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, http.NoBody)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create request for %q: %w", downloadURL, err)
 	}
