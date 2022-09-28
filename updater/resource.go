@@ -10,7 +10,9 @@ import (
 
 	semver "github.com/hashicorp/go-version"
 
+	"github.com/safing/jess/filesig"
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils"
 )
 
 var devVersion *semver.Version
@@ -49,6 +51,9 @@ type Resource struct {
 	// to download the latest version from the updates servers
 	// specified in the resource registry.
 	SelectedVersion *ResourceVersion
+
+	// VerificationOptions holds the verification options for this resource.
+	VerificationOptions *VerificationOptions
 }
 
 // ResourceVersion represents a single version of a resource.
@@ -62,6 +67,9 @@ type ResourceVersion struct {
 
 	// Available indicates if this version is available locally.
 	Available bool
+
+	// SigAvailable indicates if the signature of this version is available locally.
+	SigAvailable bool
 
 	// CurrentRelease indicates that this is the current release that should be
 	// selected, if possible.
@@ -132,9 +140,7 @@ func (res *Resource) Export() *Resource {
 		SelectedVersion: res.SelectedVersion,
 	}
 	// Copy Versions slice.
-	for i := 0; i < len(res.Versions); i++ {
-		export.Versions[i] = res.Versions[i]
-	}
+	copy(export.Versions, res.Versions)
 
 	return export
 }
@@ -184,9 +190,10 @@ func (res *Resource) AnyVersionAvailable() bool {
 
 func (reg *ResourceRegistry) newResource(identifier string) *Resource {
 	return &Resource{
-		registry:   reg,
-		Identifier: identifier,
-		Versions:   make([]*ResourceVersion, 0, 1),
+		registry:            reg,
+		Identifier:          identifier,
+		Versions:            make([]*ResourceVersion, 0, 1),
+		VerificationOptions: reg.GetVerificationOptions(identifier),
 	}
 }
 
@@ -230,6 +237,12 @@ func (res *Resource) AddVersion(version string, available, currentRelease, preRe
 	// set flags
 	if available {
 		rv.Available = true
+
+		// If available and signatures are enabled for this resource, check if the
+		// signature is available.
+		if res.VerificationOptions != nil && utils.PathExists(rv.storageSigPath()) {
+			rv.SigAvailable = true
+		}
 	}
 	if currentRelease {
 		rv.CurrentRelease = true
@@ -439,8 +452,13 @@ boundarySearch:
 
 	// Purge everything beyond the purge boundary.
 	for _, rv := range res.Versions[purgeBoundary:] {
-		storagePath := rv.storagePath()
+		// Only remove if resource file is actually available.
+		if !rv.Available {
+			continue
+		}
+
 		// Remove resource file.
+		storagePath := rv.storagePath()
 		err := os.Remove(storagePath)
 		if err != nil {
 			log.Warningf("%s: failed to purge resource %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)
@@ -507,7 +525,17 @@ func (rv *ResourceVersion) versionedPath() string {
 	return GetVersionedPath(rv.resource.Identifier, rv.VersionNumber)
 }
 
+// versionedSigPath returns the versioned identifier of the file signature.
+func (rv *ResourceVersion) versionedSigPath() string {
+	return GetVersionedPath(rv.resource.Identifier, rv.VersionNumber) + filesig.Extension
+}
+
 // storagePath returns the absolute storage path.
 func (rv *ResourceVersion) storagePath() string {
 	return filepath.Join(rv.resource.registry.storageDir.Path, filepath.FromSlash(rv.versionedPath()))
+}
+
+// storageSigPath returns the absolute storage path of the file signature.
+func (rv *ResourceVersion) storageSigPath() string {
+	return rv.storagePath() + filesig.Extension
 }

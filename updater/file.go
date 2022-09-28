@@ -1,7 +1,6 @@
 package updater
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -58,8 +57,7 @@ func (file *File) SigningMetadata() map[string]string {
 // Verify verifies the given file.
 func (file *File) Verify() ([]*filesig.FileData, error) {
 	// Check if verification is configured.
-	verifOpts := file.resource.registry.GetVerificationOptions(file.resource.Identifier)
-	if verifOpts == nil {
+	if file.resource.VerificationOptions == nil {
 		return nil, ErrVerificationNotConfigured
 	}
 
@@ -68,12 +66,12 @@ func (file *File) Verify() ([]*filesig.FileData, error) {
 		file.storagePath,
 		file.storagePath+filesig.Extension,
 		file.SigningMetadata(),
-		verifOpts.TrustStore,
+		file.resource.VerificationOptions.TrustStore,
 	)
 	if err != nil {
-		switch verifOpts.DiskLoadPolicy {
+		switch file.resource.VerificationOptions.DiskLoadPolicy {
 		case SignaturePolicyRequire:
-			return nil, fmt.Errorf("failed to verify file: %w", err)
+			return nil, err
 		case SignaturePolicyWarn:
 			log.Warningf("%s: failed to verify %s: %s", file.resource.registry.Name, file.storagePath, err)
 		case SignaturePolicyDisable:
