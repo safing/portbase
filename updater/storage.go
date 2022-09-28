@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/safing/jess/filesig"
+	"github.com/safing/jess/lhash"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
@@ -127,16 +127,44 @@ func (reg *ResourceRegistry) getIndexes() []*Index {
 }
 
 func (reg *ResourceRegistry) loadIndexFile(idx *Index) error {
-	path := filepath.FromSlash(idx.Path)
-	data, err := ioutil.ReadFile(filepath.Join(reg.storageDir.Path, path))
+	indexPath := filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path))
+	indexData, err := os.ReadFile(indexPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read index file %s: %w", idx.Path, err)
+	}
+
+	// Verify signature, if enabled.
+	if verifOpts := reg.GetVerificationOptions(idx.Path); verifOpts != nil {
+		// Load and check signature.
+		verifiedHash, _, err := reg.loadAndVerifySigFile(verifOpts, indexPath+filesig.Extension)
+		if err != nil {
+			switch verifOpts.DiskLoadPolicy {
+			case SignaturePolicyRequire:
+				return fmt.Errorf("failed to verify signature of index %s: %w", idx.Path, err)
+			case SignaturePolicyWarn:
+				log.Warningf("%s: failed to verify signature of index %s: %s", reg.Name, idx.Path, err)
+			case SignaturePolicyDisable:
+				log.Debugf("%s: failed to verify signature of index %s: %s", reg.Name, idx.Path, err)
+			}
+		}
+
+		// Check if signature checksum matches the index data.
+		if err == nil && !verifiedHash.Matches(indexData) {
+			switch verifOpts.DiskLoadPolicy {
+			case SignaturePolicyRequire:
+				return fmt.Errorf("index file %s does not match signature", idx.Path)
+			case SignaturePolicyWarn:
+				log.Warningf("%s: index file %s does not match signature", reg.Name, idx.Path)
+			case SignaturePolicyDisable:
+				log.Debugf("%s: index file %s does not match signature", reg.Name, idx.Path)
+			}
+		}
 	}
 
 	// Parse the index file.
-	indexFile, err := ParseIndexFile(data, idx.Channel, idx.LastRelease)
+	indexFile, err := ParseIndexFile(indexData, idx.Channel, idx.LastRelease)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse index file %s: %w", idx.Path, err)
 	}
 
 	// Update last seen release.
@@ -154,6 +182,49 @@ func (reg *ResourceRegistry) loadIndexFile(idx *Index) error {
 		log.Warningf("%s: failed to add resource: %s", reg.Name, err)
 	}
 	return nil
+}
+
+func (reg *ResourceRegistry) loadAndVerifySigFile(verifOpts *VerificationOptions, sigFilePath string) (*lhash.LabeledHash, []byte, error) {
+	// Load signature file.
+	sigFileData, err := os.ReadFile(sigFilePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read signature file: %w", err)
+	}
+
+	// Extract all signatures.
+	sigs, err := filesig.ParseSigFile(sigFileData)
+	switch {
+	case len(sigs) == 0 && err != nil:
+		return nil, nil, fmt.Errorf("failed to parse signature file: %w", err)
+	case len(sigs) == 0:
+		return nil, nil, errors.New("no signatures found in signature file")
+	case err != nil:
+		return nil, nil, fmt.Errorf("failed to parse signature file: %w", err)
+	}
+
+	// Verify all signatures.
+	var verifiedHash *lhash.LabeledHash
+	for _, sig := range sigs {
+		fd, err := filesig.VerifyFileData(
+			sig,
+			nil,
+			verifOpts.TrustStore,
+		)
+		if err != nil {
+			return nil, sigFileData, err
+		}
+
+		// Save or check verified hash.
+		if verifiedHash == nil {
+			verifiedHash = fd.FileHash()
+		} else if !fd.FileHash().Equal(verifiedHash) {
+			// Return an error if two valid hashes mismatch.
+			// For simplicity, all hash algorithms must be the same for now.
+			return nil, sigFileData, errors.New("file hashes from different signatures do not match")
+		}
+	}
+
+	return verifiedHash, sigFileData, nil
 }
 
 // CreateSymlinks creates a directory structure with unversioned symlinks to the given updates list.
