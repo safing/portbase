@@ -1,8 +1,12 @@
 package updater
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/safing/portbase/log"
@@ -20,13 +24,19 @@ type ResourceRegistry struct {
 	Name       string
 	storageDir *utils.DirStructure
 	tmpDir     *utils.DirStructure
-	indexes    []Index
+	indexes    []*Index
 
 	resources        map[string]*Resource
 	UpdateURLs       []string
 	UserAgent        string
 	MandatoryUpdates []string
 	AutoUnpack       []string
+
+	// Verification holds a map of VerificationOptions assigned to their
+	// applicable identifier path prefix.
+	// Use an empty string to denote the default.
+	// Use empty options to disable verification for a path prefix.
+	Verification map[string]*VerificationOptions
 
 	// UsePreReleases signifies that pre-releases should be used when selecting a
 	// version. Even if false, a pre-release version will still be used if it is
@@ -43,7 +53,12 @@ func (reg *ResourceRegistry) AddIndex(idx Index) {
 	reg.Lock()
 	defer reg.Unlock()
 
-	reg.indexes = append(reg.indexes, idx)
+	// Get channel name from path.
+	idx.Channel = strings.TrimSuffix(
+		filepath.Base(idx.Path), filepath.Ext(idx.Path),
+	)
+
+	reg.indexes = append(reg.indexes, &idx)
 }
 
 // Initialize initializes a raw registry struct and makes it ready for usage.
@@ -74,6 +89,32 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	err = reg.tmpDir.Ensure()
 	if err != nil {
 		log.Warningf("%s: failed to create tmp dir: %s", reg.Name, err)
+	}
+
+	// Check verification options.
+	if reg.Verification != nil {
+		for prefix, opts := range reg.Verification {
+			// Check if verification is disable for this prefix.
+			if opts == nil {
+				continue
+			}
+
+			// If enabled, a trust store is required.
+			if opts.TrustStore == nil {
+				return fmt.Errorf("verification enabled for prefix %q, but no trust store configured", prefix)
+			}
+
+			// DownloadPolicy must be equal or stricter than DiskLoadPolicy.
+			if opts.DiskLoadPolicy < opts.DownloadPolicy {
+				return errors.New("verification download policy must be equal or stricter than the disk load policy")
+			}
+
+			// Warn if all policies are disabled.
+			if opts.DownloadPolicy == SignaturePolicyDisable &&
+				opts.DiskLoadPolicy == SignaturePolicyDisable {
+				log.Warningf("%s: verification enabled for prefix %q, but all policies set to disable", reg.Name, prefix)
+			}
+		}
 	}
 
 	return nil
@@ -190,7 +231,7 @@ func (reg *ResourceRegistry) ResetIndexes() {
 	reg.Lock()
 	defer reg.Unlock()
 
-	reg.indexes = make([]Index, 0, 5)
+	reg.indexes = make([]*Index, 0, len(reg.indexes))
 }
 
 // Cleanup removes temporary files.

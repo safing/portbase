@@ -7,6 +7,7 @@ import (
 
 	semver "github.com/hashicorp/go-version"
 
+	"github.com/safing/jess/filesig"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
@@ -43,6 +44,42 @@ func (file *File) EqualsVersion(version string) bool {
 // Path returns the absolute filepath of the file.
 func (file *File) Path() string {
 	return file.storagePath
+}
+
+// SigningMetadata returns the metadata to be included in signatures.
+func (file *File) SigningMetadata() map[string]string {
+	return map[string]string{
+		"id":      file.Identifier(),
+		"version": file.Version(),
+	}
+}
+
+// Verify verifies the given file.
+func (file *File) Verify() ([]*filesig.FileData, error) {
+	// Check if verification is configured.
+	if file.resource.VerificationOptions == nil {
+		return nil, ErrVerificationNotConfigured
+	}
+
+	// Verify file.
+	fileData, err := filesig.VerifyFile(
+		file.storagePath,
+		file.storagePath+filesig.Extension,
+		file.SigningMetadata(),
+		file.resource.VerificationOptions.TrustStore,
+	)
+	if err != nil {
+		switch file.resource.VerificationOptions.DiskLoadPolicy {
+		case SignaturePolicyRequire:
+			return nil, err
+		case SignaturePolicyWarn:
+			log.Warningf("%s: failed to verify %s: %s", file.resource.registry.Name, file.storagePath, err)
+		case SignaturePolicyDisable:
+			log.Debugf("%s: failed to verify %s: %s", file.resource.registry.Name, file.storagePath, err)
+		}
+	}
+
+	return fileData, nil
 }
 
 // Blacklist notifies the update system that this file is somehow broken, and should be ignored from now on, until restarted.

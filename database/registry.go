@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -115,7 +114,7 @@ func loadRegistry() error {
 
 	// read file
 	filePath := path.Join(rootStructure.Path, registryFileName)
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -150,7 +149,7 @@ func saveRegistry(lock bool) error {
 	// write file
 	// TODO: write atomically (best effort)
 	filePath := path.Join(rootStructure.Path, registryFileName)
-	return ioutil.WriteFile(filePath, data, 0o0600)
+	return os.WriteFile(filePath, data, 0o0600)
 }
 
 func registryWriter() {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 )
@@ -33,7 +32,7 @@ func LoadFromHTTPResponse(resp *http.Response, t interface{}) (format uint8, err
 
 func loadFromHTTP(body io.Reader, mimeType string, t interface{}) (format uint8, err error) {
 	// Read full body.
-	data, err := ioutil.ReadAll(body)
+	data, err := io.ReadAll(body)
 	if err != nil {
 		return 0, fmt.Errorf("dsd: failed to read http body: %w", err)
 	}
@@ -90,7 +89,7 @@ func DumpToHTTPRequest(r *http.Request, t interface{}, format uint8) error {
 
 	// Set body.
 	r.Header.Set("Content-Type", mimeType)
-	r.Body = ioutil.NopCloser(bytes.NewReader(data))
+	r.Body = io.NopCloser(bytes.NewReader(data))
 
 	return nil
 }

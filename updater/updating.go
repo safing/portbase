@@ -2,15 +2,16 @@ package updater
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/safing/jess/filesig"
+	"github.com/safing/jess/lhash"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/utils"
 )
@@ -37,38 +38,87 @@ func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 	return nil
 }
 
-func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Client, idx Index) error {
-	var err error
-	var data []byte
+func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Client, idx *Index) error {
+	var (
+		// Index.
+		indexErr    error
+		indexData   []byte
+		downloadURL string
 
-	// download new index
+		// Signature.
+		sigErr       error
+		verifiedHash *lhash.LabeledHash
+		sigFileData  []byte
+		verifOpts    = reg.GetVerificationOptions(idx.Path)
+	)
+
+	// Upgrade to v2 index if verification is enabled.
+	downloadIndexPath := idx.Path
+	if verifOpts != nil {
+		downloadIndexPath = strings.TrimSuffix(downloadIndexPath, baseIndexExtension) + v2IndexExtension
+	}
+
+	// Download new index and signature.
 	for tries := 0; tries < 3; tries++ {
-		data, err = reg.fetchData(ctx, client, idx.Path, tries)
-		if err == nil {
-			break
+		// Index and signature need to be fetched together, so that they are
+		// fetched from the same source. One source should always have a matching
+		// index and signature. Backup sources may be behind a little.
+		// If the signature verification fails, another source should be tried.
+
+		// Get index data.
+		indexData, downloadURL, indexErr = reg.fetchData(ctx, client, downloadIndexPath, tries)
+		if indexErr != nil {
+			log.Debugf("%s: failed to fetch index %s: %s", reg.Name, downloadURL, indexErr)
+			continue
 		}
+
+		// Get signature and verify it.
+		if verifOpts != nil {
+			verifiedHash, sigFileData, sigErr = reg.fetchAndVerifySigFile(
+				ctx, client,
+				verifOpts, downloadIndexPath+filesig.Extension, nil,
+				tries,
+			)
+			if sigErr != nil {
+				log.Debugf("%s: failed to verify signature of %s: %s", reg.Name, downloadURL, sigErr)
+				continue
+			}
+
+			// Check if the index matches the verified hash.
+			if verifiedHash.Matches(indexData) {
+				log.Infof("%s: verified signature of %s", reg.Name, downloadURL)
+			} else {
+				sigErr = ErrIndexChecksumMismatch
+				log.Debugf("%s: checksum does not match file from %s", reg.Name, downloadURL)
+				continue
+			}
+		}
+
+		break
 	}
-	if err != nil {
-		return fmt.Errorf("failed to download index %s: %w", idx.Path, err)
+	if indexErr != nil {
+		return fmt.Errorf("failed to fetch index %s: %w", downloadIndexPath, indexErr)
+	}
+	if sigErr != nil {
+		return fmt.Errorf("failed to fetch or verify index %s signature: %w", downloadIndexPath, sigErr)
 	}
 
-	// parse
-	newIndexData := make(map[string]string)
-	err = json.Unmarshal(data, &newIndexData)
+	// Parse the index file.
+	indexFile, err := ParseIndexFile(indexData, idx.Channel, idx.LastRelease)
 	if err != nil {
 		return fmt.Errorf("failed to parse index %s: %w", idx.Path, err)
 	}
 
 	// Add index data to registry.
-	if len(newIndexData) > 0 {
+	if len(indexFile.Releases) > 0 {
 		// Check if all resources are within the indexes' authority.
 		authoritativePath := path.Dir(idx.Path) + "/"
 		if authoritativePath == "./" {
 			// Fix path for indexes at the storage root.
 			authoritativePath = ""
 		}
-		cleanedData := make(map[string]string, len(newIndexData))
-		for key, version := range newIndexData {
+		cleanedData := make(map[string]string, len(indexFile.Releases))
+		for key, version := range indexFile.Releases {
 			if strings.HasPrefix(key, authoritativePath) {
 				cleanedData[key] = version
 			} else {
@@ -85,22 +135,34 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		log.Debugf("%s: index %s is empty", reg.Name, idx.Path)
 	}
 
-	// check if dest dir exists
+	// Check if dest dir exists.
 	indexDir := filepath.FromSlash(path.Dir(idx.Path))
 	err = reg.storageDir.EnsureRelPath(indexDir)
 	if err != nil {
 		log.Warningf("%s: failed to ensure directory for updated index %s: %s", reg.Name, idx.Path, err)
 	}
 
-	// save index
-	indexPath := filepath.FromSlash(idx.Path)
 	// Index files must be readable by portmaster-staert with user permissions in order to load the index.
-	err = ioutil.WriteFile(filepath.Join(reg.storageDir.Path, indexPath), data, 0o0644) //nolint:gosec
+	err = os.WriteFile( //nolint:gosec
+		filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path)),
+		indexData, 0o0644,
+	)
 	if err != nil {
 		log.Warningf("%s: failed to save updated index %s: %s", reg.Name, idx.Path, err)
 	}
 
-	log.Infof("%s: updated index %s with %d entries", reg.Name, idx.Path, len(newIndexData))
+	// Write signature file, if we have one.
+	if len(sigFileData) > 0 {
+		err = os.WriteFile( //nolint:gosec
+			filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path)+filesig.Extension),
+			sigFileData, 0o0644,
+		)
+		if err != nil {
+			log.Warningf("%s: failed to save updated index signature %s: %s", reg.Name, idx.Path+filesig.Extension, err)
+		}
+	}
+
+	log.Infof("%s: updated index %s with %d entries", reg.Name, idx.Path, len(indexFile.Releases))
 	return nil
 }
 
@@ -108,6 +170,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	// create list of downloads
 	var toUpdate []*ResourceVersion
+	var missingSigs []*ResourceVersion
 	reg.RLock()
 	for _, res := range reg.resources {
 		res.Lock()
@@ -119,8 +182,15 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 
 			// add all non-available and eligible versions to update queue
 			for _, rv := range res.Versions {
-				if !rv.Available && rv.CurrentRelease {
+				switch {
+				case !rv.CurrentRelease:
+					// We are not interested in older releases.
+				case !rv.Available:
+					// File is not available.
 					toUpdate = append(toUpdate, rv)
+				case !rv.SigAvailable && res.VerificationOptions != nil:
+					// File signature is not available and verification is enabled.
+					missingSigs = append(missingSigs, rv)
 				}
 			}
 		}
@@ -130,7 +200,7 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	reg.RUnlock()
 
 	// nothing to update
-	if len(toUpdate) == 0 {
+	if len(toUpdate) == 0 && len(missingSigs) == 0 {
 		log.Infof("%s: everything up to date", reg.Name)
 		return nil
 	}
@@ -141,10 +211,10 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	}
 
 	// download updates
-	log.Infof("%s: starting to download %d updates parallel", reg.Name, len(toUpdate))
+	log.Infof("%s: starting to download %d updates in parallel", reg.Name, len(toUpdate)+len(missingSigs))
 	var wg sync.WaitGroup
 
-	wg.Add(len(toUpdate))
+	wg.Add(len(toUpdate) + len(missingSigs))
 	client := &http.Client{}
 
 	for idx := range toUpdate {
@@ -169,6 +239,30 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 				log.Warningf("%s: failed to download %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
 			}
 		}(toUpdate[idx])
+	}
+
+	for idx := range missingSigs {
+		go func(rv *ResourceVersion) {
+			var err error
+
+			defer wg.Done()
+			defer func() {
+				if x := recover(); x != nil {
+					log.Errorf("%s: %s: captured panic: %s", reg.Name, rv.resource.Identifier, x)
+				}
+			}()
+
+			for tries := 0; tries < 3; tries++ {
+				err = reg.fetchMissingSig(ctx, client, rv, tries)
+				if err == nil {
+					rv.SigAvailable = true
+					return
+				}
+			}
+			if err != nil {
+				log.Warningf("%s: failed to download missing sig of %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			}
+		}(missingSigs[idx])
 	}
 
 	wg.Wait()

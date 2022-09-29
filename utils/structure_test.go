@@ -4,7 +4,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +22,7 @@ func ExampleDirStructure() {
 	// /repo/b/d/f/g/h [707]
 	// /secret [700]
 
-	basePath, err := ioutil.TempDir("", "")
+	basePath, err := os.MkdirTemp("", "")
 	if err != nil {
 		fmt.Println(err)
 		return

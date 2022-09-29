@@ -1,7 +1,7 @@
 /*
 Package notifications provides a notification system.
 
-Notification Lifecycle
+# Notification Lifecycle
 
 1. Create Notification with an ID and Message.
 2. Set possible actions and save it.
@@ -9,19 +9,18 @@ Notification Lifecycle
 
 Example
 
-    // create notification
-    n := notifications.New("update-available", "A new update is available. Restart to upgrade.")
-    // set actions and save
-    n.AddAction("later", "Later").AddAction("restart", "Restart now!").Save()
+	// create notification
+	n := notifications.New("update-available", "A new update is available. Restart to upgrade.")
+	// set actions and save
+	n.AddAction("later", "Later").AddAction("restart", "Restart now!").Save()
 
-    // wait for user action
-    selectedAction := <-n.Response()
-    switch selectedAction {
-    case "later":
-      log.Infof("user wants to upgrade later.")
-    case "restart":
-      log.Infof("user wants to restart now.")
-    }
-
+	// wait for user action
+	selectedAction := <-n.Response()
+	switch selectedAction {
+	case "later":
+	  log.Infof("user wants to upgrade later.")
+	case "restart":
+	  log.Infof("user wants to restart now.")
+	}
 */
 package notifications

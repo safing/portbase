@@ -55,14 +55,13 @@ func (m *Module) EnabledAsDependency() bool {
 //
 // Example:
 //
-// 		EnableModuleManagement(func(m *modules.Module) {
-//			// some module has changed ...
-//			// do what ever you like
+//	EnableModuleManagement(func(m *modules.Module) {
+//		// some module has changed ...
+//		// do what ever you like
 //
-//			// Run the built-in module management
-//			modules.ManageModules()
-//		})
-//
+//		// Run the built-in module management
+//		modules.ManageModules()
+//	})
 func EnableModuleManagement(changeNotifyFn func(*Module)) bool {
 	if moduleMgmtEnabled.SetToIf(false, true) {
 		modulesChangeNotifyFn = changeNotifyFn

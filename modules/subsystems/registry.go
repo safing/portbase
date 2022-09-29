@@ -125,11 +125,11 @@ func (mng *Manager) Get(keyOrPrefix string) ([]record.Record, error) {
 // you. Pass a nil option to force enable.
 //
 // TODO(ppacher): IMHO the subsystem package is not responsible of registering
-//                the "toggle option". This would also remove runtime
-//                dependency to the config package. Users should either pass
-//                the BoolOptionFunc and the expertise/release level directly
-//                or just pass the configuration key so those information can
-//                be looked up by the registry.
+// the "toggle option". This would also remove runtime
+// dependency to the config package. Users should either pass
+// the BoolOptionFunc and the expertise/release level directly
+// or just pass the configuration key so those information can
+// be looked up by the registry.
 func (mng *Manager) Register(id, name, description string, module *modules.Module, configKeySpace string, option *config.Option) error {
 	mng.l.Lock()
 	defer mng.l.Unlock()

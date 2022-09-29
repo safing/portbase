@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"sort"
 	"strconv"
@@ -501,7 +500,7 @@ func readBody(w http.ResponseWriter, r *http.Request) (inputData []byte, ok bool
 	}
 
 	// Read and close body.
-	inputData, err := ioutil.ReadAll(r.Body)
+	inputData, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "failed to read body"+err.Error(), http.StatusInternalServerError)
 		return nil, false

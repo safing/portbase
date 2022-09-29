@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"runtime"
 )
@@ -40,4 +42,10 @@ func EnsureDirectory(path string, perm os.FileMode) error {
 	}
 	// other error opening path
 	return fmt.Errorf("failed to access %s: %w", path, err)
+}
+
+// PathExists returns whether the given path (file or dir) exists.
+func PathExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil || errors.Is(err, fs.ErrExist)
 }

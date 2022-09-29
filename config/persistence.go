@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -34,7 +34,7 @@ func loadConfig(requireValidConfig bool) error {
 	}
 
 	// read config file
-	data, err := ioutil.ReadFile(configFilePath)
+	data, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func saveConfig() error {
 	}
 
 	// write file
-	return ioutil.WriteFile(configFilePath, data, 0o0600)
+	return os.WriteFile(configFilePath, data, 0o0600)
 }
 
 // JSONToMap parses and flattens a hierarchical json object.

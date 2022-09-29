@@ -4,7 +4,6 @@ package renameio
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +12,7 @@ import (
 func TestWriteFile(t *testing.T) {
 	t.Parallel()
 
-	d, err := ioutil.TempDir("", "test-renameio-testwritefile")
+	d, err := os.MkdirTemp("", "test-renameio-testwritefile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +28,7 @@ func TestWriteFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gotData, err := ioutil.ReadFile(filename)
+	gotData, err := os.ReadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,6 +14,7 @@ type snippet struct {
 }
 
 // ParseQuery parses a plaintext query. Special characters (that must be escaped with a '\') are: `\()` and any whitespaces.
+//
 //nolint:gocognit
 func ParseQuery(query string) (*Query, error) {
 	snippets, err := extractSnippets(query)

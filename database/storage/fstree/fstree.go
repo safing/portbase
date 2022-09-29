@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -88,7 +87,7 @@ func (fst *FSTree) Get(key string) (record.Record, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(dstPath)
+	data, err := os.ReadFile(dstPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, storage.ErrNotFound
@@ -210,7 +209,7 @@ func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, 
 		}
 
 		// read file
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil
