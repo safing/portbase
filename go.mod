@@ -12,7 +12,7 @@ require (
 	github.com/dgraph-io/badger v1.6.2
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0
-	github.com/gofrs/uuid v4.2.0+incompatible
+	github.com/gofrs/uuid v4.3.0+incompatible
 	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0
@@ -21,6 +21,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
 	github.com/mitchellh/copystructure v1.2.0
+	github.com/safing/jess v0.3.0 // indirect
 	github.com/seehuhn/fortuna v1.0.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/stretchr/testify v1.8.0
@@ -34,7 +35,7 @@ require (
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
