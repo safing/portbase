@@ -3,8 +3,8 @@ package updater
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -143,7 +143,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 	}
 
 	// Index files must be readable by portmaster-staert with user permissions in order to load the index.
-	err = ioutil.WriteFile( //nolint:gosec
+	err = os.WriteFile( //nolint:gosec
 		filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path)),
 		indexData, 0o0644,
 	)
@@ -153,7 +153,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 
 	// Write signature file, if we have one.
 	if len(sigFileData) > 0 {
-		err = ioutil.WriteFile( //nolint:gosec
+		err = os.WriteFile( //nolint:gosec
 			filepath.Join(reg.storageDir.Path, filepath.FromSlash(idx.Path)+filesig.Extension),
 			sigFileData, 0o0644,
 		)

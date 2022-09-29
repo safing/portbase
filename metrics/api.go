@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -111,7 +110,7 @@ func writeMetricsTo(ctx context.Context, url string) error {
 	}
 
 	// Get and return error.
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	return fmt.Errorf(
 		"got %s while writing metrics to %s: %s",
 		resp.Status,

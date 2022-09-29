@@ -1,7 +1,6 @@
 package renameio
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -31,7 +30,7 @@ func tempDir(dir, dest string) string {
 	// the TMPDIR environment variable.
 	tmpdir := os.TempDir()
 
-	testsrc, err := ioutil.TempFile(tmpdir, "."+filepath.Base(dest))
+	testsrc, err := os.CreateTemp(tmpdir, "."+filepath.Base(dest))
 	if err != nil {
 		return fallback
 	}
@@ -43,7 +42,7 @@ func tempDir(dir, dest string) string {
 	}()
 	_ = testsrc.Close()
 
-	testdest, err := ioutil.TempFile(filepath.Dir(dest), "."+filepath.Base(dest))
+	testdest, err := os.CreateTemp(filepath.Dir(dest), "."+filepath.Base(dest))
 	if err != nil {
 		return fallback
 	}
@@ -114,7 +113,7 @@ func (t *PendingFile) CloseAtomicallyReplace() error {
 	return nil
 }
 
-// TempFile wraps ioutil.TempFile for the use case of atomically creating or
+// TempFile wraps os.CreateTemp for the use case of atomically creating or
 // replacing the destination file at path.
 //
 // If dir is the empty string, TempDir(filepath.Base(path)) is used. If you are
@@ -125,7 +124,7 @@ func (t *PendingFile) CloseAtomicallyReplace() error {
 // The file's permissions will be 0600 by default. You can change these by
 // explicitly calling Chmod on the returned PendingFile.
 func TempFile(dir, path string) (*PendingFile, error) {
-	f, err := ioutil.TempFile(tempDir(dir, path), "."+filepath.Base(path))
+	f, err := os.CreateTemp(tempDir(dir, path), "."+filepath.Base(path))
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +141,9 @@ func Symlink(oldname, newname string) error {
 		return err
 	}
 
-	// We need to use ioutil.TempDir, as we cannot overwrite a ioutil.TempFile,
+	// We need to use os.MkdirTemp, as we cannot overwrite a os.CreateTemp,
 	// and removing+symlinking creates a TOCTOU race.
-	d, err := ioutil.TempDir(filepath.Dir(newname), "."+filepath.Base(newname))
+	d, err := os.MkdirTemp(filepath.Dir(newname), "."+filepath.Base(newname))
 	if err != nil {
 		return err
 	}

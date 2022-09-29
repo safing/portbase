@@ -1,7 +1,6 @@
 package updater
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -12,7 +11,7 @@ var registry *ResourceRegistry
 
 func TestMain(m *testing.M) {
 	// setup
-	tmpDir, err := ioutil.TempDir("", "ci-portmaster-")
+	tmpDir, err := os.MkdirTemp("", "ci-portmaster-")
 	if err != nil {
 		panic(err)
 	}

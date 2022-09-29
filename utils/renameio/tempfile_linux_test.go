@@ -3,7 +3,6 @@
 package renameio
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -23,7 +22,7 @@ func TestTempDir(t *testing.T) {
 		})
 	}
 
-	mount1, err := ioutil.TempDir("", "test-renameio-testtempdir1")
+	mount1, err := os.MkdirTemp("", "test-renameio-testtempdir1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +30,7 @@ func TestTempDir(t *testing.T) {
 		_ = os.RemoveAll(mount1)
 	})
 
-	mount2, err := ioutil.TempDir("", "test-renameio-testtempdir2")
+	mount2, err := os.MkdirTemp("", "test-renameio-testtempdir2")
 	if err != nil {
 		t.Fatal(err)
 	}

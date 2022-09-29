@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -19,7 +18,7 @@ func TestMain(m *testing.M) {
 	module.Enable()
 
 	// tmp dir for data root (db & config)
-	tmpDir, err := ioutil.TempDir("", "portbase-testing-")
+	tmpDir, err := os.MkdirTemp("", "portbase-testing-")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create tmp dir: %s\n", err)
 		os.Exit(1)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -119,7 +118,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 	// Write signature file, if we have one and if verification succeeded.
 	if len(sigFileData) > 0 && hasher != nil {
 		sigFilePath := rv.storagePath() + filesig.Extension
-		err := ioutil.WriteFile(sigFilePath, sigFileData, 0o0644) //nolint:gosec
+		err := os.WriteFile(sigFilePath, sigFileData, 0o0644) //nolint:gosec
 		if err != nil {
 			switch rv.resource.VerificationOptions.DownloadPolicy {
 			case SignaturePolicyRequire:
@@ -212,7 +211,7 @@ func (reg *ResourceRegistry) fetchMissingSig(ctx context.Context, client *http.C
 	}
 
 	// Write signature file.
-	err = ioutil.WriteFile(rv.storageSigPath(), sigFileData, 0o0644) //nolint:gosec
+	err = os.WriteFile(rv.storageSigPath(), sigFileData, 0o0644) //nolint:gosec
 	if err != nil {
 		switch rv.resource.VerificationOptions.DownloadPolicy {
 		case SignaturePolicyRequire:

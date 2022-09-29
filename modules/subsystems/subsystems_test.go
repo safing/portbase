@@ -1,7 +1,6 @@
 package subsystems
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -14,7 +13,7 @@ import (
 
 func TestSubsystems(t *testing.T) { //nolint:paralleltest // Too much interference expected.
 	// tmp dir for data root (db & config)
-	tmpDir, err := ioutil.TempDir("", "portbase-testing-")
+	tmpDir, err := os.MkdirTemp("", "portbase-testing-")
 	// initialize data dir
 	if err == nil {
 		err = dataroot.Initialize(tmpDir, 0o0755)

@@ -4,7 +4,6 @@ package renameio
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +12,7 @@ import (
 func TestSymlink(t *testing.T) {
 	t.Parallel()
 
-	d, err := ioutil.TempDir("", "test-renameio-testsymlink")
+	d, err := os.MkdirTemp("", "test-renameio-testsymlink")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +21,7 @@ func TestSymlink(t *testing.T) {
 	})
 
 	want := []byte("Hello World")
-	if err := ioutil.WriteFile(filepath.Join(d, "hello.txt"), want, 0o0600); err != nil {
+	if err := os.WriteFile(filepath.Join(d, "hello.txt"), want, 0o0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -31,7 +30,7 @@ func TestSymlink(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got, err := ioutil.ReadFile(filepath.Join(d, "hi.txt"))
+		got, err := os.ReadFile(filepath.Join(d, "hi.txt"))
 		if err != nil {
 			t.Fatal(err)
 		}

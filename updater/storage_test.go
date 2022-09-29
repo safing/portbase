@@ -13,7 +13,7 @@ func testLoadLatestScope(t *testing.T, basePath, filePath, expectedIdentifier, e
 	}
 
 	// touch file
-	err = ioutil.WriteFile(fullPath, []byte{}, 0644)
+	err = os.WriteFile(fullPath, []byte{}, 0644)
 	if err != nil {
 		t.Fatalf("could not create test file: %s\n", err)
 		return
@@ -45,7 +45,7 @@ func TestLoadLatestScope(t *testing.T) {
 	updatesLock.Lock()
 	defer updatesLock.Unlock()
 
-	tmpDir, err := ioutil.TempDir("", "testing_")
+	tmpDir, err := os.MkdirTemp("", "testing_")
 	if err != nil {
 		t.Fatalf("could not create test dir: %s\n", err)
 		return

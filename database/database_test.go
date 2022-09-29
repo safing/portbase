@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -22,7 +21,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	testDir, err := ioutil.TempDir("", "portbase-database-testing-")
+	testDir, err := os.MkdirTemp("", "portbase-database-testing-")
 	if err != nil {
 		panic(err)
 	}

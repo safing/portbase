@@ -2,7 +2,6 @@ package bbolt
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"sync"
@@ -43,7 +42,7 @@ type TestRecord struct { //nolint:maligned
 func TestBBolt(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "testing-")
+	testDir, err := os.MkdirTemp("", "testing-")
 	if err != nil {
 		t.Fatal(err)
 	}
