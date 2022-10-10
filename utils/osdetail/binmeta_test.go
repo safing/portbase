@@ -21,6 +21,7 @@ func TestGenerateBinaryNameFromPath(t *testing.T) {
 	assert.Equal(t, "Browser Broker", GenerateBinaryNameFromPath("browser_broker.exe"))
 	assert.Equal(t, "Virtual Box VM", GenerateBinaryNameFromPath("VirtualBoxVM"))
 	assert.Equal(t, "Io Elementary Appcenter", GenerateBinaryNameFromPath("io.elementary.appcenter"))
+	assert.Equal(t, "Microsoft Windows Store", GenerateBinaryNameFromPath("Microsoft.WindowsStore"))
 }
 
 func TestCleanFileDescription(t *testing.T) {
