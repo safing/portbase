@@ -2,6 +2,7 @@ package updater
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -461,9 +462,21 @@ boundarySearch:
 		storagePath := rv.storagePath()
 		err := os.Remove(storagePath)
 		if err != nil {
-			log.Warningf("%s: failed to purge resource %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			if !errors.Is(err, fs.ErrNotExist) {
+				log.Warningf("%s: failed to purge resource %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			}
 		} else {
 			log.Tracef("%s: purged resource %s v%s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber)
+		}
+
+		// Remove resource signature file.
+		err = os.Remove(rv.storageSigPath())
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				log.Warningf("%s: failed to purge resource signature %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)
+			}
+		} else {
+			log.Tracef("%s: purged resource signature %s v%s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber)
 		}
 
 		// Remove unpacked version of resource.
