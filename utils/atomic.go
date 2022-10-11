@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 
 	"github.com/safing/portbase/utils/renameio"
@@ -94,7 +96,7 @@ func ReplaceFileAtomic(dest string, src string, opts *AtomicFileOptions) error {
 		stat, err := os.Stat(dest)
 		if err == nil {
 			opts.Mode = stat.Mode()
-		} else if !os.IsNotExist(err) {
+		} else if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 	}

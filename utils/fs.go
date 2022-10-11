@@ -33,7 +33,7 @@ func EnsureDirectory(path string, perm os.FileMode) error {
 		}
 	}
 	// file does not exist (or has been deleted)
-	if err == nil || os.IsNotExist(err) {
+	if err == nil || errors.Is(err, fs.ErrNotExist) {
 		err = os.Mkdir(path, perm)
 		if err != nil {
 			return fmt.Errorf("could not create dir %s: %w", path, err)

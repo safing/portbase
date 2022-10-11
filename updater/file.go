@@ -1,7 +1,9 @@
 package updater
 
 import (
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -121,7 +123,7 @@ func (file *File) Unpack(suffix string, unpacker Unpacker) (string, error) {
 		return path, nil
 	}
 
-	if !os.IsNotExist(err) {
+	if !errors.Is(err, fs.ErrNotExist) {
 		return "", err
 	}
 

@@ -2,7 +2,7 @@ package renameio
 
 import "os"
 
-// WriteFile mirrors ioutil.WriteFile, replacing an existing file with the same
+// WriteFile mirrors os.WriteFile, replacing an existing file with the same
 // name atomically.
 func WriteFile(filename string, data []byte, perm os.FileMode) error {
 	t, err := TempFile("", filename)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -88,7 +89,7 @@ func (res *Resource) unpackZipArchive() error {
 	// Check status of destination.
 	dstStat, err := os.Stat(destDir)
 	switch {
-	case os.IsNotExist(err):
+	case errors.Is(err, fs.ErrNotExist):
 		// The destination does not exist, continue with unpacking.
 	case err != nil:
 		return fmt.Errorf("cannot access destination for unpacking: %w", err)
