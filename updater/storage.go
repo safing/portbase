@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -102,7 +103,7 @@ func (reg *ResourceRegistry) LoadIndexes(ctx context.Context) error {
 		} else if reg.Online {
 			// try to download the index file if a local disk version
 			// does not exist or we don't have permission to read it.
-			if os.IsNotExist(err) || os.IsPermission(err) {
+			if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission) {
 				err = reg.downloadIndex(ctx, client, idx)
 			}
 		}
