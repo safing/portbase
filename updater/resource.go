@@ -489,7 +489,7 @@ boundarySearch:
 
 		// Remove if it exists, or an error occurs on access.
 		_, err = os.Stat(unpackedPath)
-		if err == nil || !os.IsNotExist(err) {
+		if err == nil || !errors.Is(err, fs.ErrNotExist) {
 			err = os.Remove(unpackedPath)
 			if err != nil {
 				log.Warningf("%s: failed to purge unpacked resource %s v%s: %s", res.registry.Name, rv.resource.Identifier, rv.VersionNumber, err)

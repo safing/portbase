@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -46,7 +47,7 @@ func NewFSTree(name, location string) (storage.Interface, error) {
 
 	file, err := os.Stat(basePath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			err = os.MkdirAll(basePath, defaultDirMode)
 			if err != nil {
 				return nil, fmt.Errorf("fstree: failed to create directory %s: %w", basePath, err)
@@ -89,7 +90,7 @@ func (fst *FSTree) Get(key string) (record.Record, error) {
 
 	data, err := os.ReadFile(dstPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, storage.ErrNotFound
 		}
 		return nil, fmt.Errorf("fstree: failed to read file %s: %w", dstPath, err)
@@ -176,7 +177,7 @@ func (fst *FSTree) Query(q *query.Query, local, internal bool) (*iterator.Iterat
 		walkRoot = walkPrefix
 	case err == nil:
 		walkRoot = filepath.Dir(walkPrefix)
-	case os.IsNotExist(err):
+	case errors.Is(err, fs.ErrNotExist):
 		walkRoot = filepath.Dir(walkPrefix)
 	default: // err != nil
 		return nil, fmt.Errorf("fstree: could not stat query root %s: %w", walkPrefix, err)
@@ -211,7 +212,7 @@ func (fst *FSTree) queryExecutor(walkRoot string, queryIter *iterator.Iterator, 
 		// read file
 		data, err := os.ReadFile(path)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
 			return fmt.Errorf("fstree: failed to read file %s: %w", path, err)
@@ -274,7 +275,7 @@ func (fst *FSTree) Shutdown() error {
 	return nil
 }
 
-// writeFile mirrors ioutil.WriteFile, replacing an existing file with the same
+// writeFile mirrors os.WriteFile, replacing an existing file with the same
 // name atomically. This is not atomic on Windows, but still an improvement.
 // TODO: Replace with github.com/google/renamio.WriteFile as soon as it is fixed on Windows.
 // TODO: This has become a wont-fix. Explore other options.

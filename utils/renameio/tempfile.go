@@ -1,6 +1,8 @@
 package renameio
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -137,7 +139,7 @@ func TempFile(dir, path string) (*PendingFile, error) {
 func Symlink(oldname, newname string) error {
 	// Fast path: if newname does not exist yet, we can skip the whole dance
 	// below.
-	if err := os.Symlink(oldname, newname); err == nil || !os.IsExist(err) {
+	if err := os.Symlink(oldname, newname); err == nil || !errors.Is(err, fs.ErrExist) {
 		return err
 	}
 
