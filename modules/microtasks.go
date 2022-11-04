@@ -30,7 +30,8 @@ const (
 func init() {
 	var microTasksVal int32
 	microTasks = &microTasksVal
-	var microTasksThreshholdVal int32
+
+	microTasksThreshholdVal := int32(runtime.GOMAXPROCS(0) * 2)
 	microTasksThreshhold = &microTasksThreshholdVal
 }
 
