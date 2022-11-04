@@ -3,9 +3,21 @@ package api
 import (
 	"errors"
 	"fmt"
+
+	"github.com/safing/portbase/modules"
 )
 
 func registerModulesEndpoints() error {
+	if err := RegisterEndpoint(Endpoint{
+		Path:        "modules/status",
+		Read:        PermitUser,
+		StructFunc:  getStatusfunc,
+		Name:        "Get Module Status",
+		Description: "Returns status information of all modules.",
+	}); err != nil {
+		return err
+	}
+
 	if err := RegisterEndpoint(Endpoint{
 		Path:        "modules/{moduleName:.+}/trigger/{eventName:.+}",
 		Write:       PermitSelf,
@@ -17,6 +29,14 @@ func registerModulesEndpoints() error {
 	}
 
 	return nil
+}
+
+func getStatusfunc(ar *Request) (i interface{}, err error) {
+	status := modules.GetStatus()
+	if status == nil {
+		return nil, errors.New("modules not yet initialized")
+	}
+	return status, nil
 }
 
 func triggerEvent(ar *Request) (msg string, err error) {
