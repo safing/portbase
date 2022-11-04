@@ -109,7 +109,7 @@ var (
 	pkgLevels       = make(map[string]Severity)
 	pkgLevelsLock   sync.Mutex
 
-	logsWaiting     = make(chan struct{}, 4)
+	logsWaiting     = make(chan struct{}, 1)
 	logsWaitingFlag = abool.NewBool(false)
 
 	shutdownFlag      = abool.NewBool(false)

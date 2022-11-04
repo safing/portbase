@@ -93,7 +93,10 @@ func log(level Severity, msg string, tracer *ContextTracer) {
 
 	// wake up writer if necessary
 	if logsWaitingFlag.SetToIf(false, true) {
-		logsWaiting <- struct{}{}
+		select {
+		case logsWaiting <- struct{}{}:
+		default:
+		}
 	}
 }
 
