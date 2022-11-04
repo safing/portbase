@@ -388,18 +388,18 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if eMethod != e.ReadMethod {
 			log.Tracer(r.Context()).Warningf(
 				"api: method %q does not match required read method %q%s",
-				" - this will be an error and abort the request in the future",
 				r.Method,
 				e.ReadMethod,
+				" - this will be an error and abort the request in the future",
 			)
 		}
 	} else {
 		if eMethod != e.WriteMethod {
 			log.Tracer(r.Context()).Warningf(
 				"api: method %q does not match required write method %q%s",
-				" - this will be an error and abort the request in the future",
 				r.Method,
-				e.ReadMethod,
+				e.WriteMethod,
+				" - this will be an error and abort the request in the future",
 			)
 		}
 	}
