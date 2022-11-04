@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+
+	"github.com/safing/portbase/log"
 )
 
 type valueCache struct {
@@ -64,6 +66,18 @@ func isAllowedPossibleValue(opt *Option, value interface{}) error {
 	return errors.New("value is not allowed")
 }
 
+// migrateValue runs all value migrations.
+func migrateValue(option *Option, value any) any {
+	for _, migration := range option.Migrations {
+		newValue := migration(option, value)
+		if newValue != value {
+			log.Debugf("config: migrated %s value from %v to %v", option.Key, value, newValue)
+		}
+		value = newValue
+	}
+	return value
+}
+
 // validateValue ensures that value matches the expected type of option.
 // It does not create a copy of the value!
 func validateValue(option *Option, value interface{}) (*valueCache, *ValidationError) { //nolint:gocyclo
@@ -75,8 +89,6 @@ func validateValue(option *Option, value interface{}) (*valueCache, *ValidationE
 			}
 		}
 	}
-
-	reflect.TypeOf(value).ConvertibleTo(reflect.TypeOf(""))
 
 	var validated *valueCache
 	switch v := value.(type) {

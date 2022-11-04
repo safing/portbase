@@ -56,6 +56,7 @@ func ValidateConfig(newValues map[string]interface{}) (validationErrors []*Valid
 				option.Lock()
 				defer option.Unlock()
 
+				newValue = migrateValue(option, newValue)
 				_, err := validateValue(option, newValue)
 				if err != nil {
 					validationErrors = append(validationErrors, err)
@@ -88,6 +89,7 @@ func ReplaceConfig(newValues map[string]interface{}) (validationErrors []*Valida
 
 			option.activeValue = nil
 			if ok {
+				newValue = migrateValue(option, newValue)
 				valueCache, err := validateValue(option, newValue)
 				if err == nil {
 					option.activeValue = valueCache
@@ -125,6 +127,7 @@ func ReplaceDefaultConfig(newValues map[string]interface{}) (validationErrors []
 
 			option.activeDefaultValue = nil
 			if ok {
+				newValue = migrateValue(option, newValue)
 				valueCache, err := validateValue(option, newValue)
 				if err == nil {
 					option.activeDefaultValue = valueCache
@@ -160,6 +163,7 @@ func setConfigOption(key string, value any, push bool) (err error) {
 	if value == nil {
 		option.activeValue = nil
 	} else {
+		value = migrateValue(option, value)
 		valueCache, vErr := validateValue(option, value)
 		if vErr == nil {
 			option.activeValue = valueCache
@@ -201,6 +205,7 @@ func setDefaultConfigOption(key string, value interface{}, push bool) (err error
 	if value == nil {
 		option.activeDefaultValue = nil
 	} else {
+		value = migrateValue(option, value)
 		valueCache, vErr := validateValue(option, value)
 		if vErr == nil {
 			option.activeDefaultValue = valueCache
