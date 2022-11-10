@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/tevino/abool"
 
@@ -36,7 +35,6 @@ func Start() error {
 	defer mgmtLock.Unlock()
 
 	// start microtask scheduler
-	SetMaxConcurrentMicroTasks(runtime.GOMAXPROCS(0))
 	go microTaskScheduler()
 
 	// inter-link modules
