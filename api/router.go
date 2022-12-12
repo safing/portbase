@@ -258,6 +258,10 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	// Format panics in handler.
 	defer func() {
 		if panicValue := recover(); panicValue != nil {
+			// Report failure via module system.
+			me := module.NewPanicError("api request", "custom", panicValue)
+			me.Report()
+			// Respond with a server error.
 			if devMode() {
 				http.Error(
 					lrw,

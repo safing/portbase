@@ -103,6 +103,10 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *DatabaseAPI) handler(context.Context) error {
+	defer func() {
+		_ = api.shutdown(nil)
+	}()
+
 	// 123|get|<key>
 	//    123|ok|<key>|<data>
 	//    123|error|<message>
@@ -206,6 +210,10 @@ func (api *DatabaseAPI) handler(context.Context) error {
 }
 
 func (api *DatabaseAPI) writer(ctx context.Context) error {
+	defer func() {
+		_ = api.shutdown(nil)
+	}()
+
 	var data []byte
 	var err error
 
@@ -214,12 +222,12 @@ func (api *DatabaseAPI) writer(ctx context.Context) error {
 		// prioritize direct writes
 		case data = <-api.sendQueue:
 			if len(data) == 0 {
-				return api.shutdown(nil)
+				return nil
 			}
 		case <-ctx.Done():
-			return api.shutdown(nil)
+			return nil
 		case <-api.shutdownSignal:
-			return api.shutdown(nil)
+			return nil
 		}
 
 		// log.Tracef("api: sending %s", string(*msg))
