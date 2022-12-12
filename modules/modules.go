@@ -304,6 +304,9 @@ func (m *Module) stopAllTasks(reports chan *report, stopComplete chan struct{}) 
 	m.Unlock()
 	m.notifyOfChange()
 
+	// Resolve any errors still on the module.
+	m.Resolve("")
+
 	// send report
 	reports <- &report{
 		module: m,
