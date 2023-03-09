@@ -55,6 +55,10 @@ type Resource struct {
 
 	// VerificationOptions holds the verification options for this resource.
 	VerificationOptions *VerificationOptions
+
+	// Index holds a reference to the index this resource was last defined in.
+	// Will be nil if resource was only found on disk.
+	Index *Index
 }
 
 // ResourceVersion represents a single version of a resource.

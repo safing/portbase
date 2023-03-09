@@ -52,6 +52,10 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 		return nil, fmt.Errorf("could not prepare tmp directory for download: %w", err)
 	}
 
+	// Start registry operation.
+	reg.state.StartOperation(StateFetching)
+	defer reg.state.EndOperation()
+
 	// download file
 	log.Tracef("%s: starting download of %s", reg.Name, file.versionedPath)
 	client := &http.Client{}
@@ -68,4 +72,20 @@ func (reg *ResourceRegistry) GetFile(identifier string) (*File, error) {
 	}
 	log.Warningf("%s: failed to download %s: %s", reg.Name, file.versionedPath, err)
 	return nil, err
+}
+
+// GetVersion returns the selected version of the given identifier.
+// The returned resource version may not be modified.
+func (reg *ResourceRegistry) GetVersion(identifier string) (*ResourceVersion, error) {
+	reg.RLock()
+	res, ok := reg.resources[identifier]
+	reg.RUnlock()
+	if !ok {
+		return nil, ErrNotFound
+	}
+
+	res.Lock()
+	defer res.Unlock()
+
+	return res.SelectedVersion, nil
 }
