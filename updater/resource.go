@@ -93,7 +93,7 @@ func (rv *ResourceVersion) String() string {
 	return rv.VersionNumber
 }
 
-// SemVer returns the semantiv version of the resource.
+// SemVer returns the semantic version of the resource.
 func (rv *ResourceVersion) SemVer() *semver.Version {
 	return rv.semVer
 }

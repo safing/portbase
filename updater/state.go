@@ -13,7 +13,7 @@ const (
 	StateFetching    = "fetching"    // Fetching a single file.
 )
 
-// RegistryState describtes the registry state.
+// RegistryState describes the registry state.
 type RegistryState struct {
 	sync.Mutex
 	reg *ResourceRegistry
@@ -58,7 +58,7 @@ type UpdateState struct {
 	LastDownloadAt *time.Time
 	// LastDownloadError holds the error of the last download.
 	LastDownloadError error
-	// LastDownload holds the resources that we downloaded the last time udpates
+	// LastDownload holds the resources that we downloaded the last time updates
 	// were downloaded.
 	LastDownload []string
 
@@ -145,8 +145,18 @@ func (s *RegistryState) ReportDownloads(downloaded []string, failed error) {
 	s.Updates.LastDownloadError = failed
 	s.Updates.LastDownload = downloaded
 
-	// Reset pending downloads, as they have now been downloaded.
-	s.Updates.PendingDownload = nil
+	// Remote downloaded resources from the pending list.
+	var newPendingDownload []string
+outer:
+	for _, pend := range s.Updates.PendingDownload {
+		for _, down := range downloaded {
+			if pend == down {
+				continue outer
+			}
+		}
+		newPendingDownload = append(newPendingDownload, pend)
+	}
+	s.Updates.PendingDownload = newPendingDownload
 
 	if failed == nil {
 		s.Updates.LastSuccessAt = &now
