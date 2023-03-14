@@ -145,7 +145,7 @@ func (s *RegistryState) ReportDownloads(downloaded []string, failed error) {
 	s.Updates.LastDownloadError = failed
 	s.Updates.LastDownload = downloaded
 
-	// Remote downloaded resources from the pending list.
+	// Remove downloaded resources from the pending list.
 	var newPendingDownload []string
 outer:
 	for _, pend := range s.Updates.PendingDownload {
