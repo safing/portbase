@@ -1,6 +1,6 @@
 module github.com/safing/portbase
 
-go 1.15
+go 1.19
 
 require (
 	github.com/VictoriaMetrics/metrics v1.23.1

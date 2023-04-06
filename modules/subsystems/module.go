@@ -64,7 +64,7 @@ func prep() error {
 	}
 
 	// We need to listen for configuration changes so we can
-	// start/stop dependend modules in case a subsystem is
+	// start/stop depended modules in case a subsystem is
 	// (de-)activated.
 	if err := module.RegisterEventHook(
 		"config",

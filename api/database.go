@@ -290,7 +290,7 @@ func (api *DatabaseAPI) handleGet(opID []byte, key string) {
 
 	r, err := api.db.Get(key)
 	if err == nil {
-		data, err = marshalRecord(r, true)
+		data, err = MarshalRecord(r, true)
 	}
 	if err != nil {
 		api.send(opID, dbMsgTypeError, err.Error(), nil)
@@ -348,7 +348,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 			// process query feed
 			if r != nil {
 				// process record
-				data, err := marshalRecord(r, true)
+				data, err := MarshalRecord(r, true)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 					continue
@@ -425,7 +425,7 @@ func (api *DatabaseAPI) processSub(opID []byte, sub *database.Subscription) {
 			// process sub feed
 			if r != nil {
 				// process record
-				data, err := marshalRecord(r, true)
+				data, err := MarshalRecord(r, true)
 				if err != nil {
 					api.send(opID, dbMsgTypeWarning, err.Error(), nil)
 					continue
@@ -629,9 +629,9 @@ func (api *DatabaseAPI) handleDelete(opID []byte, key string) {
 	api.send(opID, dbMsgTypeSuccess, emptyString, nil)
 }
 
-// marsharlRecords locks and marshals the given record, additionally adding
+// MarshalRecords locks and marshals the given record, additionally adding
 // metadata and returning it as json.
-func marshalRecord(r record.Record, withDSDIdentifier bool) ([]byte, error) {
+func MarshalRecord(r record.Record, withDSDIdentifier bool) ([]byte, error) {
 	r.Lock()
 	defer r.Unlock()
 

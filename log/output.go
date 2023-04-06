@@ -17,10 +17,10 @@ type (
 
 	// AdapterFunc is a convenience type for implementing
 	// Adapter.
-	AdapterFunc func(msg Message, duplciates uint64)
+	AdapterFunc func(msg Message, duplicates uint64)
 
 	// FormatFunc formats msg into a string.
-	FormatFunc func(msg Message, duplciates uint64) string
+	FormatFunc func(msg Message, duplicates uint64) string
 
 	// SimpleFileAdapter implements Adapter and writes all
 	// messages to File.

@@ -27,6 +27,9 @@ type Index struct {
 	// not.
 	PreRelease bool
 
+	// AutoDownload specifies whether new versions should be automatically downloaded.
+	AutoDownload bool
+
 	// LastRelease holds the time of the last seen release of this index.
 	LastRelease time.Time
 }

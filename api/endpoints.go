@@ -452,7 +452,7 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var rec record.Record
 		rec, err = e.RecordFunc(apiRequest)
 		if err == nil && r != nil {
-			responseData, err = marshalRecord(rec, false)
+			responseData, err = MarshalRecord(rec, false)
 		}
 
 	case e.HandlerFunc != nil:

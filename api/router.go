@@ -18,6 +18,9 @@ import (
 	"github.com/safing/portbase/utils"
 )
 
+// EnableServer defines if the HTTP server should be started.
+const EnableServer = true
+
 var (
 	// mainMux is the main mux router.
 	mainMux = mux.NewRouter()
@@ -48,15 +51,38 @@ func RegisterHandleFunc(path string, handleFunc func(http.ResponseWriter, *http.
 	return mainMux.HandleFunc(path, handleFunc)
 }
 
-// Serve starts serving the API endpoint.
-func Serve() {
-	// configure server
+func startServer() {
+	// Check if server is enabled.
+	if !EnableServer {
+		return
+	}
+
+	// Configure server.
 	server.Addr = listenAddressConfig()
 	server.Handler = &mainHandler{
 		// TODO: mainMux should not be modified anymore.
 		mux: mainMux,
 	}
 
+	// Start server manager.
+	module.StartServiceWorker("http server manager", 0, serverManager)
+}
+
+func stopServer() error {
+	// Check if server is enabled.
+	if !EnableServer {
+		return nil
+	}
+
+	if server.Addr != "" {
+		return server.Shutdown(context.Background())
+	}
+
+	return nil
+}
+
+// Serve starts serving the API endpoint.
+func serverManager(_ context.Context) error {
 	// start serving
 	log.Infof("api: starting to listen on %s", server.Addr)
 	backoffDuration := 10 * time.Second
@@ -67,7 +93,7 @@ func Serve() {
 		})
 		// return on shutdown error
 		if errors.Is(err, http.ErrServerClosed) {
-			return
+			return nil
 		}
 		// log error and restart
 		log.Errorf("api: http endpoint failed: %s - restarting in %s", err, backoffDuration)

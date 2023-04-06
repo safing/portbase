@@ -8,7 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/safing/jess/filesig"
 	"github.com/safing/jess/lhash"
@@ -22,6 +23,10 @@ func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 	var lastErr error
 	var anySuccess bool
 
+	// Start registry operation.
+	reg.state.StartOperation(StateChecking)
+	defer reg.state.EndOperation()
+
 	client := &http.Client{}
 	for _, idx := range reg.getIndexes() {
 		if err := reg.downloadIndex(ctx, client, idx); err != nil {
@@ -32,9 +37,20 @@ func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 		}
 	}
 
+	// If all indexes failed to update, fail.
 	if !anySuccess {
-		return fmt.Errorf("failed to update all indexes, last error was: %w", lastErr)
+		err := fmt.Errorf("failed to update all indexes, last error was: %w", lastErr)
+		reg.state.ReportUpdateCheck(nil, err)
+		return err
 	}
+
+	// Get pending resources and update status.
+	pendingResourceVersions, _ := reg.GetPendingDownloads(true, false)
+	reg.state.ReportUpdateCheck(
+		identifiersFromResourceVersions(pendingResourceVersions),
+		nil,
+	)
+
 	return nil
 }
 
@@ -127,7 +143,7 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 		}
 
 		// add resources to registry
-		err = reg.AddResources(cleanedData, false, true, idx.PreRelease)
+		err = reg.AddResources(cleanedData, idx, false, true, idx.PreRelease)
 		if err != nil {
 			log.Warningf("%s: failed to add resources: %s", reg.Name, err)
 		}
@@ -167,37 +183,17 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 }
 
 // DownloadUpdates checks if updates are available and downloads updates of used components.
-func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
-	// create list of downloads
-	var toUpdate []*ResourceVersion
-	var missingSigs []*ResourceVersion
-	reg.RLock()
-	for _, res := range reg.resources {
-		res.Lock()
+func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context, automaticOnly bool) error {
+	// Start registry operation.
+	reg.state.StartOperation(StateDownloading)
+	defer reg.state.EndOperation()
 
-		// check if we want to download
-		if res.inUse() ||
-			res.available() || // resource was used in the past
-			utils.StringInSlice(reg.MandatoryUpdates, res.Identifier) { // resource is mandatory
-
-			// add all non-available and eligible versions to update queue
-			for _, rv := range res.Versions {
-				switch {
-				case !rv.CurrentRelease:
-					// We are not interested in older releases.
-				case !rv.Available:
-					// File is not available.
-					toUpdate = append(toUpdate, rv)
-				case !rv.SigAvailable && res.VerificationOptions != nil:
-					// File signature is not available and verification is enabled.
-					missingSigs = append(missingSigs, rv)
-				}
-			}
-		}
-
-		res.Unlock()
-	}
-	reg.RUnlock()
+	// Get pending updates.
+	toUpdate, missingSigs := reg.GetPendingDownloads(!automaticOnly, true)
+	downloadDetailsResources := identifiersFromResourceVersions(toUpdate)
+	reg.state.UpdateOperationDetails(&StateDownloadingDetails{
+		Resources: downloadDetailsResources,
+	})
 
 	// nothing to update
 	if len(toUpdate) == 0 && len(missingSigs) == 0 {
@@ -211,63 +207,153 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context) error {
 	}
 
 	// download updates
-	log.Infof("%s: starting to download %d updates in parallel", reg.Name, len(toUpdate)+len(missingSigs))
-	var wg sync.WaitGroup
-
-	wg.Add(len(toUpdate) + len(missingSigs))
+	log.Infof("%s: starting to download %d updates", reg.Name, len(toUpdate))
 	client := &http.Client{}
+	var reportError error
 
-	for idx := range toUpdate {
-		go func(rv *ResourceVersion) {
-			var err error
-
-			defer wg.Done()
-			defer func() {
-				if x := recover(); x != nil {
-					log.Errorf("%s: %s: captured panic: %s", reg.Name, rv.resource.Identifier, x)
+	for i, rv := range toUpdate {
+		log.Infof(
+			"%s: downloading update [%d/%d]: %s version %s",
+			reg.Name,
+			i+1, len(toUpdate),
+			rv.resource.Identifier, rv.VersionNumber,
+		)
+		var err error
+		for tries := 0; tries < 3; tries++ {
+			err = reg.fetchFile(ctx, client, rv, tries)
+			if err == nil {
+				// Update resource version state.
+				rv.resource.Lock()
+				rv.Available = true
+				if rv.resource.VerificationOptions != nil {
+					rv.SigAvailable = true
 				}
-			}()
+				rv.resource.Unlock()
 
-			for tries := 0; tries < 3; tries++ {
-				err = reg.fetchFile(ctx, client, rv, tries)
-				if err == nil {
-					rv.Available = true
-					return
-				}
+				break
 			}
-			if err != nil {
-				log.Warningf("%s: failed to download %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
-			}
-		}(toUpdate[idx])
+		}
+		if err != nil {
+			reportError := fmt.Errorf("failed to download %s version %s: %w", rv.resource.Identifier, rv.VersionNumber, err)
+			log.Warningf("%s: %s", reg.Name, reportError)
+		}
+
+		reg.state.UpdateOperationDetails(&StateDownloadingDetails{
+			Resources:    downloadDetailsResources,
+			FinishedUpTo: i + 1,
+		})
 	}
 
-	for idx := range missingSigs {
-		go func(rv *ResourceVersion) {
+	if len(missingSigs) > 0 {
+		log.Infof("%s: downloading %d missing signatures", reg.Name, len(missingSigs))
+
+		for _, rv := range missingSigs {
 			var err error
-
-			defer wg.Done()
-			defer func() {
-				if x := recover(); x != nil {
-					log.Errorf("%s: %s: captured panic: %s", reg.Name, rv.resource.Identifier, x)
-				}
-			}()
-
 			for tries := 0; tries < 3; tries++ {
 				err = reg.fetchMissingSig(ctx, client, rv, tries)
 				if err == nil {
+					// Update resource version state.
+					rv.resource.Lock()
 					rv.SigAvailable = true
-					return
+					rv.resource.Unlock()
+
+					break
 				}
 			}
 			if err != nil {
-				log.Warningf("%s: failed to download missing sig of %s version %s: %s", reg.Name, rv.resource.Identifier, rv.VersionNumber, err)
+				reportError := fmt.Errorf("failed to download missing sig of %s version %s: %w", rv.resource.Identifier, rv.VersionNumber, err)
+				log.Warningf("%s: %s", reg.Name, reportError)
 			}
-		}(missingSigs[idx])
+		}
 	}
 
-	wg.Wait()
-
+	reg.state.ReportDownloads(
+		downloadDetailsResources,
+		reportError,
+	)
 	log.Infof("%s: finished downloading updates", reg.Name)
 
 	return nil
+}
+
+// DownloadUpdates checks if updates are available and downloads updates of used components.
+
+// GetPendingDownloads returns the list of pending downloads.
+// If manual is set, indexes with AutoDownload=false will be checked.
+// If auto is set, indexes with AutoDownload=true will be checked.
+func (reg *ResourceRegistry) GetPendingDownloads(manual, auto bool) (resources, sigs []*ResourceVersion) {
+	reg.RLock()
+	defer reg.RUnlock()
+
+	// create list of downloads
+	var toUpdate []*ResourceVersion
+	var missingSigs []*ResourceVersion
+
+	for _, res := range reg.resources {
+		func() {
+			res.Lock()
+			defer res.Unlock()
+
+			// Skip resources without index or indexes that should not be reported
+			// according to parameters.
+			switch {
+			case res.Index == nil:
+				// Cannot download if resource is not part of an index.
+				return
+			case manual && !res.Index.AutoDownload:
+				// Manual update report and index is not auto-download.
+			case auto && res.Index.AutoDownload:
+				// Auto update report and index is auto-download.
+			default:
+				// Resource should not be reported.
+				return
+			}
+
+			// Skip resources we don't need.
+			switch {
+			case res.inUse():
+				// Update if resource is in use.
+			case res.available():
+				// Update if resource is available locally, ie. was used in the past.
+			case utils.StringInSlice(reg.MandatoryUpdates, res.Identifier):
+				// Update is set as mandatory.
+			default:
+				// Resource does not need to be updated.
+				return
+			}
+
+			// Go through all versions until we find versions that need updating.
+			for _, rv := range res.Versions {
+				switch {
+				case !rv.CurrentRelease:
+					// We are not interested in older releases.
+				case !rv.Available:
+					// File not available locally, download!
+					toUpdate = append(toUpdate, rv)
+				case !rv.SigAvailable && res.VerificationOptions != nil:
+					// File signature is not available and verification is enabled, download signature!
+					missingSigs = append(missingSigs, rv)
+				}
+			}
+		}()
+	}
+
+	slices.SortFunc[*ResourceVersion](toUpdate, func(a, b *ResourceVersion) bool {
+		return a.resource.Identifier < b.resource.Identifier
+	})
+	slices.SortFunc[*ResourceVersion](missingSigs, func(a, b *ResourceVersion) bool {
+		return a.resource.Identifier < b.resource.Identifier
+	})
+
+	return toUpdate, missingSigs
+}
+
+func identifiersFromResourceVersions(resourceVersions []*ResourceVersion) []string {
+	identifiers := make([]string, len(resourceVersions))
+
+	for i, rv := range resourceVersions {
+		identifiers[i] = rv.resource.Identifier
+	}
+
+	return identifiers
 }
