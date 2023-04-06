@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/safing/jess/filesig"
 	"github.com/safing/jess/lhash"
 	"github.com/safing/portbase/log"
@@ -205,11 +207,17 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context, automaticOnly 
 	}
 
 	// download updates
-	log.Infof("%s: starting to download %d updates", reg.Name, len(toUpdate)+len(missingSigs))
+	log.Infof("%s: starting to download %d updates", reg.Name, len(toUpdate))
 	client := &http.Client{}
 	var reportError error
 
 	for i, rv := range toUpdate {
+		log.Infof(
+			"%s: downloading update [%d/%d]: %s version %s",
+			reg.Name,
+			i+1, len(toUpdate),
+			rv.resource.Identifier, rv.VersionNumber,
+		)
 		var err error
 		for tries := 0; tries < 3; tries++ {
 			err = reg.fetchFile(ctx, client, rv, tries)
@@ -236,22 +244,26 @@ func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context, automaticOnly 
 		})
 	}
 
-	for _, rv := range missingSigs {
-		var err error
-		for tries := 0; tries < 3; tries++ {
-			err = reg.fetchMissingSig(ctx, client, rv, tries)
-			if err == nil {
-				// Update resource version state.
-				rv.resource.Lock()
-				rv.SigAvailable = true
-				rv.resource.Unlock()
+	if len(missingSigs) > 0 {
+		log.Infof("%s: downloading %d missing signatures", reg.Name, len(missingSigs))
 
-				break
+		for _, rv := range missingSigs {
+			var err error
+			for tries := 0; tries < 3; tries++ {
+				err = reg.fetchMissingSig(ctx, client, rv, tries)
+				if err == nil {
+					// Update resource version state.
+					rv.resource.Lock()
+					rv.SigAvailable = true
+					rv.resource.Unlock()
+
+					break
+				}
 			}
-		}
-		if err != nil {
-			reportError := fmt.Errorf("failed to download missing sig of %s version %s: %w", rv.resource.Identifier, rv.VersionNumber, err)
-			log.Warningf("%s: %s", reg.Name, reportError)
+			if err != nil {
+				reportError := fmt.Errorf("failed to download missing sig of %s version %s: %w", rv.resource.Identifier, rv.VersionNumber, err)
+				log.Warningf("%s: %s", reg.Name, reportError)
+			}
 		}
 	}
 
@@ -325,6 +337,13 @@ func (reg *ResourceRegistry) GetPendingDownloads(manual, auto bool) (resources, 
 			}
 		}()
 	}
+
+	slices.SortFunc[*ResourceVersion](toUpdate, func(a, b *ResourceVersion) bool {
+		return a.resource.Identifier < b.resource.Identifier
+	})
+	slices.SortFunc[*ResourceVersion](missingSigs, func(a, b *ResourceVersion) bool {
+		return a.resource.Identifier < b.resource.Identifier
+	})
 
 	return toUpdate, missingSigs
 }

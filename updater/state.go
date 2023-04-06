@@ -1,8 +1,11 @@
 package updater
 
 import (
+	"sort"
 	"sync"
 	"time"
+
+	"github.com/safing/portbase/utils"
 )
 
 // Registry States.
@@ -120,6 +123,8 @@ func (s *RegistryState) EndOperation() {
 func (s *RegistryState) ReportUpdateCheck(pendingDownload []string, failed error) {
 	defer s.notify()
 
+	sort.Strings(pendingDownload)
+
 	s.Lock()
 	defer s.Unlock()
 
@@ -137,6 +142,8 @@ func (s *RegistryState) ReportUpdateCheck(pendingDownload []string, failed error
 func (s *RegistryState) ReportDownloads(downloaded []string, failed error) {
 	defer s.notify()
 
+	sort.Strings(downloaded)
+
 	s.Lock()
 	defer s.Unlock()
 
@@ -146,17 +153,15 @@ func (s *RegistryState) ReportDownloads(downloaded []string, failed error) {
 	s.Updates.LastDownload = downloaded
 
 	// Remove downloaded resources from the pending list.
-	var newPendingDownload []string
-outer:
-	for _, pend := range s.Updates.PendingDownload {
-		for _, down := range downloaded {
-			if pend == down {
-				continue outer
+	if len(s.Updates.PendingDownload) > 0 {
+		newPendingDownload := make([]string, 0, len(s.Updates.PendingDownload))
+		for _, pending := range s.Updates.PendingDownload {
+			if !utils.StringInSlice(downloaded, pending) {
+				newPendingDownload = append(newPendingDownload, pending)
 			}
 		}
-		newPendingDownload = append(newPendingDownload, pend)
+		s.Updates.PendingDownload = newPendingDownload
 	}
-	s.Updates.PendingDownload = newPendingDownload
 
 	if failed == nil {
 		s.Updates.LastSuccessAt = &now

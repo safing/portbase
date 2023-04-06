@@ -47,7 +47,7 @@ type ResourceRegistry struct {
 	Online         bool
 
 	// StateNotifyFunc may be set to receive any changes to the registry state.
-	// The specified function may lock the state, but may not block are take a
+	// The specified function may lock the state, but may not block or take a
 	// lot of time.
 	StateNotifyFunc func(*RegistryState)
 }
