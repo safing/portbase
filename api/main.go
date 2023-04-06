@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -58,7 +57,7 @@ func prep() error {
 }
 
 func start() error {
-	go Serve()
+	startServer()
 
 	_ = updateAPIKeys(module.Ctx, nil)
 	err := module.RegisterEventHook("config", "config change", "update API keys", updateAPIKeys)
@@ -75,10 +74,7 @@ func start() error {
 }
 
 func stop() error {
-	if server != nil {
-		return server.Shutdown(context.Background())
-	}
-	return nil
+	return stopServer()
 }
 
 func exportEndpointsCmd() error {
