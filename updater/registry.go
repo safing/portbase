@@ -25,6 +25,7 @@ type ResourceRegistry struct {
 	storageDir *utils.DirStructure
 	tmpDir     *utils.DirStructure
 	indexes    []*Index
+	state      *RegistryState
 
 	resources        map[string]*Resource
 	UpdateURLs       []string
@@ -44,6 +45,11 @@ type ResourceRegistry struct {
 	UsePreReleases bool
 	DevMode        bool
 	Online         bool
+
+	// StateNotifyFunc may be set to receive any changes to the registry state.
+	// The specified function may lock the state, but may not block or take a
+	// lot of time.
+	StateNotifyFunc func(*RegistryState)
 }
 
 // AddIndex adds a new index to the resource registry.
@@ -59,6 +65,18 @@ func (reg *ResourceRegistry) AddIndex(idx Index) {
 	)
 
 	reg.indexes = append(reg.indexes, &idx)
+}
+
+// PreInitUpdateState sets the initial update state of the registry before initialization.
+func (reg *ResourceRegistry) PreInitUpdateState(s UpdateState) error {
+	if reg.state != nil {
+		return errors.New("registry already initialized")
+	}
+
+	reg.state = &RegistryState{
+		Updates: s,
+	}
+	return nil
 }
 
 // Initialize initializes a raw registry struct and makes it ready for usage.
@@ -78,6 +96,11 @@ func (reg *ResourceRegistry) Initialize(storageDir *utils.DirStructure) error {
 	reg.storageDir = storageDir
 	reg.tmpDir = storageDir.ChildDir("tmp", 0o0700)
 	reg.resources = make(map[string]*Resource)
+	if reg.state == nil {
+		reg.state = &RegistryState{}
+	}
+	reg.state.ID = StateReady
+	reg.state.reg = reg
 
 	// remove tmp dir to delete old entries
 	err = reg.Cleanup()
@@ -147,32 +170,34 @@ func (reg *ResourceRegistry) SetUsePreReleases(yes bool) {
 }
 
 // AddResource adds a resource to the registry. Does _not_ select new version.
-func (reg *ResourceRegistry) AddResource(identifier, version string, available, currentRelease, preRelease bool) error {
+func (reg *ResourceRegistry) AddResource(identifier, version string, index *Index, available, currentRelease, preRelease bool) error {
 	reg.Lock()
 	defer reg.Unlock()
 
-	err := reg.addResource(identifier, version, available, currentRelease, preRelease)
+	err := reg.addResource(identifier, version, index, available, currentRelease, preRelease)
 	return err
 }
 
-func (reg *ResourceRegistry) addResource(identifier, version string, available, currentRelease, preRelease bool) error {
+func (reg *ResourceRegistry) addResource(identifier, version string, index *Index, available, currentRelease, preRelease bool) error {
 	res, ok := reg.resources[identifier]
 	if !ok {
 		res = reg.newResource(identifier)
 		reg.resources[identifier] = res
 	}
+	res.Index = index
+
 	return res.AddVersion(version, available, currentRelease, preRelease)
 }
 
 // AddResources adds resources to the registry. Errors are logged, the last one is returned. Despite errors, non-failing resources are still added. Does _not_ select new versions.
-func (reg *ResourceRegistry) AddResources(versions map[string]string, available, currentRelease, preRelease bool) error {
+func (reg *ResourceRegistry) AddResources(versions map[string]string, index *Index, available, currentRelease, preRelease bool) error {
 	reg.Lock()
 	defer reg.Unlock()
 
 	// add versions and their flags to registry
 	var lastError error
 	for identifier, version := range versions {
-		lastError = reg.addResource(identifier, version, available, currentRelease, preRelease)
+		lastError = reg.addResource(identifier, version, index, available, currentRelease, preRelease)
 		if lastError != nil {
 			log.Warningf("%s: failed to add resource %s: %s", reg.Name, identifier, lastError)
 		}

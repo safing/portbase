@@ -79,7 +79,7 @@ func (reg *ResourceRegistry) ScanStorage(root string) error {
 		}
 
 		// save
-		err = reg.AddResource(identifier, version, true, false, false)
+		err = reg.AddResource(identifier, version, nil, true, false, false)
 		if err != nil {
 			lastError = fmt.Errorf("%s: could not get add resource %s v%s: %w", reg.Name, identifier, version, err)
 			log.Warning(lastError.Error())
@@ -178,7 +178,7 @@ func (reg *ResourceRegistry) loadIndexFile(idx *Index) error {
 	}
 
 	// Add index releases to available resources.
-	err = reg.AddResources(indexFile.Releases, false, true, idx.PreRelease)
+	err = reg.AddResources(indexFile.Releases, idx, false, true, idx.PreRelease)
 	if err != nil {
 		log.Warningf("%s: failed to add resource: %s", reg.Name, err)
 	}

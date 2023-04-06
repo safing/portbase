@@ -22,8 +22,10 @@ func (di *Info) AddPlatformInfo(_ context.Context) {
 
 	// Add section.
 	di.AddSection(
-		fmt.Sprintf("Platform: Android %s", info.VersionCode),
+		fmt.Sprintf("Platform: Android"),
 		UseCodeSection|AddContentLineBreaks,
-		fmt.Sprintf("SDK: %d %s", info.SDK, info.Incremental),
-		fmt.Sprintf("Device: %s %s (%s)", info.Manufacturer, info.Brand, info.Board))
+		fmt.Sprintf("SDK: %d", info.SDK),
+		fmt.Sprintf("Device: %s %s (%s)", info.Manufacturer, info.Brand, info.Board),
+		fmt.Sprintf("App: %s: %s(%d) %s", info.ApplicationID, info.VersionName, info.VersionCode, info.BuildType))
+
 }

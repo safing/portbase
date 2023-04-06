@@ -145,7 +145,7 @@ func (reg *ResourceRegistry) fetchFile(ctx context.Context, client *http.Client,
 		}
 	}
 
-	log.Infof("%s: fetched %s (stored to %s)", reg.Name, downloadURL, rv.storagePath())
+	log.Debugf("%s: fetched %s and stored to %s", reg.Name, downloadURL, rv.storagePath())
 	return nil
 }
 
@@ -223,7 +223,7 @@ func (reg *ResourceRegistry) fetchMissingSig(ctx context.Context, client *http.C
 		}
 	}
 
-	log.Infof("%s: fetched %s (stored to %s)", reg.Name, rv.versionedSigPath(), rv.storageSigPath())
+	log.Debugf("%s: fetched %s and stored to %s", reg.Name, rv.versionedSigPath(), rv.storageSigPath())
 	return nil
 }
 

@@ -125,6 +125,8 @@ func (m *Module) runWorker(name string, fn func(context.Context) error) (err err
 	}()
 
 	// run
+	// TODO: get cancel func for worker context and cancel when worker is done.
+	// This ensure that when the worker passes its context to another (async) function, it will also be shutdown when the worker finished or dies.
 	err = fn(m.Ctx)
 	return
 }
