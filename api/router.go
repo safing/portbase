@@ -19,7 +19,7 @@ import (
 )
 
 // EnableServer defines if the HTTP server should be started.
-const EnableServer = true
+var EnableServer = true
 
 var (
 	// mainMux is the main mux router.
@@ -37,14 +37,14 @@ var (
 	}
 )
 
-// RegisterHandler registers a handler with the API endoint.
+// RegisterHandler registers a handler with the API endpoint.
 func RegisterHandler(path string, handler http.Handler) *mux.Route {
 	handlerLock.Lock()
 	defer handlerLock.Unlock()
 	return mainMux.Handle(path, handler)
 }
 
-// RegisterHandleFunc registers a handle function with the API endoint.
+// RegisterHandleFunc registers a handle function with the API endpoint.
 func RegisterHandleFunc(path string, handleFunc func(http.ResponseWriter, *http.Request)) *mux.Route {
 	handlerLock.Lock()
 	defer handlerLock.Unlock()
