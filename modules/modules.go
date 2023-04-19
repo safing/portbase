@@ -20,6 +20,9 @@ var (
 	// modulesLocked locks `modules` during starting.
 	modulesLocked = abool.New()
 
+	sleepMode                         = abool.NewBool(false)
+	taskSchedulerSleepModeExitChannel = make(chan struct{})
+
 	moduleStartTimeout = 2 * time.Minute
 	moduleStopTimeout  = 1 * time.Minute
 
@@ -37,6 +40,8 @@ type Module struct {
 	enabled             *abool.AtomicBool
 	enabledAsDependency *abool.AtomicBool
 	status              uint8
+	sleepMode           *abool.AtomicBool
+	sleepWaitingChannel chan time.Time
 
 	// failure status
 	failureStatus uint8
@@ -98,6 +103,41 @@ func (m *Module) Dependencies() []*Module {
 	m.RLock()
 	defer m.RUnlock()
 	return m.depModules
+}
+
+// Sleep enables or disables sleep mode.
+func (m *Module) Sleep(enable bool) {
+	set := m.sleepMode.SetToIf(!enable, enable)
+	if !set {
+		return
+	}
+
+	// Notify all waiting tasks that we are not sleeping anymore.
+	m.Lock()
+	defer m.Unlock()
+
+	if enable {
+		m.sleepWaitingChannel = make(chan time.Time)
+	} else {
+		close(m.sleepWaitingChannel)
+	}
+}
+
+// IsSleeping returns true if sleep mode is enabled.
+func (m *Module) IsSleeping() bool {
+	return m.sleepMode.IsSet()
+}
+
+// WaitIfSleeping returns channel that will signal when it exits sleep mode.
+func (m *Module) WaitIfSleeping() <-chan time.Time {
+	m.RLock()
+	defer m.RUnlock()
+	return m.sleepWaitingChannel
+}
+
+// NewSleepyTicker returns new sleepyTicker that will respect the modules sleep mode.
+func (m *Module) NewSleepyTicker(normalDuration time.Duration, sleepDuration time.Duration) *SleepyTicker {
+	return newSleepyTicker(m, normalDuration, sleepDuration)
 }
 
 func (m *Module) prep(reports chan *report) {
@@ -343,6 +383,8 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		Name:                name,
 		enabled:             abool.NewBool(false),
 		enabledAsDependency: abool.NewBool(false),
+		sleepMode:           abool.NewBool(false),
+		sleepWaitingChannel: make(chan time.Time),
 		prepFn:              prep,
 		startFn:             start,
 		stopFn:              stop,
@@ -357,6 +399,8 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		eventHooks:          make(map[string]*eventHooks),
 		depNames:            dependencies,
 	}
+
+	newModule.Sleep(false)
 
 	return newModule
 }
@@ -379,4 +423,23 @@ func initDependencies() error {
 	}
 
 	return nil
+}
+
+// EnterSleepMode enables or disables sleep mode for all the modules.
+func EnterSleepMode(enabled bool) {
+	// Check if differs with the old state.
+	set := sleepMode.SetToIf(!enabled, enabled)
+	if !set {
+		return
+	}
+
+	// Update all modules
+	for _, m := range modules {
+		m.Sleep(enabled)
+	}
+
+	// Send signal to the task schedular.
+	if !enabled {
+		taskSchedulerSleepModeExitChannel <- struct{}{}
+	}
 }

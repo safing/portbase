@@ -23,7 +23,7 @@ type Flag struct {
 }
 
 // NewBroadcastFlag returns a new BroadcastFlag.
-// In the initial state, the flag is not set and the singal does not trigger.
+// In the initial state, the flag is not set and the signal does not trigger.
 func NewBroadcastFlag() *BroadcastFlag {
 	return &BroadcastFlag{
 		flag:   abool.New(),
@@ -33,7 +33,7 @@ func NewBroadcastFlag() *BroadcastFlag {
 }
 
 // NewFlag returns a new Flag that listens to this broadcasting flag.
-// In the initial state, the flag is set and the singal triggers.
+// In the initial state, the flag is set and the signal triggers.
 // You can call Refresh immediately to get the current state from the
 // broadcasting flag.
 func (bf *BroadcastFlag) NewFlag() *Flag {

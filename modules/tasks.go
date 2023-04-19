@@ -443,6 +443,10 @@ func (t *Task) addToSchedule(overtime bool) {
 }
 
 func waitUntilNextScheduledTask() <-chan time.Time {
+	if sleepMode.IsSet() {
+		<-taskSchedulerSleepModeExitChannel
+	}
+
 	scheduleLock.Lock()
 	defer scheduleLock.Unlock()
 

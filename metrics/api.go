@@ -121,14 +121,14 @@ func writeMetricsTo(ctx context.Context, url string) error {
 
 func metricsWriter(ctx context.Context) error {
 	pushURL := pushOption()
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := module.NewSleepyTicker(1*time.Minute, 0)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticker.C:
+		case <-ticker.Read():
 			err := writeMetricsTo(ctx, pushURL)
 			if err != nil {
 				return err
