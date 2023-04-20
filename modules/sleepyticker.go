@@ -2,6 +2,7 @@ package modules
 
 import "time"
 
+// SleepyTicker is wrapper over time.Ticker that respects the sleep mode of the module.
 type SleepyTicker struct {
 	ticker         time.Ticker
 	module         *Module
