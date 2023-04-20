@@ -6,14 +6,14 @@ import (
 )
 
 func cleaner(ctx context.Context) error { //nolint:unparam // Conforms to worker interface
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := module.NewSleepyTicker(1*time.Second, 0)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticker.C:
+		case <-ticker.Wait():
 			deleteExpiredNotifs()
 		}
 	}

@@ -51,9 +51,9 @@ var (
 
 	waitForever chan time.Time
 
-	queueIsFilled                = make(chan struct{}, 1) // kick off queue handler
-	recalculateNextScheduledTask = make(chan struct{}, 1)
-	taskTimeslot                 = make(chan struct{})
+	queueIsFilled       = make(chan struct{}, 1) // kick off queue handler
+	notifyTaskScheduler = make(chan struct{}, 1)
+	taskTimeslot        = make(chan struct{})
 )
 
 const (
@@ -410,7 +410,7 @@ func (t *Task) addToSchedule(overtime bool) {
 	// notify scheduler
 	defer func() {
 		select {
-		case recalculateNextScheduledTask <- struct{}{}:
+		case notifyTaskScheduler <- struct{}{}:
 		default:
 		}
 	}()
@@ -515,10 +515,21 @@ func taskScheduleHandler() {
 	}
 
 	for {
+
+		if sleepMode.IsSet() {
+			select {
+			case <-shutdownSignal:
+				return
+			case <-notifyTaskScheduler:
+				continue
+			}
+		}
+
 		select {
 		case <-shutdownSignal:
 			return
-		case <-recalculateNextScheduledTask:
+		case <-notifyTaskScheduler:
+			continue
 		case <-waitUntilNextScheduledTask():
 			scheduleLock.Lock()
 

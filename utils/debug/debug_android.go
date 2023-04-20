@@ -26,6 +26,6 @@ func (di *Info) AddPlatformInfo(_ context.Context) {
 		UseCodeSection|AddContentLineBreaks,
 		fmt.Sprintf("SDK: %d", info.SDK),
 		fmt.Sprintf("Device: %s %s (%s)", info.Manufacturer, info.Brand, info.Board),
-		fmt.Sprintf("App: %s: %s(%d) %s", info.ApplicationID, info.VersionName, info.VersionCode, info.BuildType))
+		fmt.Sprintf("App: %s: %s %s", info.ApplicationID, info.VersionName, info.BuildType))
 
 }
