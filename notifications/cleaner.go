@@ -13,7 +13,7 @@ func cleaner(ctx context.Context) error { //nolint:unparam // Conforms to worker
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticker.Read():
+		case <-ticker.Wait():
 			deleteExpiredNotifs()
 		}
 	}

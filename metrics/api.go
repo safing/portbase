@@ -128,7 +128,7 @@ func metricsWriter(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticker.Read():
+		case <-ticker.Wait():
 			err := writeMetricsTo(ctx, pushURL)
 			if err != nil {
 				return err

@@ -20,8 +20,7 @@ var (
 	// modulesLocked locks `modules` during starting.
 	modulesLocked = abool.New()
 
-	sleepMode                         = abool.NewBool(false)
-	taskSchedulerSleepModeExitChannel = make(chan struct{})
+	sleepMode = abool.NewBool(false)
 
 	moduleStartTimeout = 2 * time.Minute
 	moduleStopTimeout  = 1 * time.Minute
@@ -112,13 +111,13 @@ func (m *Module) Sleep(enable bool) {
 		return
 	}
 
-	// Notify all waiting tasks that we are not sleeping anymore.
 	m.Lock()
 	defer m.Unlock()
 
 	if enable {
 		m.sleepWaitingChannel = make(chan time.Time)
 	} else {
+		// Notify all waiting tasks that we are not sleeping anymore.
 		close(m.sleepWaitingChannel)
 	}
 }
@@ -129,6 +128,8 @@ func (m *Module) IsSleeping() bool {
 }
 
 // WaitIfSleeping returns channel that will signal when it exits sleep mode.
+// The channel will always return a zero-value time.Time.
+// It uses time.Time to be easier dropped in to replace a time.Ticker.
 func (m *Module) WaitIfSleeping() <-chan time.Time {
 	m.RLock()
 	defer m.RUnlock()
@@ -136,7 +137,7 @@ func (m *Module) WaitIfSleeping() <-chan time.Time {
 }
 
 // NewSleepyTicker returns new sleepyTicker that will respect the modules sleep mode.
-func (m *Module) NewSleepyTicker(normalDuration time.Duration, sleepDuration time.Duration) *SleepyTicker {
+func (m *Module) NewSleepyTicker(normalDuration, sleepDuration time.Duration) *SleepyTicker {
 	return newSleepyTicker(m, normalDuration, sleepDuration)
 }
 
@@ -383,7 +384,7 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		Name:                name,
 		enabled:             abool.NewBool(false),
 		enabledAsDependency: abool.NewBool(false),
-		sleepMode:           abool.NewBool(false),
+		sleepMode:           abool.NewBool(true),
 		sleepWaitingChannel: make(chan time.Time),
 		prepFn:              prep,
 		startFn:             start,
@@ -400,6 +401,7 @@ func initNewModule(name string, prep, start, stop func() error, dependencies ...
 		depNames:            dependencies,
 	}
 
+	// Sleep mode is disabled by default
 	newModule.Sleep(false)
 
 	return newModule
@@ -425,21 +427,20 @@ func initDependencies() error {
 	return nil
 }
 
-// EnterSleepMode enables or disables sleep mode for all the modules.
-func EnterSleepMode(enabled bool) {
-	// Check if differs with the old state.
-	set := sleepMode.SetToIf(!enabled, enabled)
-	if !set {
-		return
-	}
-
+// SetSleepMode enables or disables sleep mode for all the modules.
+func SetSleepMode(enabled bool) {
 	// Update all modules
 	for _, m := range modules {
 		m.Sleep(enabled)
 	}
 
-	// Send signal to the task schedular.
-	if !enabled {
-		taskSchedulerSleepModeExitChannel <- struct{}{}
+	// Check if differs with the old state.
+	set := sleepMode.SetToIf(!enabled, enabled)
+	if set {
+		// Send signal to the task schedular.
+		select {
+		case notifyTaskScheduler <- struct{}{}:
+		default:
+		}
 	}
 }
