@@ -118,7 +118,11 @@ func Register(option *Option) error {
 	}
 
 	// return the validation-error from loadUnmappedValue here
-	return vErr
+	if vErr != nil {
+		return vErr
+	}
+
+	return nil
 }
 
 func loadUnmappedValue(option *Option) (bool, *ValidationError) {
