@@ -205,8 +205,9 @@ func validateValue(option *Option, value interface{}) (*valueCache, *ValidationE
 
 // ValidationError error holds details about a config option value validation error.
 type ValidationError struct {
-	Option *Option
-	Err    error
+	Option    *Option
+	Err       error
+	SoftError bool
 }
 
 // Error returns the formatted error.

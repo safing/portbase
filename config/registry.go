@@ -104,29 +104,43 @@ func Register(option *Option) error {
 		return fmt.Errorf("config: invalid default value: %w", vErr)
 	}
 
-	if err := loadUnmappedValue(option); err != nil {
-		return err
+	hasUnmappedValue, vErr := loadUnmappedValue(option)
+	if vErr != nil && !vErr.SoftError {
+		return fmt.Errorf("config: invalid value: %w", vErr)
 	}
 
 	optionsLock.Lock()
 	defer optionsLock.Unlock()
 	options[option.Key] = option
 
-	return nil
+	if hasUnmappedValue {
+		signalChanges()
+	}
+
+	// return the validation-error from loadUnmappedValue here
+	return vErr
 }
 
-func loadUnmappedValue(option *Option) error {
+func loadUnmappedValue(option *Option) (bool, *ValidationError) {
 	unmappedValuesLock.Lock()
 	defer unmappedValuesLock.Unlock()
+
 	if value, ok := unmappedValues[option.Key]; ok {
 		delete(unmappedValues, option.Key)
 
 		var vErr *ValidationError
 		option.activeValue, vErr = validateValue(option, value)
 		if vErr != nil {
-			return fmt.Errorf("config: invalid value: %w", vErr)
+			// we consider this error as a "soft" error so lazily registered
+			// options don't fail the hard way.
+			option.activeValue = option.activeFallbackValue
+			vErr.SoftError = true
+
+			return true, vErr
 		}
+
+		return true, nil
 	}
 
-    return nil
+	return false, nil
 }
