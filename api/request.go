@@ -33,11 +33,11 @@ type Request struct {
 // apiRequestContextKey is a key used for the context key/value storage.
 type apiRequestContextKey struct{}
 
-var requestContextKey = apiRequestContextKey{}
+var RequestContextKey = apiRequestContextKey{}
 
 // GetAPIRequest returns the API Request of the given http request.
 func GetAPIRequest(r *http.Request) *Request {
-	ar, ok := r.Context().Value(requestContextKey).(*Request)
+	ar, ok := r.Context().Value(RequestContextKey).(*Request)
 	if ok {
 		return ar
 	}

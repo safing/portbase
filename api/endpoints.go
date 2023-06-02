@@ -224,6 +224,17 @@ func RegisterEndpoint(e Endpoint) error {
 	return nil
 }
 
+func GetEndpointByPath(path string) (*Endpoint, error) {
+	endpointsLock.Lock()
+	defer endpointsLock.Unlock()
+	endpoint, ok := endpoints[path]
+	if !ok {
+		return nil, fmt.Errorf("no registered endpoint on path: %q", path)
+	}
+
+	return endpoint, nil
+}
+
 func (e *Endpoint) check() error {
 	// Check path.
 	if strings.TrimSpace(e.Path) == "" {

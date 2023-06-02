@@ -118,7 +118,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	apiRequest := &Request{
 		Request: r,
 	}
-	ctx = context.WithValue(ctx, requestContextKey, apiRequest)
+	ctx = context.WithValue(ctx, RequestContextKey, apiRequest)
 	// Add context back to request.
 	r = r.WithContext(ctx)
 	lrw := NewLoggingResponseWriter(w, r)

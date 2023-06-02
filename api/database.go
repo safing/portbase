@@ -44,7 +44,7 @@ var (
 
 func init() {
 	RegisterHandler("/api/database/v1", WrapInAuthHandler(
-		startDatabaseAPI,
+		startDatabaseWebsocketAPI,
 		// Default to admin read/write permissions until the database gets support
 		// for api permissions.
 		dbCompatibilityPermission,
@@ -54,9 +54,6 @@ func init() {
 
 // DatabaseAPI is a database API instance.
 type DatabaseAPI struct {
-	conn      *websocket.Conn
-	sendQueue chan []byte
-
 	queriesLock sync.Mutex
 	queries     map[string]*iterator.Iterator
 
@@ -66,13 +63,33 @@ type DatabaseAPI struct {
 	shutdownSignal chan struct{}
 	shuttingDown   *abool.AtomicBool
 	db             *database.Interface
+
+	sendBytes func(data []byte)
+}
+
+type DatabaseWebsocketAPI struct {
+	DatabaseAPI
+
+	sendQueue chan []byte
+	conn      *websocket.Conn
 }
 
 func allowAnyOrigin(r *http.Request) bool {
 	return true
 }
 
-func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
+func CreateDatabaseAPI(sendFunction func(data []byte)) DatabaseAPI {
+	return DatabaseAPI{
+		queries:        make(map[string]*iterator.Iterator),
+		subs:           make(map[string]*database.Subscription),
+		shutdownSignal: make(chan struct{}),
+		shuttingDown:   abool.NewBool(false),
+		db:             database.NewInterface(nil),
+		sendBytes:      sendFunction,
+	}
+}
+
+func startDatabaseWebsocketAPI(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		CheckOrigin:     allowAnyOrigin,
 		ReadBufferSize:  1024,
@@ -86,14 +103,21 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newDBAPI := &DatabaseAPI{
-		conn:           wsConn,
-		sendQueue:      make(chan []byte, 100),
-		queries:        make(map[string]*iterator.Iterator),
-		subs:           make(map[string]*database.Subscription),
-		shutdownSignal: make(chan struct{}),
-		shuttingDown:   abool.NewBool(false),
-		db:             database.NewInterface(nil),
+	newDBAPI := &DatabaseWebsocketAPI{
+		DatabaseAPI: DatabaseAPI{
+			queries:        make(map[string]*iterator.Iterator),
+			subs:           make(map[string]*database.Subscription),
+			shutdownSignal: make(chan struct{}),
+			shuttingDown:   abool.NewBool(false),
+			db:             database.NewInterface(nil),
+		},
+
+		sendQueue: make(chan []byte, 100),
+		conn:      wsConn,
+	}
+
+	newDBAPI.sendBytes = func(data []byte) {
+		newDBAPI.sendQueue <- data
 	}
 
 	module.StartWorker("database api handler", newDBAPI.handler)
@@ -102,11 +126,76 @@ func startDatabaseAPI(w http.ResponseWriter, r *http.Request) {
 	log.Tracer(r.Context()).Infof("api request: init websocket %s %s", r.RemoteAddr, r.RequestURI)
 }
 
-func (api *DatabaseAPI) handler(context.Context) error {
+func (api *DatabaseWebsocketAPI) handler(context.Context) error {
 	defer func() {
 		_ = api.shutdown(nil)
 	}()
 
+	for {
+		_, msg, err := api.conn.ReadMessage()
+		if err != nil {
+			return api.shutdown(err)
+		}
+
+		api.Handle(msg)
+	}
+}
+
+func (api *DatabaseWebsocketAPI) writer(ctx context.Context) error {
+	defer func() {
+		_ = api.shutdown(nil)
+	}()
+
+	var data []byte
+	var err error
+
+	for {
+		select {
+		// prioritize direct writes
+		case data = <-api.sendQueue:
+			if len(data) == 0 {
+				return nil
+			}
+		case <-ctx.Done():
+			return nil
+		case <-api.shutdownSignal:
+			return nil
+		}
+
+		// log.Tracef("api: sending %s", string(*msg))
+		err = api.conn.WriteMessage(websocket.BinaryMessage, data)
+		if err != nil {
+			return api.shutdown(err)
+		}
+	}
+}
+
+func (api *DatabaseWebsocketAPI) shutdown(err error) error {
+	// Check if we are the first to shut down.
+	if !api.shuttingDown.SetToIf(false, true) {
+		return nil
+	}
+
+	// Check the given error.
+	if err != nil {
+		if websocket.IsCloseError(err,
+			websocket.CloseNormalClosure,
+			websocket.CloseGoingAway,
+			websocket.CloseAbnormalClosure,
+		) {
+			log.Infof("api: websocket connection to %s closed", api.conn.RemoteAddr())
+		} else {
+			log.Warningf("api: websocket connection error with %s: %s", api.conn.RemoteAddr(), err)
+		}
+	}
+
+	// Trigger shutdown.
+	close(api.shutdownSignal)
+	_ = api.conn.Close()
+	return nil
+}
+
+func (api *DatabaseAPI) Handle(msg []byte) {
 	// 123|get|<key>
 	//    123|ok|<key>|<data>
 	//    123|error|<message>
@@ -145,122 +234,60 @@ func (api *DatabaseAPI) handler(context.Context) error {
 	//    131|success
 	//    131|error|<message>
 
-	for {
+	parts := bytes.SplitN(msg, []byte("|"), 3)
 
-		_, msg, err := api.conn.ReadMessage()
-		if err != nil {
-			return api.shutdown(err)
-		}
+	// Handle special command "cancel"
+	if len(parts) == 2 && string(parts[1]) == "cancel" {
+		// 124|cancel
+		// 125|cancel
+		// 127|cancel
+		go api.handleCancel(parts[0])
+		return
+	}
 
-		parts := bytes.SplitN(msg, []byte("|"), 3)
+	if len(parts) != 3 {
+		api.send(nil, dbMsgTypeError, "bad request: malformed message", nil)
+		return
+	}
 
-		// Handle special command "cancel"
-		if len(parts) == 2 && string(parts[1]) == "cancel" {
-			// 124|cancel
-			// 125|cancel
-			// 127|cancel
-			go api.handleCancel(parts[0])
-			continue
-		}
-
-		if len(parts) != 3 {
+	switch string(parts[1]) {
+	case "get":
+		// 123|get|<key>
+		go api.handleGet(parts[0], string(parts[2]))
+	case "query":
+		// 124|query|<query>
+		go api.handleQuery(parts[0], string(parts[2]))
+	case "sub":
+		// 125|sub|<query>
+		go api.handleSub(parts[0], string(parts[2]))
+	case "qsub":
+		// 127|qsub|<query>
+		go api.handleQsub(parts[0], string(parts[2]))
+	case "create", "update", "insert":
+		// split key and payload
+		dataParts := bytes.SplitN(parts[2], []byte("|"), 2)
+		if len(dataParts) != 2 {
 			api.send(nil, dbMsgTypeError, "bad request: malformed message", nil)
-			continue
+			return
 		}
 
 		switch string(parts[1]) {
-		case "get":
-			// 123|get|<key>
-			go api.handleGet(parts[0], string(parts[2]))
-		case "query":
-			// 124|query|<query>
-			go api.handleQuery(parts[0], string(parts[2]))
-		case "sub":
-			// 125|sub|<query>
-			go api.handleSub(parts[0], string(parts[2]))
-		case "qsub":
-			// 127|qsub|<query>
-			go api.handleQsub(parts[0], string(parts[2]))
-		case "create", "update", "insert":
-			// split key and payload
-			dataParts := bytes.SplitN(parts[2], []byte("|"), 2)
-			if len(dataParts) != 2 {
-				api.send(nil, dbMsgTypeError, "bad request: malformed message", nil)
-				continue
-			}
-
-			switch string(parts[1]) {
-			case "create":
-				// 128|create|<key>|<data>
-				go api.handlePut(parts[0], string(dataParts[0]), dataParts[1], true)
-			case "update":
-				// 129|update|<key>|<data>
-				go api.handlePut(parts[0], string(dataParts[0]), dataParts[1], false)
-			case "insert":
-				// 130|insert|<key>|<data>
-				go api.handleInsert(parts[0], string(dataParts[0]), dataParts[1])
-			}
-		case "delete":
-			// 131|delete|<key>
-			go api.handleDelete(parts[0], string(parts[2]))
-		default:
-			api.send(parts[0], dbMsgTypeError, "bad request: unknown method", nil)
+		case "create":
+			// 128|create|<key>|<data>
+			go api.handlePut(parts[0], string(dataParts[0]), dataParts[1], true)
+		case "update":
+			// 129|update|<key>|<data>
+			go api.handlePut(parts[0], string(dataParts[0]), dataParts[1], false)
+		case "insert":
+			// 130|insert|<key>|<data>
+			go api.handleInsert(parts[0], string(dataParts[0]), dataParts[1])
 		}
+	case "delete":
+		// 131|delete|<key>
+		go api.handleDelete(parts[0], string(parts[2]))
+	default:
+		api.send(parts[0], dbMsgTypeError, "bad request: unknown method", nil)
 	}
-}
-
-func (api *DatabaseAPI) writer(ctx context.Context) error {
-	defer func() {
-		_ = api.shutdown(nil)
-	}()
-
-	var data []byte
-	var err error
-
-	for {
-		select {
-		// prioritize direct writes
-		case data = <-api.sendQueue:
-			if len(data) == 0 {
-				return nil
-			}
-		case <-ctx.Done():
-			return nil
-		case <-api.shutdownSignal:
-			return nil
-		}
-
-		// log.Tracef("api: sending %s", string(*msg))
-		err = api.conn.WriteMessage(websocket.BinaryMessage, data)
-		if err != nil {
-			return api.shutdown(err)
-		}
-	}
-}
-
-func (api *DatabaseAPI) shutdown(err error) error {
-	// Check if we are the first to shut down.
-	if !api.shuttingDown.SetToIf(false, true) {
-		return nil
-	}
-
-	// Check the given error.
-	if err != nil {
-		if websocket.IsCloseError(err,
-			websocket.CloseNormalClosure,
-			websocket.CloseGoingAway,
-			websocket.CloseAbnormalClosure,
-		) {
-			log.Infof("api: websocket connection to %s closed", api.conn.RemoteAddr())
-		} else {
-			log.Warningf("api: websocket connection error with %s: %s", api.conn.RemoteAddr(), err)
-		}
-	}
-
-	// Trigger shutdown.
-	close(api.shutdownSignal)
-	_ = api.conn.Close()
-	return nil
 }
 
 func (api *DatabaseAPI) send(opID []byte, msgType string, msgOrKey string, data []byte) {
@@ -278,7 +305,7 @@ func (api *DatabaseAPI) send(opID []byte, msgType string, msgOrKey string, data 
 		c.Append(data)
 	}
 
-	api.sendQueue <- c.CompileData()
+	api.sendBytes(c.CompileData())
 }
 
 func (api *DatabaseAPI) handleGet(opID []byte, key string) {
@@ -367,7 +394,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 	}
 }
 
-// func (api *DatabaseAPI) runQuery()
+// func (api *DatabaseWebsocketAPI) runQuery()
 
 func (api *DatabaseAPI) handleSub(opID []byte, queryText string) {
 	// 125|sub|<query>

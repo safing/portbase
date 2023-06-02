@@ -184,7 +184,7 @@ func Errorf(format string, things ...interface{}) {
 	}
 }
 
-// Critical is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
+// Critical is used to log events that completely break the system. Operation cannot continue. User/Admin must be informed.
 func Critical(msg string) {
 	atomic.AddUint64(critLogLines, 1)
 	if fastcheck(CriticalLevel) {
@@ -192,7 +192,7 @@ func Critical(msg string) {
 	}
 }
 
-// Criticalf is used to log events that completely break the system. Operation connot continue. User/Admin must be informed.
+// Criticalf is used to log events that completely break the system. Operation cannot continue. User/Admin must be informed.
 func Criticalf(format string, things ...interface{}) {
 	atomic.AddUint64(critLogLines, 1)
 	if fastcheck(CriticalLevel) {
