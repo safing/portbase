@@ -52,6 +52,7 @@ func replaceConfig(newValues map[string]interface{}) []*ValidationError {
 
 		option.Lock()
 		option.activeValue = nil
+
 		if ok {
 			valueCache, err := validateValue(option, newValue)
 			if err == nil {
@@ -103,11 +104,11 @@ func replaceDefaultConfig(newValues map[string]interface{}) []*ValidationError {
 }
 
 // SetConfigOption sets a single value in the (prioritized) user defined config.
-func SetConfigOption(key string, value interface{}) error {
+func SetConfigOption(key string, value any) error {
 	return setConfigOption(key, value, true)
 }
 
-func setConfigOption(key string, value interface{}, push bool) (err error) {
+func setConfigOption(key string, value any, push bool) (err error) {
 	option, err := GetOption(key)
 	if err != nil {
 		return err
