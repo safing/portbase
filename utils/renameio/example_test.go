@@ -7,7 +7,7 @@ import (
 	"github.com/safing/portbase/utils/renameio"
 )
 
-func ExampleTempFile_justone() {
+func ExampleTempFile_justone() { //nolint:testableexamples
 	persist := func(temperature float64) error {
 		t, err := renameio.TempFile("", "/srv/www/metrics.txt")
 		if err != nil {
@@ -28,7 +28,7 @@ func ExampleTempFile_justone() {
 	}
 }
 
-func ExampleTempFile_many() {
+func ExampleTempFile_many() { //nolint:testableexamples
 	// Prepare for writing files to /srv/www, effectively caching calls to
 	// TempDir which TempFile would otherwise need to make.
 	dir := renameio.TempDir("/srv/www")

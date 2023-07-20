@@ -44,7 +44,7 @@ func (f *Feeder) NeedsEntropy() bool {
 	return f.needsEntropy.IsSet()
 }
 
-// SupplyEntropy supplies entropy to to the Feeder, it will block until the Feeder has read from it.
+// SupplyEntropy supplies entropy to the Feeder, it will block until the Feeder has read from it.
 func (f *Feeder) SupplyEntropy(data []byte, entropy int) {
 	f.input <- &entropyData{
 		data:    data,
@@ -52,7 +52,7 @@ func (f *Feeder) SupplyEntropy(data []byte, entropy int) {
 	}
 }
 
-// SupplyEntropyIfNeeded supplies entropy to to the Feeder, but will not block if no entropy is currently needed.
+// SupplyEntropyIfNeeded supplies entropy to the Feeder, but will not block if no entropy is currently needed.
 func (f *Feeder) SupplyEntropyIfNeeded(data []byte, entropy int) {
 	if f.needsEntropy.IsSet() {
 		return
@@ -67,14 +67,14 @@ func (f *Feeder) SupplyEntropyIfNeeded(data []byte, entropy int) {
 	}
 }
 
-// SupplyEntropyAsInt supplies entropy to to the Feeder, it will block until the Feeder has read from it.
+// SupplyEntropyAsInt supplies entropy to the Feeder, it will block until the Feeder has read from it.
 func (f *Feeder) SupplyEntropyAsInt(n int64, entropy int) {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(n))
 	f.SupplyEntropy(b, entropy)
 }
 
-// SupplyEntropyAsIntIfNeeded supplies entropy to to the Feeder, but will not block if no entropy is currently needed.
+// SupplyEntropyAsIntIfNeeded supplies entropy to the Feeder, but will not block if no entropy is currently needed.
 func (f *Feeder) SupplyEntropyAsIntIfNeeded(n int64, entropy int) {
 	if f.needsEntropy.IsSet() { // avoid allocating a slice if possible
 		b := make([]byte, 8)

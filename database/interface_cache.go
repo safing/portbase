@@ -45,7 +45,7 @@ func (i *Interface) DelayedCacheWriter(ctx context.Context) error {
 			i.flushWriteCache(0)
 
 		case <-thresholdWriteTicker.C:
-			// Often check if the the write cache has filled up to a certain degree and
+			// Often check if the write cache has filled up to a certain degree and
 			// flush it to storage before we start evicting to-be-written entries and
 			// slow down the hot path again.
 			i.flushWriteCache(percentThreshold)

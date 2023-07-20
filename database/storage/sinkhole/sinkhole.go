@@ -62,7 +62,7 @@ func (s *Sinkhole) PutMany(shadowDelete bool) (chan<- record.Record, <-chan erro
 	// start handler
 	go func() {
 		for range batch {
-			// nom, nom, nom
+			// discard everything
 		}
 		errs <- nil
 	}()

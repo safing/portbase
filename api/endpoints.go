@@ -208,7 +208,7 @@ func getAPIContext(r *http.Request) (apiEndpoint *Endpoint, apiRequest *Request)
 // does not pass the sanity checks.
 func RegisterEndpoint(e Endpoint) error {
 	if err := e.check(); err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidEndpoint, err)
+		return fmt.Errorf("%w: %w", ErrInvalidEndpoint, err)
 	}
 
 	endpointsLock.Lock()
@@ -222,6 +222,18 @@ func RegisterEndpoint(e Endpoint) error {
 	endpoints[e.Path] = &e
 	endpointsMux.Handle(apiV1Path+e.Path, &e)
 	return nil
+}
+
+// GetEndpointByPath returns the endpoint registered with the given path.
+func GetEndpointByPath(path string) (*Endpoint, error) {
+	endpointsLock.Lock()
+	defer endpointsLock.Unlock()
+	endpoint, ok := endpoints[path]
+	if !ok {
+		return nil, fmt.Errorf("no registered endpoint on path: %q", path)
+	}
+
+	return endpoint, nil
 }
 
 func (e *Endpoint) check() error {
