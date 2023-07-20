@@ -310,6 +310,14 @@ func (option *Option) copyOrNil() *Option {
 	return copied.(*Option) //nolint:forcetypeassert
 }
 
+// IsSetByUser returns whether the option has been set by the user.
+func (option *Option) IsSetByUser() bool {
+	option.Lock()
+	defer option.Unlock()
+
+	return option.activeValue != nil
+}
+
 // Export expors an option to a Record.
 func (option *Option) Export() (record.Record, error) {
 	option.Lock()
