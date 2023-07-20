@@ -33,6 +33,7 @@ type Request struct {
 // apiRequestContextKey is a key used for the context key/value storage.
 type apiRequestContextKey struct{}
 
+// RequestContextKey is the key used to add the API request to the context.
 var RequestContextKey = apiRequestContextKey{}
 
 // GetAPIRequest returns the API Request of the given http request.

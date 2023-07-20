@@ -52,7 +52,7 @@ func init() {
 	))
 }
 
-// DatabaseAPI is a database API instance.
+// DatabaseAPI is a generic database API interface.
 type DatabaseAPI struct {
 	queriesLock sync.Mutex
 	queries     map[string]*iterator.Iterator
@@ -67,6 +67,7 @@ type DatabaseAPI struct {
 	sendBytes func(data []byte)
 }
 
+// DatabaseWebsocketAPI is a database websocket API interface.
 type DatabaseWebsocketAPI struct {
 	DatabaseAPI
 
@@ -78,6 +79,7 @@ func allowAnyOrigin(r *http.Request) bool {
 	return true
 }
 
+// CreateDatabaseAPI creates a new database interface.
 func CreateDatabaseAPI(sendFunction func(data []byte)) DatabaseAPI {
 	return DatabaseAPI{
 		queries:        make(map[string]*iterator.Iterator),
@@ -195,6 +197,7 @@ func (api *DatabaseWebsocketAPI) shutdown(err error) error {
 	return nil
 }
 
+// Handle handles a message for the database API.
 func (api *DatabaseAPI) Handle(msg []byte) {
 	// 123|get|<key>
 	//    123|ok|<key>|<data>
@@ -370,7 +373,7 @@ func (api *DatabaseAPI) processQuery(opID []byte, q *query.Query) (ok bool) {
 		case <-api.shutdownSignal:
 			// cancel query and return
 			it.Cancel()
-			return
+			return false
 		case r := <-it.Next:
 			// process query feed
 			if r != nil {
@@ -656,7 +659,7 @@ func (api *DatabaseAPI) handleDelete(opID []byte, key string) {
 	api.send(opID, dbMsgTypeSuccess, emptyString, nil)
 }
 
-// MarshalRecords locks and marshals the given record, additionally adding
+// MarshalRecord locks and marshals the given record, additionally adding
 // metadata and returning it as json.
 func MarshalRecord(r record.Record, withDSDIdentifier bool) ([]byte, error) {
 	r.Lock()

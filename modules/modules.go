@@ -30,7 +30,7 @@ var (
 )
 
 // Module represents a module.
-type Module struct {
+type Module struct { //nolint:maligned
 	sync.RWMutex
 
 	Name string
