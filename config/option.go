@@ -108,6 +108,10 @@ const (
 	// requirement. The type of RequiresAnnotation is []ValueRequirement
 	// or ValueRequirement.
 	RequiresAnnotation = "safing/portbase:config:requires"
+	// RequiresFeaturePlan can be used to mark a setting as only available
+	// when the user has a certain feature ID in the subscription plan.
+	// The type is []string or string.
+	RequiresFeatureID = "safing/portmaster:ui:config:requires-feature"
 )
 
 // QuickSettingsAction defines the action of a quick setting.
