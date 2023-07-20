@@ -18,7 +18,9 @@ func init() {
 
 func parseFlags() error {
 	// parse flags
-	flag.Parse()
+	if !flag.Parsed() {
+		flag.Parse()
+	}
 
 	if HelpFlag {
 		flag.Usage()
