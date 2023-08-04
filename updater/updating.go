@@ -338,11 +338,11 @@ func (reg *ResourceRegistry) GetPendingDownloads(manual, auto bool) (resources, 
 		}()
 	}
 
-	slices.SortFunc[*ResourceVersion](toUpdate, func(a, b *ResourceVersion) bool {
-		return a.resource.Identifier < b.resource.Identifier
+	slices.SortFunc[[]*ResourceVersion, *ResourceVersion](toUpdate, func(a, b *ResourceVersion) int {
+		return strings.Compare(a.resource.Identifier, b.resource.Identifier)
 	})
-	slices.SortFunc[*ResourceVersion](missingSigs, func(a, b *ResourceVersion) bool {
-		return a.resource.Identifier < b.resource.Identifier
+	slices.SortFunc[[]*ResourceVersion, *ResourceVersion](missingSigs, func(a, b *ResourceVersion) int {
+		return strings.Compare(a.resource.Identifier, b.resource.Identifier)
 	})
 
 	return toUpdate, missingSigs
