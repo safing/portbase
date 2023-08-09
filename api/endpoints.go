@@ -23,6 +23,13 @@ import (
 // Path and at least one permission are required.
 // As is exactly one function.
 type Endpoint struct { //nolint:maligned
+	// Name is the human reabable name of the endpoint.
+	Name string
+	// Description is the human readable description and documentation of the endpoint.
+	Description string
+	// Parameters is the parameter documentation.
+	Parameters []Parameter `json:",omitempty"`
+
 	// Path describes the URL path of the endpoint.
 	Path string
 
@@ -74,12 +81,6 @@ type Endpoint struct { //nolint:maligned
 
 	// HandlerFunc is the raw http handler.
 	HandlerFunc http.HandlerFunc `json:"-"`
-
-	// Documentation Metadata.
-
-	Name        string
-	Description string
-	Parameters  []Parameter `json:",omitempty"`
 }
 
 // Parameter describes a parameterized variation of an endpoint.
