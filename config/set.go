@@ -34,7 +34,7 @@ func signalChanges() {
 	validityFlag = abool.NewBool(true)
 	validityFlagLock.Unlock()
 
-	module.TriggerEvent(configChangeEvent, nil)
+	module.TriggerEvent(ChangeEvent, nil)
 }
 
 // replaceConfig sets the (prioritized) user defined config.

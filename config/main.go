@@ -16,9 +16,8 @@ import (
 	"github.com/safing/portbase/utils/debug"
 )
 
-const (
-	configChangeEvent = "config change"
-)
+// ChangeEvent is the name of the config change event.
+const ChangeEvent = "config change"
 
 var (
 	module   *modules.Module
@@ -36,7 +35,7 @@ func SetDataRoot(root *utils.DirStructure) {
 
 func init() {
 	module = modules.Register("config", prep, start, nil, "database")
-	module.RegisterEvent(configChangeEvent, true)
+	module.RegisterEvent(ChangeEvent, true)
 
 	flag.BoolVar(&exportConfig, "export-config-options", false, "export configuration registry and exit")
 }

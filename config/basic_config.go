@@ -80,7 +80,7 @@ func registerBasicOptions() error {
 	// Register to hook to update the log level.
 	if err := module.RegisterEventHook(
 		"config",
-		configChangeEvent,
+		ChangeEvent,
 		"update log level",
 		setLogLevel,
 	); err != nil {
