@@ -1,0 +1,19 @@
+name: Greetings
+
+on: [issues]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+#      pull-requests: write
+    steps:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-message: |
+          Greetings and welcome to our community! As this is the first issue you opened here, we wanted to share some useful infos with you:
+          🗣️ On [Discord](https://discord.gg/safing) the community is super helpful and active, we also have a support bot there which will give you immediate help
+          📖 The [Wiki](https://wiki.safing.io/) answers almost all questions, if you cant find your solution there let us know so we can add the missing info's
+ #       pr-message: "Message that will be displayed on users' first pull request"
