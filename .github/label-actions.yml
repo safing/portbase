@@ -30,3 +30,11 @@ in/compatibility:
     If you can't find your software in the list, then a good starting point is our guide on [How do I make software compatible with Portmaster](https://wiki.safing.io/en/FAQ/MakeSoftwareCompatibleWithPortmaster).
 
     If you have managed to establish compatibility with an application, please share your findings here. This will greatly help other users encountering the same issues.
+
+fixed:
+  comment: |
+    This issue has been fixed by the recently referenced commit or PR.
+
+    However, the fix is not released yet.
+    
+    It is expected to go into the [Beta Release Channel](https://wiki.safing.io/en/FAQ/SwitchReleaseChannel) for testing within the next two weeks and will be available for everyone within the next four weeks. While this is the typical timeline we work with, things are subject to change.
