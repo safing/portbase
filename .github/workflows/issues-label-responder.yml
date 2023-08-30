@@ -1,0 +1,37 @@
+# This workflow responds with a message when certain labels are added to an issue or PR.
+# Docs: https://github.com/hramos/respond-to-issue-based-on-label
+name: Respond To Issues Based on Label
+
+# This workflow is triggered when a label is added to an issue.
+on:
+  issues:
+    types: labeled
+
+jobs:
+  respond:
+    name: Process Label Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hramos/respond-to-issue-based-on-label@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          community support:
+            comment: |
+              Thank you for raising this issue with us.
+
+              After a first review we noticed that this does not seem to be a technical issue, but rather a configuration issue or general question about how Portmaster works.
+
+              Thus, we invite the community to help with configuration and/or answering this questions.
+
+              If you are in a hurry or haven't received an answer, a good place to ask is in [our Discord community](https://discord.gg/safing).
+
+              If your problem or question has been resolved or answered, please come back and give an update here for other users encountering the same and then close this issue.
+
+              If you are a paying subscriber and want this issue to be checked out by Safing, please send us a message [on Discord](https://discord.gg/safing) or [via Email](mailto:support@safing.io) with your username and the link to this issue, so we can prioritize accordingly.
+          needs debug info:
+            comment: |
+              Thank you for raising this issue with us.
+
+              After a first review we noticed that we will require the Debug Info for further investigation. However, you haven't supplied any Debug Info in your report.
+
+              Please [collect Debug Info](https://wiki.safing.io/en/FAQ/DebugInfo) from Portmaster _while_ the reported issue is present.
