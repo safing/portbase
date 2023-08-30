@@ -36,4 +36,4 @@ jobs:
 
               After a first review we noticed that we will require the Debug Info for further investigation. However, you haven't supplied any Debug Info in your report.
 
-              Please [collect Debug Info](https://wiki.safing.io/en/FAQ/DebugInfo) from _while_ the reported issue is present.
+              Please [collect Debug Info](https://wiki.safing.io/en/FAQ/DebugInfo) from Portmaster _while_ the reported issue is present.
