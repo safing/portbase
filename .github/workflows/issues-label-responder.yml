@@ -12,9 +12,7 @@ jobs:
     name: Process Label Action
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Process Label Action
-        uses: hramos/respond-to-issue-based-on-label@v2
+      - uses: hramos/respond-to-issue-based-on-label@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           community support:
@@ -30,7 +28,7 @@ jobs:
               If your problem or question has been resolved or answered, please come back and give an update here for other users encountering the same and then close this issue.
 
               If you are a paying subscriber and want this issue to be checked out by Safing, please send us a message [on Discord](https://discord.gg/safing) or [via Email](mailto:support@safing.io) with your username and the link to this issue, so we can prioritize accordingly.
-          need debug info:
+          needs debug info:
             comment: |
               Thank you for raising this issue with us.
 

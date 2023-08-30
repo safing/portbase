@@ -13,14 +13,14 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/stale@v5
+      - uses: actions/stale@v8
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           # Handle stale issues
           stale-issue-label: 'stale'
           # Exemptions
-          exempt-issue-assignees: 'dhaavi,Raphty'
-          exempt-issue-labels: 'support,faq,dependencies,pinned,security'
+          exempt-all-issue-assignees: true
+          exempt-issue-labels: 'support,dependencies,pinned,security'
           # Mark as stale
           days-before-issue-stale: 63 # 2 months / 9 weeks
           stale-issue-message: |
@@ -32,12 +32,5 @@ jobs:
           close-issue-message: |
             This issue has been automatically closed because it has not had recent activity. Thank you for your contributions.
 
-            If the issue has not been resolved, you can find more information or continue the conversation here:
-
-            - [Wiki & FAQ](https://wiki.safing.io/)
-            - [Get Help on Discord](https://discord.gg/safing)
-
-            Please keep in mind that the free version of Portmaster only has limited support. If you find our work brings value to you, please consider supporting it by purchasing Portmaster Plus or Pro: https://safing.io/pricing/.
-
-            If you already are a paying subscriber and want this issue to be checked out by Safing, please send us a message [on Discord](https://discord.gg/safing) or [via Email](mailto:support@safing.io) with your username and the link to this issue, so we can prioritize accordingly.
+            If the issue has not been resolved, you can [find more information in our Wiki](https://wiki.safing.io/) or [continue the conversation on our Discord](https://discord.gg/safing).
           # TODO: Handle stale PRs
