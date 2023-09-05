@@ -42,3 +42,8 @@ func NewCounter(id string, labels map[string]string, opts *Options) (*Counter, e
 
 	return m, nil
 }
+
+// CurrentValue returns the current counter value.
+func (c *Counter) CurrentValue() uint64 {
+	return c.Get()
+}

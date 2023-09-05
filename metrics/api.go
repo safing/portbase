@@ -3,7 +3,6 @@ package metrics
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,20 +16,41 @@ import (
 func registerAPI() error {
 	api.RegisterHandler("/metrics", &metricsAPI{})
 
-	return api.RegisterEndpoint(api.Endpoint{
-		Path:      "metrics/list",
-		Read:      api.PermitAnyone,
-		MimeType:  api.MimeTypeJSON,
-		BelongsTo: module,
-		DataFunc: func(*api.Request) ([]byte, error) {
-			registryLock.RLock()
-			defer registryLock.RUnlock()
-
-			return json.Marshal(registry)
-		},
+	if err := api.RegisterEndpoint(api.Endpoint{
 		Name:        "Export Registered Metrics",
 		Description: "List all registered metrics with their metadata.",
-	})
+		Path:        "metrics/list",
+		Read:        api.Dynamic,
+		BelongsTo:   module,
+		StructFunc: func(ar *api.Request) (any, error) {
+			return ExportMetrics(ar.AuthToken.Read), nil
+		},
+	}); err != nil {
+		return err
+	}
+
+	if err := api.RegisterEndpoint(api.Endpoint{
+		Name:        "Export Metric Values",
+		Description: "List all exportable metric values.",
+		Path:        "metrics/values",
+		Read:        api.Dynamic,
+		Parameters: []api.Parameter{{
+			Method:      http.MethodGet,
+			Field:       "internal-only",
+			Description: "Specify to only return metrics with an alternative internal ID.",
+		}},
+		BelongsTo: module,
+		StructFunc: func(ar *api.Request) (any, error) {
+			return ExportValues(
+				ar.AuthToken.Read,
+				ar.Request.URL.Query().Has("internal-only"),
+			), nil
+		},
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type metricsAPI struct{}

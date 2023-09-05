@@ -50,6 +50,11 @@ func NewFetchingCounter(id string, labels map[string]string, fn func() uint64, o
 	return m, nil
 }
 
+// CurrentValue returns the current counter value.
+func (fc *FetchingCounter) CurrentValue() uint64 {
+	return fc.fetchCnt()
+}
+
 // WritePrometheus writes the metric in the prometheus format to the given writer.
 func (fc *FetchingCounter) WritePrometheus(w io.Writer) {
 	fc.counter.Set(fc.fetchCnt())
