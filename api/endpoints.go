@@ -436,6 +436,9 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add response headers to request struct so that the endpoint can work with them.
+	apiRequest.ResponseHeader = w.Header()
+
 	// Execute action function and get response data
 	var responseData []byte
 	var err error

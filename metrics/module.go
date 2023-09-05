@@ -92,6 +92,10 @@ func register(m Metric) error {
 		if m.LabeledID() == registeredMetric.LabeledID() {
 			return ErrAlreadyRegistered
 		}
+		if m.Opts().InternalID != "" &&
+			m.Opts().InternalID == registeredMetric.Opts().InternalID {
+			return fmt.Errorf("%w with this internal ID", ErrAlreadyRegistered)
+		}
 	}
 
 	// Add new metric to registry and sort it.

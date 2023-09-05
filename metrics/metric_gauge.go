@@ -39,3 +39,8 @@ func NewGauge(id string, labels map[string]string, fn func() float64, opts *Opti
 
 	return m, nil
 }
+
+// CurrentValue returns the current gauge value.
+func (g *Gauge) CurrentValue() float64 {
+	return g.Get()
+}
