@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/safing/portbase/info"
 	"github.com/safing/portbase/utils/debug"
 )
 
@@ -46,6 +47,7 @@ func registerDebugEndpoints() error {
 
 	if err := RegisterEndpoint(Endpoint{
 		Path:     "debug/cpu",
+		MimeType: "application/octet-stream",
 		Read:     PermitAnyone,
 		DataFunc: handleCPUProfile,
 		Name:     "Get CPU Profile",
@@ -67,6 +69,7 @@ You can easily view this data in your browser with this command (with Go install
 
 	if err := RegisterEndpoint(Endpoint{
 		Path:     "debug/heap",
+		MimeType: "application/octet-stream",
 		Read:     PermitAnyone,
 		DataFunc: handleHeapProfile,
 		Name:     "Get Heap Profile",
@@ -81,6 +84,7 @@ You can easily view this data in your browser with this command (with Go install
 
 	if err := RegisterEndpoint(Endpoint{
 		Path:     "debug/allocs",
+		MimeType: "application/octet-stream",
 		Read:     PermitAnyone,
 		DataFunc: handleAllocsProfile,
 		Name:     "Get Allocs Profile",
@@ -154,6 +158,12 @@ func handleCPUProfile(ar *Request) (data []byte, err error) {
 		duration = parsedDuration
 	}
 
+	// Indicate download and filename.
+	ar.ResponseHeader.Set(
+		"Content-Disposition",
+		fmt.Sprintf(`attachment; filename="portmaster-cpu-profile_v%s.pprof"`, info.Version()),
+	)
+
 	// Start CPU profiling.
 	buf := new(bytes.Buffer)
 	if err := pprof.StartCPUProfile(buf); err != nil {
@@ -175,6 +185,12 @@ func handleCPUProfile(ar *Request) (data []byte, err error) {
 
 // handleHeapProfile returns the Heap profile.
 func handleHeapProfile(ar *Request) (data []byte, err error) {
+	// Indicate download and filename.
+	ar.ResponseHeader.Set(
+		"Content-Disposition",
+		fmt.Sprintf(`attachment; filename="portmaster-memory-heap-profile_v%s.pprof"`, info.Version()),
+	)
+
 	buf := new(bytes.Buffer)
 	if err := pprof.Lookup("heap").WriteTo(buf, 0); err != nil {
 		return nil, fmt.Errorf("failed to write heap profile: %w", err)
@@ -184,6 +200,12 @@ func handleHeapProfile(ar *Request) (data []byte, err error) {
 
 // handleAllocsProfile returns the Allocs profile.
 func handleAllocsProfile(ar *Request) (data []byte, err error) {
+	// Indicate download and filename.
+	ar.ResponseHeader.Set(
+		"Content-Disposition",
+		fmt.Sprintf(`attachment; filename="portmaster-memory-allocs-profile_v%s.pprof"`, info.Version()),
+	)
+
 	buf := new(bytes.Buffer)
 	if err := pprof.Lookup("allocs").WriteTo(buf, 0); err != nil {
 		return nil, fmt.Errorf("failed to write allocs profile: %w", err)
