@@ -43,6 +43,10 @@ type Options struct {
 	// Name defines an optional human readable name for the metric.
 	Name string
 
+	// InternalID specifies an alternative internal ID that will be used when
+	// exposing the metric via the API in a structured format.
+	InternalID string
+
 	// AlertLimit defines an upper limit that triggers an alert.
 	AlertLimit float64
 
