@@ -26,6 +26,9 @@ type Request struct {
 	// AuthToken is the request-side authentication token assigned.
 	AuthToken *AuthToken
 
+	// ResponseHeader holds the response header.
+	ResponseHeader http.Header
+
 	// HandlerCache can be used by handlers to cache data between handlers within a request.
 	HandlerCache interface{}
 }
