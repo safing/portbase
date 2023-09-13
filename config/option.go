@@ -112,6 +112,13 @@ const (
 	// when the user has a certain feature ID in the subscription plan.
 	// The type is []string or string.
 	RequiresFeatureID = "safing/portmaster:ui:config:requires-feature"
+
+	// RequiresUIReloadAnnotation can be used to inform the UI that changing the value
+	// of the annotated setting requires a full reload of the user interface.
+	// The value of this annotation does not matter as the sole presence of
+	// the annotation key is enough. Though, users are advised to set the value
+	// of this annotation to true.
+	RequiresUIReloadAnnotation = "safing/portmaster:ui:requires-reload"
 )
 
 // QuickSettingsAction defines the action of a quick setting.
