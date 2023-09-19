@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/safing/portbase/modules"
 )
@@ -78,6 +79,20 @@ func start() error {
 }
 
 func stop() error {
+	// Wait until the metrics pusher is done, as it may have started reporting
+	// and may report a higher number than we store to disk. For persistent
+	// metrics it can then happen that the first report is lower than the
+	// previous report, making prometheus think that al that happened since the
+	// last report, due to the automatic restart detection.
+	done := metricsPusherDone.NewFlag()
+	done.Refresh()
+	if !done.IsSet() {
+		select {
+		case <-done.Signal():
+		case <-time.After(10 * time.Second):
+		}
+	}
+
 	storePersistentMetrics()
 
 	return nil

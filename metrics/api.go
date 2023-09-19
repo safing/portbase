@@ -11,6 +11,7 @@ import (
 	"github.com/safing/portbase/api"
 	"github.com/safing/portbase/config"
 	"github.com/safing/portbase/log"
+	"github.com/safing/portbase/utils"
 )
 
 func registerAPI() error {
@@ -139,7 +140,11 @@ func writeMetricsTo(ctx context.Context, url string) error {
 	)
 }
 
+var metricsPusherDone = utils.NewBroadcastFlag()
+
 func metricsWriter(ctx context.Context) error {
+	defer metricsPusherDone.NotifyAndReset()
+
 	pushURL := pushOption()
 	ticker := module.NewSleepyTicker(1*time.Minute, 0)
 	defer ticker.Stop()
