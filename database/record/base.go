@@ -44,6 +44,13 @@ func (b *Base) SetKey(key string) {
 	}
 }
 
+// ResetKey resets the database name and key.
+// Use with caution!
+func (b *Base) ResetKey() {
+	b.dbName = ""
+	b.dbKey = ""
+}
+
 // Key returns the key of the database record.
 // As the key must be set before any usage and can only be set once, this
 // function may be used without locking the record.
