@@ -11,6 +11,12 @@ import (
 var (
 	optionsLock sync.RWMutex
 	options     = make(map[string]*Option)
+
+	// unmappedValues holds a list of configuration values that have been
+	// read from the persistence layer but no option has been defined yet.
+	// This is mainly to support the plugin system of the Portmaster.
+	unmappedValuesLock sync.Mutex
+	unmappedValues     map[string]interface{}
 )
 
 // ForEachOption calls fn for each defined option. If fn returns
@@ -98,9 +104,47 @@ func Register(option *Option) error {
 		return fmt.Errorf("config: invalid default value: %w", vErr)
 	}
 
+	hasUnmappedValue, vErr := loadUnmappedValue(option)
+	if vErr != nil && !vErr.SoftError {
+		return fmt.Errorf("config: invalid value: %w", vErr)
+	}
+
 	optionsLock.Lock()
 	defer optionsLock.Unlock()
 	options[option.Key] = option
 
+	if hasUnmappedValue {
+		signalChanges()
+	}
+
+	// return the validation-error from loadUnmappedValue here
+	if vErr != nil {
+		return vErr
+	}
+
 	return nil
+}
+
+func loadUnmappedValue(option *Option) (bool, *ValidationError) {
+	unmappedValuesLock.Lock()
+	defer unmappedValuesLock.Unlock()
+
+	if value, ok := unmappedValues[option.Key]; ok {
+		delete(unmappedValues, option.Key)
+
+		var vErr *ValidationError
+		option.activeValue, vErr = validateValue(option, value)
+		if vErr != nil {
+			// we consider this error as a "soft" error so lazily registered
+			// options don't fail the hard way.
+			option.activeValue = option.activeFallbackValue
+			vErr.SoftError = true
+
+			return true, vErr
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
