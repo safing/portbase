@@ -325,6 +325,29 @@ func (option *Option) IsSetByUser() bool {
 	return option.activeValue != nil
 }
 
+// UserValue returns the value set by the user or nil if the value has not
+// been changed from the default.
+func (option *Option) UserValue() any {
+	option.Lock()
+	defer option.Unlock()
+
+	if option.activeValue == nil {
+		return nil
+	}
+	return option.activeValue.getData(option)
+}
+
+// ValidateValue checks if the given value is valid for the option.
+func (option *Option) ValidateValue(value any) error {
+	option.Lock()
+	defer option.Unlock()
+
+	if _, err := validateValue(option, value); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Export expors an option to a Record.
 func (option *Option) Export() (record.Record, error) {
 	option.Lock()

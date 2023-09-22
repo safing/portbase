@@ -482,7 +482,6 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Check for handler error.
 	if err != nil {
-		// if statusProvider, ok := err.(HTTPStatusProvider); ok {
 		var statusProvider HTTPStatusProvider
 		if errors.As(err, &statusProvider) {
 			http.Error(w, err.Error(), statusProvider.HTTPStatus())

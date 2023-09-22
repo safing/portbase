@@ -14,7 +14,7 @@ func parseAndReplaceConfig(jsonData string) error {
 		return err
 	}
 
-	validationErrors := replaceConfig(m)
+	validationErrors, _ := ReplaceConfig(m)
 	if len(validationErrors) > 0 {
 		return fmt.Errorf("%d errors, first: %w", len(validationErrors), validationErrors[0])
 	}
@@ -27,7 +27,7 @@ func parseAndReplaceDefaultConfig(jsonData string) error {
 		return err
 	}
 
-	validationErrors := replaceDefaultConfig(m)
+	validationErrors, _ := ReplaceDefaultConfig(m)
 	if len(validationErrors) > 0 {
 		return fmt.Errorf("%d errors, first: %w", len(validationErrors), validationErrors[0])
 	}
