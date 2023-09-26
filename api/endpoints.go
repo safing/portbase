@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/safing/portbase/database/record"
+	"github.com/safing/portbase/formats/dsd"
 	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 )
@@ -461,7 +461,11 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var v interface{}
 		v, err = e.StructFunc(apiRequest)
 		if err == nil && v != nil {
-			responseData, err = json.Marshal(v)
+			var mimeType string
+			responseData, mimeType, _, err = dsd.MimeDump(v, r.Header.Get("Accept"))
+			if err == nil {
+				w.Header().Set("Content-Type", mimeType)
+			}
 		}
 
 	case e.RecordFunc != nil:
@@ -497,8 +501,12 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set content type if not yet set.
+	if w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", e.MimeType+"; charset=utf-8")
+	}
+
 	// Write response.
-	w.Header().Set("Content-Type", e.MimeType+"; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(len(responseData)))
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(responseData)
