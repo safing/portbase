@@ -16,7 +16,7 @@ func TestMimeTypes(t *testing.T) {
 		assert.NoError(t, err, "mime type must be parse-able")
 		assert.Equal(t, mimeType, cleaned, "mime type should be clean in map already")
 	}
-	for mimeType, _ := range MimeTypeToFormat {
+	for mimeType := range MimeTypeToFormat {
 		cleaned, _, err := mime.ParseMediaType(mimeType)
 		assert.NoError(t, err, "mime type must be parse-able")
 		assert.Equal(t, mimeType, cleaned, "mime type should be clean in map already")
