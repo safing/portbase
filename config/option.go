@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"sync"
 
@@ -108,11 +109,13 @@ const (
 	// requirement. The type of RequiresAnnotation is []ValueRequirement
 	// or ValueRequirement.
 	RequiresAnnotation = "safing/portbase:config:requires"
-	// RequiresFeaturePlan can be used to mark a setting as only available
+	// RequiresFeatureIDAnnotation can be used to mark a setting as only available
 	// when the user has a certain feature ID in the subscription plan.
 	// The type is []string or string.
-	RequiresFeatureID = "safing/portmaster:ui:config:requires-feature"
-
+	RequiresFeatureIDAnnotation = "safing/portmaster:ui:config:requires-feature"
+	// SettablePerAppAnnotation can be used to mark a setting as settable per-app and
+	// is a boolean.
+	SettablePerAppAnnotation = "safing/portmaster:settable-per-app"
 	// RequiresUIReloadAnnotation can be used to inform the UI that changing the value
 	// of the annotated setting requires a full reload of the user interface.
 	// The value of this annotation does not matter as the sole presence of
@@ -306,6 +309,22 @@ func (option *Option) GetAnnotation(key string) (interface{}, bool) {
 	}
 	val, ok := option.Annotations[key]
 	return val, ok
+}
+
+// AnnotationEquals returns whether the annotation of the given key matches the
+// given value.
+func (option *Option) AnnotationEquals(key string, value any) bool {
+	option.Lock()
+	defer option.Unlock()
+
+	if option.Annotations == nil {
+		return false
+	}
+	setValue, ok := option.Annotations[key]
+	if !ok {
+		return false
+	}
+	return reflect.DeepEqual(value, setValue)
 }
 
 // copyOrNil returns a copy of the option, or nil if copying failed.
