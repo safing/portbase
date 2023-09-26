@@ -19,6 +19,7 @@ const (
 	GenCode = 71 // G
 	JSON    = 74 // J
 	MsgPack = 77 // M
+	YAML    = 89 // Y
 
 	// Compression types.
 	GZIP = 90 // Z
@@ -47,6 +48,8 @@ func ValidateSerializationFormat(format uint8) (validatedFormat uint8, ok bool) 
 	case GenCode:
 		return format, true
 	case JSON:
+		return format, true
+	case YAML:
 		return format, true
 	case MsgPack:
 		return format, true
