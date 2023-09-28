@@ -7,7 +7,13 @@ import (
 	"sync/atomic"
 )
 
-// OnceAgain is an object that will perform only one action "in flight". It's basically the same as sync.Once, but is automatically reused when the function was executed and everyone who waited has left.
+// OnceAgain is an object that will perform only one action "in flight". It's
+// basically the same as sync.Once, but is automatically reused when the
+// function was executed and everyone who waited has left.
+// Important: This is somewhat racy when used heavily as it only resets _after_
+// everyone who waited has left. So, while some goroutines are waiting to be
+// activated again to leave the waiting state, other goroutines will call Do()
+// without executing the function again.
 type OnceAgain struct {
 	// done indicates whether the action has been performed.
 	// It is first in the struct because it is used in the hot path.
