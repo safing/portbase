@@ -45,6 +45,8 @@ func TestVersionSelection(t *testing.T) {
 	registry.UsePreReleases = true
 	registry.DevMode = true
 	registry.Online = true
+	res.Index = &Index{AutoDownload: true}
+
 	res.selectVersion()
 	if res.SelectedVersion.VersionNumber != "0.0.0" {
 		t.Errorf("selected version should be 0.0.0, not %s", res.SelectedVersion.VersionNumber)
