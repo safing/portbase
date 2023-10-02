@@ -43,8 +43,12 @@ type ResourceRegistry struct {
 	// version. Even if false, a pre-release version will still be used if it is
 	// defined as the current version by an index.
 	UsePreReleases bool
-	DevMode        bool
-	Online         bool
+
+	// DevMode specifies if a local 0.0.0 version should be always chosen, when available.
+	DevMode bool
+
+	// Online specifies if resources may be downloaded if not available locally.
+	Online bool
 
 	// StateNotifyFunc may be set to receive any changes to the registry state.
 	// The specified function may lock the state, but may not block or take a
