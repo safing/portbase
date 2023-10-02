@@ -112,7 +112,26 @@ func (rv *ResourceVersion) EqualsVersion(version string) bool {
 // A version is selectable if it's not blacklisted and either already locally
 // available or ready to be downloaded.
 func (rv *ResourceVersion) isSelectable() bool {
-	return !rv.Blacklisted && (rv.Available || rv.resource.registry.Online)
+	switch {
+	case rv.Blacklisted:
+		// Should not be used.
+		return false
+	case rv.Available:
+		// Is available locally, use!
+		return true
+	case !rv.resource.registry.Online:
+		// Cannot download, because registry is set to offline.
+		return false
+	case rv.resource.Index == nil:
+		// Cannot download, because resource is not part of an index.
+		return false
+	case !rv.resource.Index.AutoDownload:
+		// Cannot download, because index may not automatically download.
+		return false
+	default:
+		// Is not available locally, but we are allowed to download it on request!
+		return true
+	}
 }
 
 // isBetaVersionNumber checks if rv is marked as a beta version by checking
@@ -290,8 +309,13 @@ func (res *Resource) selectVersion() {
 	sort.Sort(res)
 
 	// export after we finish
+	var fallback bool
 	defer func() {
-		log.Tracef("updater: selected version %s for resource %s", res.SelectedVersion, res.Identifier)
+		if fallback {
+			log.Tracef("updater: selected version %s (as fallback) for resource %s", res.SelectedVersion, res.Identifier)
+		} else {
+			log.Debugf("updater: selected version %s for resource %s", res.SelectedVersion, res.Identifier)
+		}
 
 		if res.inUse() &&
 			res.SelectedVersion != res.ActiveVersion && // new selected version does not match previously selected version
@@ -356,7 +380,7 @@ func (res *Resource) selectVersion() {
 
 	// 5) Default to newest.
 	res.SelectedVersion = res.Versions[0]
-	log.Warningf("updater: falling back to version %s for %s because we failed to find a selectable one", res.SelectedVersion, res.Identifier)
+	fallback = true
 }
 
 // Blacklist blacklists the specified version and selects a new version.
