@@ -47,7 +47,7 @@ func (reg *ResourceRegistry) UpdateIndexes(ctx context.Context) error {
 	// Get pending resources and update status.
 	pendingResourceVersions, _ := reg.GetPendingDownloads(true, false)
 	reg.state.ReportUpdateCheck(
-		identifiersFromResourceVersions(pendingResourceVersions),
+		humanInfoFromResourceVersions(pendingResourceVersions),
 		nil,
 	)
 
@@ -183,14 +183,14 @@ func (reg *ResourceRegistry) downloadIndex(ctx context.Context, client *http.Cli
 }
 
 // DownloadUpdates checks if updates are available and downloads updates of used components.
-func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context, automaticOnly bool) error {
+func (reg *ResourceRegistry) DownloadUpdates(ctx context.Context, includeManual bool) error {
 	// Start registry operation.
 	reg.state.StartOperation(StateDownloading)
 	defer reg.state.EndOperation()
 
 	// Get pending updates.
-	toUpdate, missingSigs := reg.GetPendingDownloads(!automaticOnly, true)
-	downloadDetailsResources := identifiersFromResourceVersions(toUpdate)
+	toUpdate, missingSigs := reg.GetPendingDownloads(includeManual, true)
+	downloadDetailsResources := humanInfoFromResourceVersions(toUpdate)
 	reg.state.UpdateOperationDetails(&StateDownloadingDetails{
 		Resources: downloadDetailsResources,
 	})
@@ -348,11 +348,11 @@ func (reg *ResourceRegistry) GetPendingDownloads(manual, auto bool) (resources, 
 	return toUpdate, missingSigs
 }
 
-func identifiersFromResourceVersions(resourceVersions []*ResourceVersion) []string {
+func humanInfoFromResourceVersions(resourceVersions []*ResourceVersion) []string {
 	identifiers := make([]string, len(resourceVersions))
 
 	for i, rv := range resourceVersions {
-		identifiers[i] = rv.resource.Identifier
+		identifiers[i] = fmt.Sprintf("%s v%s", rv.resource.Identifier, rv.VersionNumber)
 	}
 
 	return identifiers
