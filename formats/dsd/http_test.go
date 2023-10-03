@@ -24,12 +24,13 @@ func TestMimeTypes(t *testing.T) {
 
 	// Test assumptions.
 	for mimeType, mimeTypeCleaned := range map[string]string{
-		"application/xml, image/webp":       "application/xml",
-		"application/xml;q=0.9, image/webp": "application/xml",
+		"application/xml, image/webp":       "xml",
+		"application/xml;q=0.9, image/webp": "xml",
 		"*":                                 "*",
-		"*/*":                               "*/*",
+		"*/*":                               "*",
+		"text/yAMl":                         "yaml",
 	} {
-		cleaned := cleanMimeType(mimeType)
+		cleaned := extractMimeType(mimeType)
 		assert.Equal(t, mimeTypeCleaned, cleaned, "assumption for %q should hold", mimeType)
 	}
 }

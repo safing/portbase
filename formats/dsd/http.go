@@ -98,8 +98,7 @@ func DumpToHTTPResponse(w http.ResponseWriter, r *http.Request, t interface{}) e
 // MimeLoad loads the given data into the interface based on the given mime type.
 func MimeLoad(data []byte, mimeType string, t interface{}) (format uint8, err error) {
 	// Find format.
-	mimeType = cleanMimeType(mimeType)
-	format = MimeTypeToFormat[mimeType]
+	format = FormatFromMime(mimeType)
 	if format == 0 {
 		return 0, ErrIncompatibleFormat
 	}
@@ -112,9 +111,9 @@ func MimeLoad(data []byte, mimeType string, t interface{}) (format uint8, err er
 // MimeDump dumps the given interface based on the given mime type accept header.
 func MimeDump(t any, accept string) (data []byte, mimeType string, format uint8, err error) {
 	// Find format.
-	accept = cleanMimeType(accept)
+	accept = extractMimeType(accept)
 	switch accept {
-	case "", "*", "*/*":
+	case "", "*":
 		format = DefaultSerializationFormat
 	default:
 		format = MimeTypeToFormat[accept]
@@ -132,17 +131,20 @@ func MimeDump(t any, accept string) (data []byte, mimeType string, format uint8,
 // FormatFromMime returns the format for the given mime type.
 // Will return AUTO format for unsupported or unrecognized mime types.
 func FormatFromMime(mimeType string) (format uint8) {
-	return MimeTypeToFormat[cleanMimeType(mimeType)]
+	return MimeTypeToFormat[extractMimeType(mimeType)]
 }
 
-func cleanMimeType(mimeType string) string {
+func extractMimeType(mimeType string) string {
 	if strings.Contains(mimeType, ",") {
 		mimeType, _, _ = strings.Cut(mimeType, ",")
 	}
 	if strings.Contains(mimeType, ";") {
 		mimeType, _, _ = strings.Cut(mimeType, ";")
 	}
-	return mimeType
+	if strings.Contains(mimeType, "/") {
+		_, mimeType, _ = strings.Cut(mimeType, "/")
+	}
+	return strings.ToLower(mimeType)
 }
 
 // Format and MimeType mappings.
@@ -154,12 +156,10 @@ var (
 		YAML:    "application/yaml",
 	}
 	MimeTypeToFormat = map[string]uint8{
-		"application/cbor":    CBOR,
-		"application/json":    JSON,
-		"application/msgpack": MsgPack,
-		"application/yaml":    YAML,
-		"text/json":           JSON,
-		"text/yaml":           YAML,
-		"text/yml":            YAML,
+		"cbor":    CBOR,
+		"json":    JSON,
+		"msgpack": MsgPack,
+		"yaml":    YAML,
+		"yml":     YAML,
 	}
 )
