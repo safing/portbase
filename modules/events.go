@@ -104,7 +104,7 @@ func (m *Module) InjectEvent(sourceEventName, targetModuleName, targetEventName 
 func (m *Module) runEventHook(hook *eventHook, event string, data interface{}) {
 	// check if source module is ready for handling
 	if m.Status() != StatusOnline {
-		// target module has not yet fully started, wait until start is complete
+		// source module has not yet fully started, wait until start is complete
 		select {
 		case <-m.StartCompleted():
 			// continue with hook execution

@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/ghodss/yaml"
 	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/safing/portbase/formats/varint"
@@ -39,6 +40,12 @@ func LoadAsFormat(data []byte, format uint8, t interface{}) (err error) {
 		err = json.Unmarshal(data, t)
 		if err != nil {
 			return fmt.Errorf("dsd: failed to unpack json: %w, data: %s", err, utils.SafeFirst16Bytes(data))
+		}
+		return nil
+	case YAML:
+		err = yaml.Unmarshal(data, t)
+		if err != nil {
+			return fmt.Errorf("dsd: failed to unpack yaml: %w, data: %s", err, utils.SafeFirst16Bytes(data))
 		}
 		return nil
 	case CBOR:
@@ -118,6 +125,11 @@ func dumpWithoutIdentifier(t interface{}, format uint8, indent string) ([]byte, 
 		} else {
 			data, err = json.Marshal(t)
 		}
+		if err != nil {
+			return nil, err
+		}
+	case YAML:
+		data, err = yaml.Marshal(t)
 		if err != nil {
 			return nil, err
 		}

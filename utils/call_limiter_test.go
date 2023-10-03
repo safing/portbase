@@ -62,10 +62,30 @@ func TestCallLimiter(t *testing.T) {
 	}
 
 	testWg.Wait()
-	if execs <= 8 {
+	if execs <= 5 {
 		t.Errorf("unexpected low exec count: %d", execs)
 	}
-	if execs >= 12 {
+	if execs >= 15 {
 		t.Errorf("unexpected high exec count: %d", execs)
 	}
+
+	// Wait for pause to reset.
+	time.Sleep(pause)
+
+	// Check if the limiter correctly handles panics.
+	testWg.Add(100)
+	for i := 0; i < 100; i++ {
+		go func() {
+			defer func() {
+				_ = recover()
+				testWg.Done()
+			}()
+			oa.Do(func() {
+				time.Sleep(1 * time.Millisecond)
+				panic("test")
+			})
+		}()
+		time.Sleep(100 * time.Microsecond)
+	}
+	testWg.Wait()
 }

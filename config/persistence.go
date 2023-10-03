@@ -45,7 +45,7 @@ func loadConfig(requireValidConfig bool) error {
 		return err
 	}
 
-	validationErrors := replaceConfig(newValues)
+	validationErrors, _ := ReplaceConfig(newValues)
 	if requireValidConfig && len(validationErrors) > 0 {
 		return fmt.Errorf("encountered %d validation errors during config loading", len(validationErrors))
 	}

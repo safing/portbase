@@ -69,7 +69,7 @@ func start() error {
 
 	err = loadConfig(false)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
+		return fmt.Errorf("failed to load config file: %w", err)
 	}
 	return nil
 }
