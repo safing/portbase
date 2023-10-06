@@ -23,14 +23,23 @@ func TestMimeTypes(t *testing.T) {
 	}
 
 	// Test assumptions.
-	for mimeType, mimeTypeCleaned := range map[string]string{
-		"application/xml, image/webp":       "xml",
-		"application/xml;q=0.9, image/webp": "xml",
-		"*":                                 "*",
-		"*/*":                               "*",
-		"text/yAMl":                         "yaml",
+	for accept, format := range map[string]uint8{
+		"application/json, image/webp":       JSON,
+		"image/webp, application/json":       JSON,
+		"application/json;q=0.9, image/webp": JSON,
+		"*":                                  DefaultSerializationFormat,
+		"*/*":                                DefaultSerializationFormat,
+		"text/yAMl":                          YAML,
+		" * , yaml ":                         YAML,
+		"yaml;charset ,*":                    YAML,
+		"xml,*":                              DefaultSerializationFormat,
+		"text/xml, text/other":               AUTO,
+		"text/*":                             DefaultSerializationFormat,
+		"yaml ;charset":                      AUTO, // Invalid mimetype format.
+		"":                                   DefaultSerializationFormat,
+		"x":                                  AUTO,
 	} {
-		cleaned := extractMimeType(mimeType)
-		assert.Equal(t, mimeTypeCleaned, cleaned, "assumption for %q should hold", mimeType)
+		derivedFormat := FormatFromAccept(accept)
+		assert.Equal(t, format, derivedFormat, "assumption for %q should hold", accept)
 	}
 }
