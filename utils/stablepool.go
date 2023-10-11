@@ -2,8 +2,6 @@ package utils
 
 import "sync"
 
-// This file is forked from https://github.com/golang/go/blob/bc593eac2dc63d979a575eccb16c7369a5ff81e0/src/sync/once.go.
-
 // A StablePool is a drop-in replacement for sync.Pool that is slower, but
 // predictable.
 // A StablePool is a set of temporary objects that may be individually saved and
