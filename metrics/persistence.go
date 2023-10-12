@@ -52,10 +52,18 @@ func EnableMetricPersistence(key string) error {
 
 	// Set storage key.
 	storageKey = key
+	return nil
+}
+
+func loadPersistentMetrics() error {
+	// Abort if storage is not enabled.
+	if storageInit.SetToIf(false, true) {
+		return nil
+	}
 
 	// Load metrics from storage.
 	var err error
-	storage, err = getMetricsStorage(key)
+	storage, err = getMetricsStorage(storageKey)
 	switch {
 	case err == nil:
 		// Continue.

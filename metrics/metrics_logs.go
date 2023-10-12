@@ -5,7 +5,7 @@ import (
 	"github.com/safing/portbase/log"
 )
 
-func registeLogMetrics() (err error) {
+func registerLogMetrics() (err error) {
 	_, err = NewFetchingCounter(
 		"logs/warning/total",
 		nil,
