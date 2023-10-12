@@ -53,6 +53,7 @@ func (m *Module) RunWorker(name string, fn func(context.Context) error) error {
 }
 
 // StartServiceWorker starts a generic worker, which is automatically restarted in case of an error. A call to StartServiceWorker runs the service-worker in a new goroutine and returns immediately. `backoffDuration` specifies how to long to wait before restarts, multiplied by the number of failed attempts. Pass `0` for the default backoff duration. For custom error remediation functionality, build your own error handling procedure using calls to RunWorker.
+// Returning nil error or context.Canceled will stop the service worker.
 func (m *Module) StartServiceWorker(name string, backoffDuration time.Duration, fn func(context.Context) error) {
 	if m == nil {
 		log.Errorf(`modules: cannot start service worker "%s" with nil module`, name)
@@ -81,34 +82,36 @@ func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn
 		}
 
 		err := m.runWorker(name, fn)
-		if err != nil {
-			if !errors.Is(err, ErrRestartNow) {
-				// reset fail counter if running without error for some time
-				if time.Now().Add(-5 * time.Minute).After(lastFail) {
-					failCnt = 0
-				}
-				// increase fail counter and set last failed time
-				failCnt++
-				lastFail = time.Now()
-				// log error
-				sleepFor := time.Duration(failCnt) * backoffDuration
-				if errors.Is(err, context.Canceled) {
-					log.Debugf("%s: service-worker %s was canceled (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
-				} else {
-					log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
-				}
-				select {
-				case <-time.After(sleepFor):
-				case <-m.Ctx.Done():
-					return
-				}
-				// loop to restart
-			} else {
-				log.Infof("%s: service-worker %s %s - restarting now", m.Name, name, err)
-			}
-		} else {
-			// finish
+		switch {
+		case err == nil:
+			// No error means that the worker is finished.
 			return
+
+		case errors.Is(err, context.Canceled):
+			// A canceled context also means that the worker is finished.
+			return
+
+		case errors.Is(err, ErrRestartNow):
+			// Worker requested a restart - silently continue with loop.
+
+		default:
+			// Any other errors triggers a restart with backoff.
+
+			// Reset fail counter if running without error for some time.
+			if time.Now().Add(-5 * time.Minute).After(lastFail) {
+				failCnt = 0
+			}
+			// Increase fail counter and set last failed time.
+			failCnt++
+			lastFail = time.Now()
+			// Log error and back off for some time.
+			sleepFor := time.Duration(failCnt) * backoffDuration
+			log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
+			select {
+			case <-time.After(sleepFor):
+			case <-m.Ctx.Done():
+				return
+			}
 		}
 	}
 }
