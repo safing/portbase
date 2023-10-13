@@ -3,9 +3,12 @@ package metrics
 import (
 	"runtime"
 	"strings"
+	"sync/atomic"
 
 	"github.com/safing/portbase/info"
 )
+
+var reportedStart atomic.Bool
 
 func registerInfoMetric() error {
 	meta := info.GetInfo()
@@ -26,6 +29,10 @@ func registerInfoMetric() error {
 			"comment":       commentOption(),
 		},
 		func() float64 {
+			// Report as 0 the first time in order to detect (re)starts.
+			if reportedStart.CompareAndSwap(false, true) {
+				return 0
+			}
 			return 1
 		},
 		nil,

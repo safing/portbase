@@ -151,7 +151,7 @@ func authenticateRequest(w http.ResponseWriter, r *http.Request, targetHandler h
 	switch requiredPermission { //nolint:exhaustive
 	case NotFound:
 		// Not found.
-		tracer.Trace("api: authenticated handler reported: not found")
+		tracer.Debug("api: no API endpoint registered for this path")
 		http.Error(w, "Not found.", http.StatusNotFound)
 		return nil
 	case NotSupported:

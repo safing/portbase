@@ -25,7 +25,7 @@ var (
 	})
 
 	// ErrAlreadyInitialized is returned when trying to initialize an option
-	// more than once.
+	// more than once or if the time window for initializing is over.
 	ErrAlreadyInitialized = errors.New("already initialized")
 )
 
@@ -55,7 +55,7 @@ func EnableMetricPersistence(key string) error {
 
 	// Load metrics from storage.
 	var err error
-	storage, err = getMetricsStorage(key)
+	storage, err = getMetricsStorage(storageKey)
 	switch {
 	case err == nil:
 		// Continue.

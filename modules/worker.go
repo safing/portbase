@@ -53,6 +53,7 @@ func (m *Module) RunWorker(name string, fn func(context.Context) error) error {
 }
 
 // StartServiceWorker starts a generic worker, which is automatically restarted in case of an error. A call to StartServiceWorker runs the service-worker in a new goroutine and returns immediately. `backoffDuration` specifies how to long to wait before restarts, multiplied by the number of failed attempts. Pass `0` for the default backoff duration. For custom error remediation functionality, build your own error handling procedure using calls to RunWorker.
+// Returning nil error or context.Canceled will stop the service worker.
 func (m *Module) StartServiceWorker(name string, backoffDuration time.Duration, fn func(context.Context) error) {
 	if m == nil {
 		log.Errorf(`modules: cannot start service worker "%s" with nil module`, name)
@@ -81,34 +82,36 @@ func (m *Module) runServiceWorker(name string, backoffDuration time.Duration, fn
 		}
 
 		err := m.runWorker(name, fn)
-		if err != nil {
-			if !errors.Is(err, ErrRestartNow) {
-				// reset fail counter if running without error for some time
-				if time.Now().Add(-5 * time.Minute).After(lastFail) {
-					failCnt = 0
-				}
-				// increase fail counter and set last failed time
-				failCnt++
-				lastFail = time.Now()
-				// log error
-				sleepFor := time.Duration(failCnt) * backoffDuration
-				if errors.Is(err, context.Canceled) {
-					log.Debugf("%s: service-worker %s was canceled (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
-				} else {
-					log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
-				}
-				select {
-				case <-time.After(sleepFor):
-				case <-m.Ctx.Done():
-					return
-				}
-				// loop to restart
-			} else {
-				log.Infof("%s: service-worker %s %s - restarting now", m.Name, name, err)
-			}
-		} else {
-			// finish
+		switch {
+		case err == nil:
+			// No error means that the worker is finished.
 			return
+
+		case errors.Is(err, context.Canceled):
+			// A canceled context also means that the worker is finished.
+			return
+
+		case errors.Is(err, ErrRestartNow):
+			// Worker requested a restart - silently continue with loop.
+
+		default:
+			// Any other errors triggers a restart with backoff.
+
+			// Reset fail counter if running without error for some time.
+			if time.Now().Add(-5 * time.Minute).After(lastFail) {
+				failCnt = 0
+			}
+			// Increase fail counter and set last failed time.
+			failCnt++
+			lastFail = time.Now()
+			// Log error and back off for some time.
+			sleepFor := time.Duration(failCnt) * backoffDuration
+			log.Errorf("%s: service-worker %s failed (%d): %s - restarting in %s", m.Name, name, failCnt, err, sleepFor)
+			select {
+			case <-time.After(sleepFor):
+			case <-m.Ctx.Done():
+				return
+			}
 		}
 	}
 }
@@ -132,10 +135,7 @@ func (m *Module) runWorker(name string, fn func(context.Context) error) (err err
 }
 
 func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn func() error) error {
-	stopFnError := make(chan error)
-	go func() {
-		stopFnError <- m.runCtrlFn(name, fn)
-	}()
+	stopFnError := m.startCtrlFn(name, fn)
 
 	// wait for results
 	select {
@@ -146,26 +146,44 @@ func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn fun
 	}
 }
 
-func (m *Module) runCtrlFn(name string, fn func() error) (err error) {
+func (m *Module) startCtrlFn(name string, fn func() error) chan error {
+	ctrlFnError := make(chan error, 1)
+
+	// If no function is given, still act as if it was run.
 	if fn == nil {
-		return
+		// Signal finish.
+		m.ctrlFuncRunning.UnSet()
+		m.checkIfStopComplete()
+
+		// Report nil error and return.
+		ctrlFnError <- nil
+		return ctrlFnError
 	}
 
-	if m.ctrlFuncRunning.SetToIf(false, true) {
-		defer m.ctrlFuncRunning.SetToIf(true, false)
-	}
+	// Signal that a control function is running.
+	m.ctrlFuncRunning.Set()
 
-	defer func() {
-		// recover from panic
-		panicVal := recover()
-		if panicVal != nil {
-			me := m.NewPanicError(name, "module-control", panicVal)
-			me.Report()
-			err = me
-		}
+	// Start control function in goroutine.
+	go func() {
+		// Recover from panic and reset control function signal.
+		defer func() {
+			// recover from panic
+			panicVal := recover()
+			if panicVal != nil {
+				me := m.NewPanicError(name, "module-control", panicVal)
+				me.Report()
+				ctrlFnError <- fmt.Errorf("panic: %s", panicVal)
+			}
+
+			// Signal finish.
+			m.ctrlFuncRunning.UnSet()
+			m.checkIfStopComplete()
+		}()
+
+		// Run control function and report error.
+		err := fn()
+		ctrlFnError <- err
 	}()
 
-	// run
-	err = fn()
-	return
+	return ctrlFnError
 }
