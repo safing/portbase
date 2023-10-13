@@ -135,10 +135,7 @@ func (m *Module) runWorker(name string, fn func(context.Context) error) (err err
 }
 
 func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn func() error) error {
-	stopFnError := make(chan error)
-	go func() {
-		stopFnError <- m.runCtrlFn(name, fn)
-	}()
+	stopFnError := m.startCtrlFn(name, fn)
 
 	// wait for results
 	select {
@@ -149,26 +146,44 @@ func (m *Module) runCtrlFnWithTimeout(name string, timeout time.Duration, fn fun
 	}
 }
 
-func (m *Module) runCtrlFn(name string, fn func() error) (err error) {
+func (m *Module) startCtrlFn(name string, fn func() error) chan error {
+	ctrlFnError := make(chan error, 1)
+
+	// If no function is given, still act as if it was run.
 	if fn == nil {
-		return
+		// Signal finish.
+		m.ctrlFuncRunning.UnSet()
+		m.checkIfStopComplete()
+
+		// Report nil error and return.
+		ctrlFnError <- nil
+		return ctrlFnError
 	}
 
-	if m.ctrlFuncRunning.SetToIf(false, true) {
-		defer m.ctrlFuncRunning.SetToIf(true, false)
-	}
+	// Signal that a control function is running.
+	m.ctrlFuncRunning.Set()
 
-	defer func() {
-		// recover from panic
-		panicVal := recover()
-		if panicVal != nil {
-			me := m.NewPanicError(name, "module-control", panicVal)
-			me.Report()
-			err = me
-		}
+	// Start control function in goroutine.
+	go func() {
+		// Recover from panic and reset control function signal.
+		defer func() {
+			// recover from panic
+			panicVal := recover()
+			if panicVal != nil {
+				me := m.NewPanicError(name, "module-control", panicVal)
+				me.Report()
+				ctrlFnError <- fmt.Errorf("panic: %s", panicVal)
+			}
+
+			// Signal finish.
+			m.ctrlFuncRunning.UnSet()
+			m.checkIfStopComplete()
+		}()
+
+		// Run control function and report error.
+		err := fn()
+		ctrlFnError <- err
 	}()
 
-	// run
-	err = fn()
-	return
+	return ctrlFnError
 }
