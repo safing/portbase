@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/safing/portbase/log"
 	"github.com/safing/portbase/modules"
 )
 
@@ -36,7 +35,7 @@ var (
 )
 
 func init() {
-	module = modules.Register("metrics", prep, start, stop, "config", "database", "api", "base")
+	module = modules.Register("metrics", prep, start, stop, "config", "database", "api")
 }
 
 func prep() error {
@@ -69,10 +68,6 @@ func start() error {
 
 	if err := registerAPI(); err != nil {
 		return err
-	}
-
-	if err := loadPersistentMetrics(); err != nil {
-		log.Errorf("metrics: failed to load persistent metrics: %s", err)
 	}
 
 	if pushOption() != "" {
@@ -120,6 +115,10 @@ func register(m Metric) error {
 
 	// Set flag that first metric is now registered.
 	firstMetricRegistered = true
+
+	if module.Status() < modules.StatusStarting {
+		return fmt.Errorf("registering metric %q too early", m.ID())
+	}
 
 	return nil
 }
