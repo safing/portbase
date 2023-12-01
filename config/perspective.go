@@ -35,6 +35,8 @@ optionsLoop:
 		if !ok {
 			continue
 		}
+		// migrate value
+		configValue = migrateValue(option, configValue)
 		// validate value
 		valueCache, err := validateValue(option, configValue)
 		if err != nil {

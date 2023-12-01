@@ -66,6 +66,9 @@ type PossibleValue struct {
 // Format: <vendor/package>:<scope>:<identifier> //.
 type Annotations map[string]interface{}
 
+// MigrationFunc is a function that migrates a config option value.
+type MigrationFunc func(option *Option, value any) any
+
 // Well known annotations defined by this package.
 const (
 	// DisplayHintAnnotation provides a hint for the user
@@ -259,6 +262,9 @@ type Option struct {
 	// Annotations is considered mutable and setting/reading annotation keys
 	// must be performed while the option is locked.
 	Annotations Annotations
+	// Migrations holds migration functions that are given the raw option value
+	// before any validation is run. The returned value is then used.
+	Migrations []MigrationFunc `json:"-"`
 
 	activeValue         *valueCache // runtime value (loaded from config file or set by user)
 	activeDefaultValue  *valueCache // runtime default value (may be set internally)
@@ -361,6 +367,7 @@ func (option *Option) ValidateValue(value any) error {
 	option.Lock()
 	defer option.Unlock()
 
+	value = migrateValue(option, value)
 	if _, err := validateValue(option, value); err != nil {
 		return err
 	}
