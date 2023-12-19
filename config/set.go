@@ -187,7 +187,7 @@ func setConfigOption(key string, value any, push bool) (err error) {
 	// finalize change, activate triggers
 	signalChanges()
 
-	return saveConfig()
+	return SaveConfig()
 }
 
 // SetDefaultConfigOption sets a single value in the (fallback) default config.

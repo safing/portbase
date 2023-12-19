@@ -58,10 +58,10 @@ func loadConfig(requireValidConfig bool) error {
 	return nil
 }
 
-// saveConfig saves the current configuration to file.
+// SaveConfig saves the current configuration to file.
 // It will acquire a read-lock on the global options registry
 // lock and must lock each option!
-func saveConfig() error {
+func SaveConfig() error {
 	optionsLock.RLock()
 	defer optionsLock.RUnlock()
 

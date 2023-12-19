@@ -114,7 +114,7 @@ func (reg *Registry) Migrate(ctx context.Context) (err error) {
 		if err := m.MigrateFunc(migrationCtx, lastAppliedMigration, target, db); err != nil {
 			diag.Wrapped = err
 			diag.FailedMigration = m.Description
-			tracer.Infof("migration: applied migration for %s: %s - %s", reg.key, target.String(), m.Description)
+			tracer.Errorf("migration: migration for %s failed: %s - %s", reg.key, target.String(), m.Description)
 			tracer.Submit()
 			return diag
 		}
