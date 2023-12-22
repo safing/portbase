@@ -393,6 +393,17 @@ func (n *Notification) Update(expires int64) {
 
 // Delete (prematurely) cancels and deletes a notification.
 func (n *Notification) Delete() {
+	// Dismiss notification.
+	func() {
+		n.lock.Lock()
+		defer n.lock.Unlock()
+
+		if n.actionTrigger != nil {
+			close(n.actionTrigger)
+			n.actionTrigger = nil
+		}
+	}()
+
 	n.delete(true)
 }
 
