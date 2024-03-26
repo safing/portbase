@@ -99,12 +99,11 @@ func CheckVersion() error {
 		return nil // testing on windows
 	default:
 		// check version information
-		if name == "[NAME]" {
+		if name == "[NAME]" || license == "[license unknown]" {
 			return errors.New("must call SetInfo() before calling CheckVersion()")
 		}
 
-		if version == "[version unknown]" ||
-			license == "[license unknown]" {
+		if version == "[version unknown]" {
 			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
 		}
 	}
