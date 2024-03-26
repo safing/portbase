@@ -5,34 +5,32 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
+	"sync"
 )
 
 var (
-	name         = "[NAME]"
-	version      = "[version unknown]"
-	commit       = "[commit unknown]"
-	license      = "[license unknown]"
-	buildOptions = "[options unknown]"
-	buildUser    = "[user unknown]"
-	buildHost    = "[host unknown]"
-	buildDate    = "[date unknown]"
-	buildSource  = "[source unknown]"
+	name        string
+	version     = "dev build"
+	buildSource = "[source unknown]"
+	license     = "[license unknown]"
 
-	compareVersion bool
+	info     *Info
+	loadInfo sync.Once
 )
 
 // Info holds the programs meta information.
 type Info struct {
-	Name         string
-	Version      string
-	License      string
-	Commit       string
-	BuildOptions string
-	BuildUser    string
-	BuildHost    string
-	BuildDate    string
-	BuildSource  string
+	Name    string
+	Version string
+	License string
+	Commit  string
+	Time    string
+	Source  string
+	Dirty   bool
+
+	debug.BuildInfo
 }
 
 // Set sets meta information via the main routine. This should be the first thing your program calls.
@@ -40,47 +38,56 @@ func Set(setName string, setVersion string, setLicenseName string, compareVersio
 	name = setName
 	version = setVersion
 	license = setLicenseName
-	compareVersion = compareVersionToTag
 }
 
 // GetInfo returns all the meta information about the program.
 func GetInfo() *Info {
-	return &Info{
-		Name:         name,
-		Version:      version,
-		Commit:       commit,
-		License:      license,
-		BuildOptions: buildOptions,
-		BuildUser:    buildUser,
-		BuildHost:    buildHost,
-		BuildDate:    buildDate,
-		BuildSource:  buildSource,
-	}
+	loadInfo.Do(func() {
+		buildInfo, _ := debug.ReadBuildInfo()
+		buildSettings := make(map[string]string)
+		for _, setting := range buildInfo.Settings {
+			buildSettings[setting.Key] = setting.Value
+		}
+
+		info = &Info{
+			Name:      name,
+			Version:   version,
+			License:   license,
+			BuildInfo: *buildInfo,
+			Source:    buildSource,
+			Commit:    buildSettings["vcs.revision"],
+			Time:      buildSettings["vcs.time"],
+			Dirty:     buildSettings["vcs.modified"] == "true",
+		}
+	})
+
+	return info
 }
 
 // Version returns the short version string.
 func Version() string {
-	if !compareVersion || strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
-		return version
+	info := GetInfo()
+
+	if info.Dirty {
+		return version + "*"
 	}
-	return version + "*"
+
+	return version
 }
 
 // FullVersion returns the full and detailed version string.
 func FullVersion() string {
-	s := ""
-	if !compareVersion || strings.HasPrefix(commit, fmt.Sprintf("tags/v%s-0-", version)) {
-		s += fmt.Sprintf("%s\nversion %s\n", name, version)
-	} else {
-		s += fmt.Sprintf("%s\ndevelopment build, built on top version %s\n", name, version)
-	}
-	s += fmt.Sprintf("\ncommit %s\n", commit)
-	s += fmt.Sprintf("built with %s (%s) %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
-	s += fmt.Sprintf("  using options %s\n", strings.ReplaceAll(buildOptions, "§", " "))
-	s += fmt.Sprintf("  by %s@%s\n", buildUser, buildHost)
-	s += fmt.Sprintf("  on %s\n", buildDate)
-	s += fmt.Sprintf("\nLicensed under the %s license.\nThe source code is available here: %s", license, buildSource)
-	return s
+	info := GetInfo()
+
+	builder := new(strings.Builder)
+
+	builder.WriteString(fmt.Sprintf("%s\nversion %s\n", info.Name, Version()))
+	builder.WriteString(fmt.Sprintf("\ncommit %s\n", info.Commit))
+	builder.WriteString(fmt.Sprintf("built with %s (%s) %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH))
+	builder.WriteString(fmt.Sprintf("  on %s\n", info.Time))
+	builder.WriteString(fmt.Sprintf("\nLicensed under the %s license.\nThe source code is available here: %s", license, info.Source))
+
+	return builder.String()
 }
 
 // CheckVersion checks if the metadata is ok.
@@ -95,14 +102,9 @@ func CheckVersion() error {
 		if name == "[NAME]" {
 			return errors.New("must call SetInfo() before calling CheckVersion()")
 		}
+
 		if version == "[version unknown]" ||
-			commit == "[commit unknown]" ||
-			license == "[license unknown]" ||
-			buildOptions == "[options unknown]" ||
-			buildUser == "[user unknown]" ||
-			buildHost == "[host unknown]" ||
-			buildDate == "[date unknown]" ||
-			buildSource == "[source unknown]" {
+			license == "[license unknown]" {
 			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
 		}
 	}
