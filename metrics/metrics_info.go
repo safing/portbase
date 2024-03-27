@@ -15,18 +15,15 @@ func registerInfoMetric() error {
 	_, err := NewGauge(
 		"info",
 		map[string]string{
-			"version":       checkUnknown(meta.Version),
-			"commit":        checkUnknown(meta.Commit),
-			"build_options": checkUnknown(meta.BuildOptions),
-			"build_user":    checkUnknown(meta.BuildUser),
-			"build_host":    checkUnknown(meta.BuildHost),
-			"build_date":    checkUnknown(meta.BuildDate),
-			"build_source":  checkUnknown(meta.BuildSource),
-			"go_os":         runtime.GOOS,
-			"go_arch":       runtime.GOARCH,
-			"go_version":    runtime.Version(),
-			"go_compiler":   runtime.Compiler,
-			"comment":       commentOption(),
+			"version":      checkUnknown(meta.Version),
+			"commit":       checkUnknown(meta.Commit),
+			"build_date":   checkUnknown(meta.Time),
+			"build_source": checkUnknown(meta.Source),
+			"go_os":        runtime.GOOS,
+			"go_arch":      runtime.GOARCH,
+			"go_version":   runtime.Version(),
+			"go_compiler":  runtime.Compiler,
+			"comment":      commentOption(),
 		},
 		func() float64 {
 			// Report as 0 the first time in order to detect (re)starts.
