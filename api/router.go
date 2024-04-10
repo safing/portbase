@@ -134,7 +134,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	}()
 
 	// Add security headers.
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Referrer-Policy", "same-origin")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "deny")
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
