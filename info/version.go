@@ -14,6 +14,7 @@ var (
 	name        string
 	version     = "dev build"
 	buildSource = "[source unknown]"
+	buildTime   = "[build time unknown]"
 	license     = "[license unknown]"
 
 	info     *Info
@@ -25,19 +26,25 @@ type Info struct {
 	Name    string
 	Version string
 	License string
-	Commit  string
-	Time    string
-	Source  string
-	Dirty   bool
+
+	Source    string
+	BuildTime string
+
+	Commit     string
+	CommitTime string
+	Dirty      bool
 
 	debug.BuildInfo
 }
 
 // Set sets meta information via the main routine. This should be the first thing your program calls.
-func Set(setName string, setVersion string, setLicenseName string, compareVersionToTag bool) {
+func Set(setName string, setVersion string, setLicenseName string) {
 	name = setName
-	version = setVersion
 	license = setLicenseName
+
+	if setVersion != "" {
+		version = setVersion
+	}
 }
 
 // GetInfo returns all the meta information about the program.
@@ -50,14 +57,22 @@ func GetInfo() *Info {
 		}
 
 		info = &Info{
-			Name:      name,
-			Version:   version,
-			License:   license,
-			BuildInfo: *buildInfo,
-			Source:    buildSource,
-			Commit:    buildSettings["vcs.revision"],
-			Time:      buildSettings["vcs.time"],
-			Dirty:     buildSettings["vcs.modified"] == "true",
+			Name:       name,
+			Version:    version,
+			License:    license,
+			Source:     buildSource,
+			BuildTime:  buildTime,
+			Commit:     buildSettings["vcs.revision"],
+			CommitTime: buildSettings["vcs.time"],
+			Dirty:      buildSettings["vcs.modified"] == "true",
+			BuildInfo:  *buildInfo,
+		}
+
+		if info.Commit == "" {
+			info.Commit = "[commit unknown]"
+		}
+		if info.CommitTime == "" {
+			info.CommitTime = "[commit time unknown]"
 		}
 	})
 
@@ -78,14 +93,21 @@ func Version() string {
 // FullVersion returns the full and detailed version string.
 func FullVersion() string {
 	info := GetInfo()
-
 	builder := new(strings.Builder)
 
-	builder.WriteString(fmt.Sprintf("%s\nversion %s\n", info.Name, Version()))
+	// Name and version.
+	builder.WriteString(fmt.Sprintf("%s %s\n", info.Name, Version()))
+
+	// Build info.
+	builder.WriteString(fmt.Sprintf("\nbuilt with %s (%s) %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH))
+	builder.WriteString(fmt.Sprintf("  at %s\n", info.BuildTime))
+
+	// Commit info.
 	builder.WriteString(fmt.Sprintf("\ncommit %s\n", info.Commit))
-	builder.WriteString(fmt.Sprintf("built with %s (%s) %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH))
-	builder.WriteString(fmt.Sprintf("  on %s\n", info.Time))
-	builder.WriteString(fmt.Sprintf("\nLicensed under the %s license.\nThe source code is available here: %s", license, info.Source))
+	builder.WriteString(fmt.Sprintf("  at %s\n", info.CommitTime))
+	builder.WriteString(fmt.Sprintf("  from %s\n", info.Source))
+
+	builder.WriteString(fmt.Sprintf("\nLicensed under the %s license.", license))
 
 	return builder.String()
 }
@@ -101,10 +123,6 @@ func CheckVersion() error {
 		// check version information
 		if name == "[NAME]" || license == "[license unknown]" {
 			return errors.New("must call SetInfo() before calling CheckVersion()")
-		}
-
-		if version == "[version unknown]" {
-			return errors.New("please build using the supplied build script.\n$ ./build {main.go|...}")
 		}
 	}
 

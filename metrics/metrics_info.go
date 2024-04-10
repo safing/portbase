@@ -17,7 +17,7 @@ func registerInfoMetric() error {
 		map[string]string{
 			"version":      checkUnknown(meta.Version),
 			"commit":       checkUnknown(meta.Commit),
-			"build_date":   checkUnknown(meta.Time),
+			"build_date":   checkUnknown(meta.BuildTime),
 			"build_source": checkUnknown(meta.Source),
 			"go_os":        runtime.GOOS,
 			"go_arch":      runtime.GOARCH,
