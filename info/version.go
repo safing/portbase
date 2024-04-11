@@ -65,8 +65,6 @@ func GetInfo() *Info {
 			buildSettings[setting.Key] = setting.Value
 		}
 
-		fmt.Println(buildSettings)
-
 		info = &Info{
 			Name:       name,
 			Version:    version,
