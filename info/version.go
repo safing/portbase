@@ -11,24 +11,33 @@ import (
 )
 
 var (
-	name        string
+	name    string
+	license string
+
 	version     = "dev build"
-	buildSource = "[source unknown]"
-	buildTime   = "[build time unknown]"
-	license     = "[license unknown]"
+	buildSource = "unknown"
+	buildTime   = "unknown"
 
 	info     *Info
 	loadInfo sync.Once
 )
 
+func init() {
+	// Convert version string space placeholders.
+	version = strings.ReplaceAll(version, "_", " ")
+	buildSource = strings.ReplaceAll(buildSource, "_", " ")
+	buildTime = strings.ReplaceAll(buildTime, "_", " ")
+}
+
 // Info holds the programs meta information.
-type Info struct {
+type Info struct { //nolint:maligned
 	Name    string
 	Version string
 	License string
 
 	Source    string
 	BuildTime string
+	CGO       bool
 
 	Commit     string
 	CommitTime string
@@ -56,12 +65,15 @@ func GetInfo() *Info {
 			buildSettings[setting.Key] = setting.Value
 		}
 
+		fmt.Println(buildSettings)
+
 		info = &Info{
 			Name:       name,
 			Version:    version,
 			License:    license,
 			Source:     buildSource,
 			BuildTime:  buildTime,
+			CGO:        buildSettings["CGO_ENABLED"] == "1",
 			Commit:     buildSettings["vcs.revision"],
 			CommitTime: buildSettings["vcs.time"],
 			Dirty:      buildSettings["vcs.modified"] == "true",
@@ -69,10 +81,10 @@ func GetInfo() *Info {
 		}
 
 		if info.Commit == "" {
-			info.Commit = "[commit unknown]"
+			info.Commit = "unknown"
 		}
 		if info.CommitTime == "" {
-			info.CommitTime = "[commit time unknown]"
+			info.CommitTime = "unknown"
 		}
 	})
 
@@ -99,11 +111,19 @@ func FullVersion() string {
 	builder.WriteString(fmt.Sprintf("%s %s\n", info.Name, Version()))
 
 	// Build info.
-	builder.WriteString(fmt.Sprintf("\nbuilt with %s (%s) %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH))
+	cgoInfo := "-cgo"
+	if info.CGO {
+		cgoInfo = "+cgo"
+	}
+	builder.WriteString(fmt.Sprintf("\nbuilt with %s (%s %s) for %s/%s\n", runtime.Version(), runtime.Compiler, cgoInfo, runtime.GOOS, runtime.GOARCH))
 	builder.WriteString(fmt.Sprintf("  at %s\n", info.BuildTime))
 
 	// Commit info.
-	builder.WriteString(fmt.Sprintf("\ncommit %s\n", info.Commit))
+	dirtyInfo := "clean"
+	if info.Dirty {
+		dirtyInfo = "dirty"
+	}
+	builder.WriteString(fmt.Sprintf("\ncommit %s (%s)\n", info.Commit, dirtyInfo))
 	builder.WriteString(fmt.Sprintf("  at %s\n", info.CommitTime))
 	builder.WriteString(fmt.Sprintf("  from %s\n", info.Source))
 
@@ -121,7 +141,7 @@ func CheckVersion() error {
 		return nil // testing on windows
 	default:
 		// check version information
-		if name == "[NAME]" || license == "[license unknown]" {
+		if name == "" || license == "" {
 			return errors.New("must call SetInfo() before calling CheckVersion()")
 		}
 	}
