@@ -14,26 +14,47 @@ var (
 	name    string
 	license string
 
-	version     = "dev build"
-	buildSource = "unknown"
-	buildTime   = "unknown"
+	version       = "dev build"
+	versionNumber = "0.0.0"
+	buildSource   = "unknown"
+	buildTime     = "unknown"
 
 	info     *Info
 	loadInfo sync.Once
 )
 
 func init() {
-	// Convert version string space placeholders.
-	version = strings.ReplaceAll(version, "_", " ")
+	// Replace space placeholders.
 	buildSource = strings.ReplaceAll(buildSource, "_", " ")
 	buildTime = strings.ReplaceAll(buildTime, "_", " ")
+
+	// Convert version string from git tag to expected format.
+	version = strings.TrimSpace(strings.ReplaceAll(strings.TrimPrefix(version, "v"), "_", " "))
+	versionNumber = strings.TrimSpace(strings.TrimSuffix(version, "dev build"))
+	if versionNumber == "" {
+		versionNumber = "0.0.0"
+	}
+
+	// Get build info.
+	buildInfo, _ := debug.ReadBuildInfo()
+	buildSettings := make(map[string]string)
+	for _, setting := range buildInfo.Settings {
+		buildSettings[setting.Key] = setting.Value
+	}
+
+	// Add "dev build" to version if repo is dirty.
+	if buildSettings["vcs.modified"] == "true" &&
+		!strings.HasSuffix(version, "dev build") {
+		version += " dev build"
+	}
 }
 
 // Info holds the programs meta information.
 type Info struct { //nolint:maligned
-	Name    string
-	Version string
-	License string
+	Name          string
+	Version       string
+	VersionNumber string
+	License       string
 
 	Source    string
 	BuildTime string
@@ -66,16 +87,17 @@ func GetInfo() *Info {
 		}
 
 		info = &Info{
-			Name:       name,
-			Version:    version,
-			License:    license,
-			Source:     buildSource,
-			BuildTime:  buildTime,
-			CGO:        buildSettings["CGO_ENABLED"] == "1",
-			Commit:     buildSettings["vcs.revision"],
-			CommitTime: buildSettings["vcs.time"],
-			Dirty:      buildSettings["vcs.modified"] == "true",
-			BuildInfo:  *buildInfo,
+			Name:          name,
+			Version:       version,
+			VersionNumber: versionNumber,
+			License:       license,
+			Source:        buildSource,
+			BuildTime:     buildTime,
+			CGO:           buildSettings["CGO_ENABLED"] == "1",
+			Commit:        buildSettings["vcs.revision"],
+			CommitTime:    buildSettings["vcs.time"],
+			Dirty:         buildSettings["vcs.modified"] == "true",
+			BuildInfo:     *buildInfo,
 		}
 
 		if info.Commit == "" {
@@ -89,15 +111,14 @@ func GetInfo() *Info {
 	return info
 }
 
-// Version returns the short version string.
+// Version returns the annotated version.
 func Version() string {
-	info := GetInfo()
-
-	if info.Dirty {
-		return version + "*"
-	}
-
 	return version
+}
+
+// VersionNumber returns the version number only.
+func VersionNumber() string {
+	return versionNumber
 }
 
 // FullVersion returns the full and detailed version string.
@@ -106,7 +127,7 @@ func FullVersion() string {
 	builder := new(strings.Builder)
 
 	// Name and version.
-	builder.WriteString(fmt.Sprintf("%s %s\n", info.Name, Version()))
+	builder.WriteString(fmt.Sprintf("%s %s\n", info.Name, version))
 
 	// Build info.
 	cgoInfo := "-cgo"
