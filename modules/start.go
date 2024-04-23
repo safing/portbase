@@ -24,6 +24,11 @@ func SetGlobalPrepFn(fn func() error) {
 	}
 }
 
+// IsStarting returns whether the initial global start is still in progress.
+func IsStarting() bool {
+	return !initialStartCompleted.IsSet()
+}
+
 // Start starts all modules in the correct order. In case of an error, it will automatically shutdown again.
 func Start() error {
 	if !modulesLocked.SetToIf(false, true) {

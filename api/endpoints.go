@@ -381,7 +381,7 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Wait for the owning module to be ready.
 	if !moduleIsReady(e.BelongsTo) {
-		http.Error(w, "The API endpoint is not ready yet or the its module is not enabled. Please try again later.", http.StatusServiceUnavailable)
+		http.Error(w, "The API endpoint is not ready yet or the its module is not enabled. Reload (F5) to try again.", http.StatusServiceUnavailable)
 		return
 	}
 

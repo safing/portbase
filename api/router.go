@@ -271,7 +271,7 @@ func (mh *mainHandler) handle(w http.ResponseWriter, r *http.Request) error {
 	// Wait for the owning module to be ready.
 	if moduleHandler, ok := handler.(ModuleHandler); ok {
 		if !moduleIsReady(moduleHandler.BelongsTo()) {
-			http.Error(lrw, "The API endpoint is not ready yet. Please try again later.", http.StatusServiceUnavailable)
+			http.Error(lrw, "The API endpoint is not ready yet. Reload (F5) to try again.", http.StatusServiceUnavailable)
 			return nil
 		}
 	}
