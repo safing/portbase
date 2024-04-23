@@ -132,7 +132,7 @@ You can easily view this data in your browser with this command (with Go install
 func ping(ar *Request) (msg string, err error) {
 	// TODO: Remove upgrade to "ready" when all UI components have transitioned.
 	if modules.IsStarting() || modules.IsShuttingDown() {
-		return "", ErrorWithStatus(errors.New("portmaster is not ready"), http.StatusTooEarly)
+		return "", ErrorWithStatus(errors.New("portmaster is not ready, reload (F5) to try again"), http.StatusTooEarly)
 	}
 
 	return "Pong.", nil
@@ -141,7 +141,7 @@ func ping(ar *Request) (msg string, err error) {
 // ready checks if Portmaster has completed starting.
 func ready(ar *Request) (msg string, err error) {
 	if modules.IsStarting() || modules.IsShuttingDown() {
-		return "", ErrorWithStatus(errors.New("portmaster is not ready"), http.StatusTooEarly)
+		return "", ErrorWithStatus(errors.New("portmaster is not ready, reload (F5) to try again"), http.StatusTooEarly)
 	}
 	return "Portmaster is ready.", nil
 }
